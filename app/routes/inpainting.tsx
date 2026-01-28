@@ -1,5 +1,5 @@
-import { SEOMeta } from '../components/SeoMeta'
-import Inpainting from '../components/Inpainting'
+import { SEOMeta } from '~/components/SeoMeta'
+import Inpainting from '~/components/Inpainting'
 
 export function meta() {
   return [

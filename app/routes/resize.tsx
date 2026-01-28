@@ -16,8 +16,8 @@ import {
   Download,
 } from 'lucide-react'
 import type { Route } from './+types/resize'
-import { useI18n } from '../lib/i18n'
-import { SEOMeta } from '../components/SeoMeta'
+import { useI18n } from '~/lib/i18n'
+import { SEOMeta } from '~/components/SeoMeta'
 
 type ResizeMode = 'px' | 'percentage'
 

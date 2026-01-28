@@ -16,8 +16,8 @@ import {
   CircleDollarSign,
 } from "lucide-react";
 import type { Route } from "./+types/convert";
-import { useI18n } from "../lib/i18n";
-import { SEOMeta } from "../components/SeoMeta";
+import { useI18n } from "~/lib/i18n";
+import { SEOMeta } from "~/components/SeoMeta";
 
 type OutputFormat = "jpeg" | "png" | "webp";
 

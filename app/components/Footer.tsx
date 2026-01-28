@@ -1,8 +1,8 @@
 import { Link } from "react-router";
-import Logo from "./Logo";
-import { useI18n, type Language } from "../lib/i18n";
+import Logo from "~/components/Logo";
+import { useI18n, type Language } from "~/lib/i18n";
 
-import { XIcon, GithubIcon } from "../lib/SocialIcons";
+import { XIcon, GithubIcon } from "~/lib/socialIcons";
 
 const LANG_NAMES: Record<Language, string> = {
   en: "English",

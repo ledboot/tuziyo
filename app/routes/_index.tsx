@@ -9,8 +9,8 @@ import {
   Zap,
 } from 'lucide-react'
 import type { Route } from './+types/_index'
-import { useI18n } from '../lib/i18n'
-import { SEOMeta } from '../components/SeoMeta'
+import { useI18n } from '~/lib/i18n'
+import { SEOMeta } from '~/components/SeoMeta'
 
 export function meta({}: Route.MetaArgs) {
   return [
