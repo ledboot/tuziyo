@@ -442,7 +442,7 @@ export default function CropPage() {
                     htmlFor="file-upload"
                     className="inline-flex items-center gap-2 px-8 py-3 bg-primary-brand text-white rounded-xl font-bold cursor-pointer hover:opacity-90 transition-all font-display uppercase tracking-widest text-xs"
                   >
-                    {t.common.newProject}
+                    {t.common.uploadImage}
                     <input
                       id="file-upload"
                       type="file"

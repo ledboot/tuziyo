@@ -326,7 +326,7 @@ export default function ConvertPage() {
               className="flex items-center gap-3 px-10 py-4 bg-primary-brand text-white rounded-2xl font-bold shadow-xl shadow-primary-brand/25 hover:shadow-primary-brand/40 transition-all active:scale-95 cursor-pointer font-display uppercase tracking-widest text-xs"
             >
               <Upload className="size-5" />
-              {t.common.newProject}
+              {t.common.uploadImage}
               <input
                 id="file-upload"
                 type="file"

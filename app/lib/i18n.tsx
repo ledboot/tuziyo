@@ -14,7 +14,7 @@ export interface Translations {
     aboutUs: string;
     resources: string;
     languages: string;
-    newProject: string;
+    uploadImage: string;
     saveResult: string;
     undo: string;
     loading: string;
@@ -85,7 +85,6 @@ export interface Translations {
     hideOriginal: string;
     download: string;
     editor: string;
-    uploadImage: string;
     downloadingModel: string;
     loadingModel: string;
     downloadedFromCDN: string;
@@ -149,7 +148,7 @@ export const translations: Record<Language, Translations> = {
       aboutUs: "About Us",
       resources: "Resources",
       languages: "Languages",
-      newProject: "New Project",
+      uploadImage: "Upload Image",
       saveResult: "Save Result",
       undo: "Undo Last Step",
       loading: "Loading...",
@@ -225,7 +224,6 @@ export const translations: Record<Language, Translations> = {
       hideOriginal: "Hide Original",
       download: "Download",
       editor: "Editor",
-      uploadImage: "Upload Image",
       downloadingModel: "Downloading AI Model",
       loadingModel: "Loading AI Model",
       downloadedFromCDN: "downloaded from CDN",
@@ -305,7 +303,7 @@ export const translations: Record<Language, Translations> = {
       aboutUs: "关于我们",
       resources: "相关资源",
       languages: "语言选择",
-      newProject: "上传文件",
+      uploadImage: "上传图片",
       saveResult: "保存结果",
       undo: "撤销上一步",
       loading: "加载中...",
@@ -377,7 +375,6 @@ export const translations: Record<Language, Translations> = {
       hideOriginal: "隐藏原图",
       download: "下载",
       editor: "编辑器",
-      uploadImage: "上传图片",
       downloadingModel: "正在下载 AI 模型",
       loadingModel: "正在加载 AI 模型",
       downloadedFromCDN: "已从 CDN 下载",
@@ -452,7 +449,7 @@ export const translations: Record<Language, Translations> = {
       aboutUs: "À propos de nous",
       resources: "Ressources",
       languages: "Langues",
-      newProject: "Nouveau Projet",
+      uploadImage: "Télécharger l'image",
       saveResult: "Enregistrer",
       undo: "Annuler l'action",
       loading: "Chargement...",
@@ -528,7 +525,6 @@ export const translations: Record<Language, Translations> = {
       hideOriginal: "Masquer l'original",
       download: "Télécharger",
       editor: "Éditeur",
-      uploadImage: "Télécharger l'image",
       downloadingModel: "Téléchargement du modèle IA",
       loadingModel: "Chargement du modèle IA",
       downloadedFromCDN: "téléchargé depuis le CDN",
@@ -608,7 +604,7 @@ export const translations: Record<Language, Translations> = {
       aboutUs: "私たちについて",
       resources: "リソース",
       languages: "言語",
-      newProject: "ファイルをアップロード",
+      uploadImage: "画像をアップロード",
       saveResult: "結果を保存",
       undo: "元に戻す",
       loading: "読み込み中...",
@@ -682,7 +678,6 @@ export const translations: Record<Language, Translations> = {
       hideOriginal: "オリジナルを隠す",
       download: "ダウンロード",
       editor: "エディター",
-      uploadImage: "画像をアップロード",
       downloadingModel: "AIモデルをダウンロード中",
       loadingModel: "AIモデルを読み込み中",
       downloadedFromCDN: "CDNからダウンロード済み",
@@ -758,7 +753,7 @@ export const translations: Record<Language, Translations> = {
       aboutUs: "회사 소개",
       resources: "리소스",
       languages: "언어",
-      newProject: "파일 업로드",
+      uploadImage: "이미지 업로드",
       saveResult: "결과 저장",
       undo: "실행 취소",
       loading: "로딩 중...",
@@ -833,7 +828,6 @@ export const translations: Record<Language, Translations> = {
       hideOriginal: "원본 숨기기",
       download: "다운로드",
       editor: "편집기",
-      uploadImage: "이미지 업로드",
       downloadingModel: "AI 모델 다운로드 중",
       loadingModel: "AI 모델 로드 중",
       downloadedFromCDN: "CDN에서 다운로드됨",
@@ -908,7 +902,7 @@ export const translations: Record<Language, Translations> = {
       aboutUs: "О нас",
       resources: "Ресурсы",
       languages: "Языки",
-      newProject: "Загрузить файл",
+      uploadImage: "Загрузить изображение",
       saveResult: "Сохранить результат",
       undo: "Отменить шаг",
       loading: "Загрузка...",
@@ -984,7 +978,6 @@ export const translations: Record<Language, Translations> = {
       hideOriginal: "Скрыть оригинал",
       download: "Скачать",
       editor: "Редактор",
-      uploadImage: "Загрузить изображение",
       downloadingModel: "Загрузка модели ИИ",
       loadingModel: "Загрузка модели ИИ",
       downloadedFromCDN: "загружено из CDN",
@@ -1066,7 +1059,7 @@ export const translations: Record<Language, Translations> = {
       aboutUs: "Chi Siamo",
       resources: "Risorse",
       languages: "Lingue",
-      newProject: "Carica File",
+      uploadImage: "Carica Immagine",
       saveResult: "Salva Risultato",
       undo: "Annulla Ultimo Passo",
       loading: "Caricamento...",
@@ -1142,7 +1135,6 @@ export const translations: Record<Language, Translations> = {
       hideOriginal: "Nascondi Originale",
       download: "Scarica",
       editor: "Editor",
-      uploadImage: "Carica Immagine",
       downloadingModel: "Download Modello IA",
       loadingModel: "Caricamento Modello IA",
       downloadedFromCDN: "scaricato dal CDN",
