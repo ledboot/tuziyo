@@ -77,6 +77,7 @@ export default function ConvertPage() {
     useState<OutputFormat>("webp");
   const [quality, setQuality] = useState(90);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   // Ensure client-side only rendering for file operations
@@ -306,9 +307,23 @@ export default function ConvertPage() {
           <div
             className={`group relative flex flex-col items-center justify-center p-12 md:p-16 rounded-[2.5rem] border-2 border-dashed transition-all duration-300 ${
               images.length === 0
-                ? "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                ? isDragging
+                  ? "border-primary-brand bg-primary-brand/5 scale-[1.01]"
+                  : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
                 : "border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50"
             } hover:border-primary-brand/50 hover:bg-primary-brand/5`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              if (e.dataTransfer.files) {
+                handleMultipleFiles(e.dataTransfer.files);
+              }
+            }}
           >
             <div className="size-20 bg-primary-brand/10 rounded-3xl flex items-center justify-center mb-6 text-primary-brand group-hover:scale-110 transition-transform">
               <ImagePlus className="size-10" />

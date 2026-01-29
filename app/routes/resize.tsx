@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
-import JSZip from 'jszip'
+import { useState, useRef, useCallback, useEffect } from "react";
+import JSZip from "jszip";
 import {
   ZoomOut,
   ZoomIn,
@@ -14,78 +14,79 @@ import {
   ChevronsUpDown,
   RefreshCw,
   Download,
-} from 'lucide-react'
-import type { Route } from './+types/resize'
-import { useI18n } from '~/lib/i18n'
-import { SEOMeta } from '~/components/SeoMeta'
+} from "lucide-react";
+import type { Route } from "./+types/resize";
+import { useI18n } from "~/lib/i18n";
+import { SEOMeta } from "~/components/SeoMeta";
 
-type ResizeMode = 'px' | 'percentage'
+type ResizeMode = "px" | "percentage";
 
 interface ImageItem {
-  file: File
-  preview: string
-  originalWidth: number
-  originalHeight: number
-  size: number
+  file: File;
+  preview: string;
+  originalWidth: number;
+  originalHeight: number;
+  size: number;
 }
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: 'Batch Image Resizer | Resize Images by Percentage or Pixels' },
+    { title: "Batch Image Resizer | Resize Images by Percentage or Pixels" },
     {
-      name: 'description',
+      name: "description",
       content:
-        'Resize multiple images at once with precision. Support for aspect ratio locking and percentage scaling. 100% private and fast.',
+        "Resize multiple images at once with precision. Support for aspect ratio locking and percentage scaling. 100% private and fast.",
     },
     {
-      name: 'keywords',
+      name: "keywords",
       content:
-        'batch resize images online, image resizer percentage, social media image resizer free, fast photo scaler browser',
+        "batch resize images online, image resizer percentage, social media image resizer free, fast photo scaler browser",
     },
     {
-      property: 'og:title',
-      content: 'Batch Image Resizer | Free Online Photo Scaler',
+      property: "og:title",
+      content: "Batch Image Resizer | Free Online Photo Scaler",
     },
     {
-      property: 'og:description',
+      property: "og:description",
       content:
-        'Resize multiple images at once with precision. 100% private and fast.',
+        "Resize multiple images at once with precision. 100% private and fast.",
     },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:url', content: 'https://tuziyo.com/resize' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'robots', content: 'index, follow' },
-  ]
+    { property: "og:type", content: "website" },
+    { property: "og:url", content: "https://tuziyo.com/resize" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "robots", content: "index, follow" },
+  ];
 }
 
 export default function ResizePage() {
-  const { t } = useI18n()
-  const [images, setImages] = useState<ImageItem[]>([])
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const [resizeMode, setResizeMode] = useState<ResizeMode>('px')
-  const [percentage, setPercentage] = useState(100)
-  const [targetWidth, setTargetWidth] = useState(0)
-  const [targetHeight, setTargetHeight] = useState(0)
-  const [lockRatio, setLockRatio] = useState(true)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [zoom, setZoom] = useState(85)
-  const [outputFormat, setOutputFormat] = useState('PNG')
+  const { t } = useI18n();
+  const [images, setImages] = useState<ImageItem[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [resizeMode, setResizeMode] = useState<ResizeMode>("px");
+  const [percentage, setPercentage] = useState(100);
+  const [targetWidth, setTargetWidth] = useState(0);
+  const [targetHeight, setTargetHeight] = useState(0);
+  const [lockRatio, setLockRatio] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [zoom, setZoom] = useState(85);
+  const [outputFormat, setOutputFormat] = useState("PNG");
 
-  const previewCanvasRef = useRef<HTMLCanvasElement>(null)
-  const currentImage = images[selectedIndex]
+  const [isDragging, setIsDragging] = useState(false);
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const currentImage = images[selectedIndex];
 
   const formatSize = (bytes: number) => {
-    if (bytes === 0) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return `${parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`
-  }
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
+  };
 
   const handleFileChange = useCallback(
     (file: File) => {
-      const img = new Image()
-      const url = URL.createObjectURL(file)
+      const img = new Image();
+      const url = URL.createObjectURL(file);
       img.onload = () => {
         const newItem = {
           file,
@@ -93,131 +94,135 @@ export default function ResizePage() {
           originalWidth: img.naturalWidth,
           originalHeight: img.naturalHeight,
           size: file.size,
-        }
-        setImages(prev => [...prev, newItem])
+        };
+        setImages((prev) => [...prev, newItem]);
         if (images.length === 0) {
-          setTargetWidth(img.naturalWidth)
-          setTargetHeight(img.naturalHeight)
+          setTargetWidth(img.naturalWidth);
+          setTargetHeight(img.naturalHeight);
         }
-      }
-      img.src = url
+      };
+      img.src = url;
     },
-    [images.length]
-  )
+    [images.length],
+  );
 
   const handleMultipleFiles = useCallback(
     (files: FileList | File[]) => {
-      Array.from(files).forEach(file => {
-        if (file.type.startsWith('image/')) {
-          handleFileChange(file)
+      Array.from(files).forEach((file) => {
+        if (file.type.startsWith("image/")) {
+          handleFileChange(file);
         }
-      })
+      });
     },
-    [handleFileChange]
-  )
+    [handleFileChange],
+  );
 
   // Calculate new dimensions
   const getNewDimensions = useCallback(() => {
-    if (!currentImage) return { width: 0, height: 0 }
-    if (resizeMode === 'percentage') {
+    if (!currentImage) return { width: 0, height: 0 };
+    if (resizeMode === "percentage") {
       return {
         width: Math.round(currentImage.originalWidth * (percentage / 100)),
         height: Math.round(currentImage.originalHeight * (percentage / 100)),
-      }
+      };
     }
-    return { width: targetWidth, height: targetHeight }
-  }, [currentImage, resizeMode, percentage, targetWidth, targetHeight])
+    return { width: targetWidth, height: targetHeight };
+  }, [currentImage, resizeMode, percentage, targetWidth, targetHeight]);
 
   // Update preview
   useEffect(() => {
-    if (!currentImage || !previewCanvasRef.current) return
+    if (!currentImage || !previewCanvasRef.current) return;
 
-    const img = new Image()
+    const img = new Image();
     img.onload = () => {
-      const canvas = previewCanvasRef.current!
-      const ctx = canvas.getContext('2d')!
-      const { width, height } = getNewDimensions()
+      const canvas = previewCanvasRef.current!;
+      const ctx = canvas.getContext("2d")!;
+      const { width, height } = getNewDimensions();
 
       // Limit canvas size for preview performance
-      const maxDisplaySize = 1200
-      const scale = Math.min(maxDisplaySize / width, maxDisplaySize / height, 1)
-      canvas.width = width * scale
-      canvas.height = height * scale
+      const maxDisplaySize = 1200;
+      const scale = Math.min(
+        maxDisplaySize / width,
+        maxDisplaySize / height,
+        1,
+      );
+      canvas.width = width * scale;
+      canvas.height = height * scale;
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      ctx.imageSmoothingEnabled = true
-      ctx.imageSmoothingQuality = 'high'
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-    }
-    img.src = currentImage.preview
-  }, [currentImage, getNewDimensions])
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    img.src = currentImage.preview;
+  }, [currentImage, getNewDimensions]);
 
   const processImage = useCallback(
     async (item: ImageItem): Promise<Blob> => {
       return new Promise((resolve, reject) => {
-        const img = new Image()
+        const img = new Image();
         img.onload = () => {
-          const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')!
-          const { width, height } = getNewDimensions()
-          canvas.width = width
-          canvas.height = height
-          ctx.imageSmoothingEnabled = true
-          ctx.imageSmoothingQuality = 'high'
-          ctx.drawImage(img, 0, 0, width, height)
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d")!;
+          const { width, height } = getNewDimensions();
+          canvas.width = width;
+          canvas.height = height;
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, 0, 0, width, height);
           canvas.toBlob(
-            blob => (blob ? resolve(blob) : reject()),
+            (blob) => (blob ? resolve(blob) : reject()),
             `image/${outputFormat.toLowerCase()}`,
-            0.92
-          )
-        }
-        img.src = item.preview
-      })
+            0.92,
+          );
+        };
+        img.src = item.preview;
+      });
     },
-    [getNewDimensions, outputFormat]
-  )
+    [getNewDimensions, outputFormat],
+  );
 
   const handleDownload = useCallback(async () => {
-    if (!currentImage) return
-    setIsProcessing(true)
+    if (!currentImage) return;
+    setIsProcessing(true);
 
     if (images.length === 1) {
-      const blob = await processImage(currentImage)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      const { width, height } = getNewDimensions()
-      a.href = url
-      a.download = `tuziyo_${width}x${height}_${currentImage.file.name}`
-      a.click()
-      URL.revokeObjectURL(url)
+      const blob = await processImage(currentImage);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const { width, height } = getNewDimensions();
+      a.href = url;
+      a.download = `tuziyo_${width}x${height}_${currentImage.file.name}`;
+      a.click();
+      URL.revokeObjectURL(url);
     } else {
-      const zip = new JSZip()
+      const zip = new JSZip();
       for (let i = 0; i < images.length; i += 1) {
-        const blob = await processImage(images[i])
-        const { width, height } = getNewDimensions()
-        zip.file(`tuziyo_${width}x${height}_${images[i].file.name}`, blob)
+        const blob = await processImage(images[i]);
+        const { width, height } = getNewDimensions();
+        zip.file(`tuziyo_${width}x${height}_${images[i].file.name}`, blob);
       }
-      const content = await zip.generateAsync({ type: 'blob' })
-      const url = URL.createObjectURL(content)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'tuziyo-resized-images.zip'
-      a.click()
-      URL.revokeObjectURL(url)
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "tuziyo-resized-images.zip";
+      a.click();
+      URL.revokeObjectURL(url);
     }
-    setIsProcessing(false)
-  }, [images, currentImage, processImage, getNewDimensions])
+    setIsProcessing(false);
+  }, [images, currentImage, processImage, getNewDimensions]);
 
   const applyPreset = (w: number, h: number) => {
-    setResizeMode('px')
-    setTargetWidth(w)
-    setTargetHeight(h)
+    setResizeMode("px");
+    setTargetWidth(w);
+    setTargetHeight(h);
     if (currentImage) {
-      setPercentage(Math.round((w / currentImage.originalWidth) * 100))
+      setPercentage(Math.round((w / currentImage.originalWidth) * 100));
     }
-  }
+  };
 
-  const { width: displayWidth, height: displayHeight } = getNewDimensions()
+  const { width: displayWidth, height: displayHeight } = getNewDimensions();
 
   return (
     <div className="bg-slate-50 dark:bg-slate-950 min-h-[calc(100vh-64px)] flex flex-col">
@@ -256,11 +261,39 @@ export default function ResizePage() {
             </div>
           )}
 
-          <div className="flex-1 flex items-center justify-center p-12 relative overflow-auto custom-scrollbar">
+          <div
+            className={`flex-1 flex items-center justify-center p-12 relative overflow-auto custom-scrollbar transition-colors ${
+              isDragging && images.length > 0 ? "bg-primary-brand/5" : ""
+            }`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              if (e.dataTransfer.files) {
+                handleMultipleFiles(e.dataTransfer.files);
+              }
+            }}
+          >
             {images.length === 0 ? (
               <div className="max-w-md w-full text-center">
-                <div className="bg-white dark:bg-slate-900 p-12 rounded-[2.5rem] border-2 border-dashed border-slate-300 dark:border-slate-700 shadow-xl">
-                  <div className="size-20 bg-primary-brand/10 rounded-3xl flex items-center justify-center mb-6 mx-auto text-primary-brand">
+                <div
+                  className={`bg-white dark:bg-slate-900 p-12 rounded-[2.5rem] border-2 border-dashed transition-all duration-300 shadow-xl ${
+                    isDragging
+                      ? "border-primary-brand bg-primary-brand/5 scale-[1.02]"
+                      : "border-slate-300 dark:border-slate-700"
+                  }`}
+                >
+                  <div
+                    className={`size-20 rounded-3xl flex items-center justify-center mb-6 mx-auto transition-colors ${
+                      isDragging
+                        ? "bg-primary-brand text-white"
+                        : "bg-primary-brand/10 text-primary-brand"
+                    }`}
+                  >
                     <Upload className="size-10" />
                   </div>
                   <h3 className="text-xl font-bold mb-4">{t.resize.title}</h3>
@@ -276,7 +309,7 @@ export default function ResizePage() {
                       multiple
                       accept="image/*"
                       className="hidden"
-                      onChange={e =>
+                      onChange={(e) =>
                         e.target.files && handleMultipleFiles(e.target.files)
                       }
                     />
@@ -295,11 +328,11 @@ export default function ResizePage() {
                   />
                   <div className="absolute -bottom-16 left-0 flex gap-6 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm px-6 py-3 rounded-full border border-white/50 dark:border-slate-800 shadow-sm">
                     <span className="flex items-center gap-2">
-                      <Scaling className="size-4 text-primary-brand" />{' '}
+                      <Scaling className="size-4 text-primary-brand" />{" "}
                       {displayWidth} × {displayHeight} PX
                     </span>
                     <span className="flex items-center gap-2">
-                      <FileText className="size-4 text-primary-brand" />{' '}
+                      <FileText className="size-4 text-primary-brand" />{" "}
                       {formatSize(currentImage.size)}
                     </span>
                   </div>
@@ -316,15 +349,15 @@ export default function ResizePage() {
                   type="button"
                   key={img.preview}
                   onClick={() => {
-                    setSelectedIndex(idx)
-                    setTargetWidth(img.originalWidth)
-                    setTargetHeight(img.originalHeight)
+                    setSelectedIndex(idx);
+                    setTargetWidth(img.originalWidth);
+                    setTargetHeight(img.originalHeight);
                   }}
                   aria-label={`Select image ${idx + 1}`}
                   className={`size-12 rounded-lg overflow-hidden border-2 transition-all ${
                     selectedIndex === idx
-                      ? 'border-primary-brand scale-110 shadow-lg'
-                      : 'border-transparent opacity-60 hover:opacity-100'
+                      ? "border-primary-brand scale-110 shadow-lg"
+                      : "border-transparent opacity-60 hover:opacity-100"
                   }`}
                 >
                   <img
@@ -345,7 +378,7 @@ export default function ResizePage() {
                   multiple
                   accept="image/*"
                   className="hidden"
-                  onChange={e =>
+                  onChange={(e) =>
                     e.target.files && handleMultipleFiles(e.target.files)
                   }
                 />
@@ -369,28 +402,28 @@ export default function ResizePage() {
                   <button
                     type="button"
                     className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
-                      resizeMode === 'px'
-                        ? 'bg-white dark:bg-slate-700 shadow-sm text-primary-brand'
-                        : 'text-slate-500 dark:text-slate-400'
+                      resizeMode === "px"
+                        ? "bg-white dark:bg-slate-700 shadow-sm text-primary-brand"
+                        : "text-slate-500 dark:text-slate-400"
                     }`}
-                    onClick={() => setResizeMode('px')}
+                    onClick={() => setResizeMode("px")}
                   >
                     {t.resize.pixels}
                   </button>
                   <button
                     type="button"
                     className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
-                      resizeMode === 'percentage'
-                        ? 'bg-white dark:bg-slate-700 shadow-sm text-primary-brand'
-                        : 'text-slate-500 dark:text-slate-400'
+                      resizeMode === "percentage"
+                        ? "bg-white dark:bg-slate-700 shadow-sm text-primary-brand"
+                        : "text-slate-500 dark:text-slate-400"
                     }`}
-                    onClick={() => setResizeMode('percentage')}
+                    onClick={() => setResizeMode("percentage")}
                   >
                     {t.resize.percentage}
                   </button>
                 </div>
 
-                {resizeMode === 'px' ? (
+                {resizeMode === "px" ? (
                   <div className="space-y-8 relative">
                     <label
                       htmlFor="target-width"
@@ -407,17 +440,17 @@ export default function ResizePage() {
                         className="w-full h-14 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-2xl text-base font-bold focus:ring-4 focus:ring-primary-brand/10 focus:border-primary-brand px-5 transition-all text-slate-900 dark:text-white"
                         type="number"
                         value={targetWidth}
-                        onChange={e => {
-                          const w = Number(e.target.value)
-                          setTargetWidth(w)
+                        onChange={(e) => {
+                          const w = Number(e.target.value);
+                          setTargetWidth(w);
                           if (lockRatio && currentImage) {
                             setTargetHeight(
                               Math.round(
                                 w *
                                   (currentImage.originalHeight /
-                                    currentImage.originalWidth)
-                              )
-                            )
+                                    currentImage.originalWidth),
+                              ),
+                            );
                           }
                         }}
                       />
@@ -426,7 +459,7 @@ export default function ResizePage() {
                       <button
                         type="button"
                         className={`size-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all ${
-                          lockRatio ? 'text-primary-brand' : 'text-slate-300'
+                          lockRatio ? "text-primary-brand" : "text-slate-300"
                         }`}
                         onClick={() => setLockRatio(!lockRatio)}
                         title={t.resize.aspectRatio}
@@ -453,17 +486,17 @@ export default function ResizePage() {
                         className="w-full h-14 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-2xl text-base font-bold focus:ring-4 focus:ring-primary-brand/10 focus:border-primary-brand px-5 transition-all text-slate-900 dark:text-white"
                         type="number"
                         value={targetHeight}
-                        onChange={e => {
-                          const h = Number(e.target.value)
-                          setTargetHeight(h)
+                        onChange={(e) => {
+                          const h = Number(e.target.value);
+                          setTargetHeight(h);
                           if (lockRatio && currentImage) {
                             setTargetWidth(
                               Math.round(
                                 h *
                                   (currentImage.originalWidth /
-                                    currentImage.originalHeight)
-                              )
-                            )
+                                    currentImage.originalHeight),
+                              ),
+                            );
                           }
                         }}
                       />
@@ -486,20 +519,20 @@ export default function ResizePage() {
                           min="1"
                           max="200"
                           value={percentage}
-                          onChange={e => {
-                            const p = Number(e.target.value)
-                            setPercentage(p)
+                          onChange={(e) => {
+                            const p = Number(e.target.value);
+                            setPercentage(p);
                             if (currentImage) {
                               setTargetWidth(
                                 Math.round(
-                                  currentImage.originalWidth * (p / 100)
-                                )
-                              )
+                                  currentImage.originalWidth * (p / 100),
+                                ),
+                              );
                               setTargetHeight(
                                 Math.round(
-                                  currentImage.originalHeight * (p / 100)
-                                )
-                              )
+                                  currentImage.originalHeight * (p / 100),
+                                ),
+                              );
                             }
                           }}
                           className="flex-1 h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-primary-brand"
@@ -508,20 +541,20 @@ export default function ResizePage() {
                           <input
                             type="number"
                             value={percentage}
-                            onChange={e => {
-                              const p = Number(e.target.value)
-                              setPercentage(p)
+                            onChange={(e) => {
+                              const p = Number(e.target.value);
+                              setPercentage(p);
                               if (currentImage) {
                                 setTargetWidth(
                                   Math.round(
-                                    currentImage.originalWidth * (p / 100)
-                                  )
-                                )
+                                    currentImage.originalWidth * (p / 100),
+                                  ),
+                                );
                                 setTargetHeight(
                                   Math.round(
-                                    currentImage.originalHeight * (p / 100)
-                                  )
-                                )
+                                    currentImage.originalHeight * (p / 100),
+                                  ),
+                                );
                               }
                             }}
                             className="w-20 h-10 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-xl text-center text-sm font-bold focus:ring-2 focus:ring-primary-brand/20 focus:border-primary-brand transition-all text-slate-900 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -532,29 +565,29 @@ export default function ResizePage() {
                         </div>
                       </div>
                       <div className="grid grid-cols-4 gap-2">
-                        {[25, 50, 75, 100, 150, 200].map(p => (
+                        {[25, 50, 75, 100, 150, 200].map((p) => (
                           <button
                             type="button"
                             key={p}
                             onClick={() => {
-                              setPercentage(p)
+                              setPercentage(p);
                               if (currentImage) {
                                 setTargetWidth(
                                   Math.round(
-                                    currentImage.originalWidth * (p / 100)
-                                  )
-                                )
+                                    currentImage.originalWidth * (p / 100),
+                                  ),
+                                );
                                 setTargetHeight(
                                   Math.round(
-                                    currentImage.originalHeight * (p / 100)
-                                  )
-                                )
+                                    currentImage.originalHeight * (p / 100),
+                                  ),
+                                );
                               }
                             }}
                             className={`py-2 text-xs font-bold rounded-lg transition-all ${
                               percentage === p
-                                ? 'bg-primary-brand text-white shadow-sm'
-                                : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                ? "bg-primary-brand text-white shadow-sm"
+                                : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
                             }`}
                           >
                             {p}%
@@ -572,11 +605,11 @@ export default function ResizePage() {
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { label: 'HD', w: 1280, h: 720 },
-                    { label: 'Full HD', w: 1920, h: 1080 },
-                    { label: 'Instagram', w: 1080, h: 1080 },
-                    { label: '4K', w: 3840, h: 2160 },
-                  ].map(preset => (
+                    { label: "HD", w: 1280, h: 720 },
+                    { label: "Full HD", w: 1920, h: 1080 },
+                    { label: "Instagram", w: 1080, h: 1080 },
+                    { label: "4K", w: 3840, h: 2160 },
+                  ].map((preset) => (
                     <button
                       type="button"
                       key={preset.label}
@@ -603,7 +636,7 @@ export default function ResizePage() {
                   <select
                     id="output-format"
                     value={outputFormat}
-                    onChange={e => setOutputFormat(e.target.value)}
+                    onChange={(e) => setOutputFormat(e.target.value)}
                     className="w-full h-14 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary-brand/10 focus:border-primary-brand px-5 appearance-none text-slate-900 dark:text-white"
                   >
                     <option>PNG</option>
@@ -623,7 +656,7 @@ export default function ResizePage() {
               disabled={isProcessing || images.length === 0}
               className="w-full py-5 bg-slate-900 dark:bg-primary-brand text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 dark:hover:bg-primary-brand/90 transition-all flex items-center justify-center gap-3 group disabled:opacity-50"
             >
-              <span className={isProcessing ? 'animate-spin' : ''}>
+              <span className={isProcessing ? "animate-spin" : ""}>
                 {isProcessing ? (
                   <RefreshCw className="size-5" />
                 ) : (
@@ -643,5 +676,5 @@ export default function ResizePage() {
         </aside>
       </main>
     </div>
-  )
+  );
 }

@@ -87,6 +87,7 @@ export default function CropPage() {
   });
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<string | null>(null);
+  const [isDraggingUpload, setIsDraggingUpload] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoom, setZoom] = useState(85);
@@ -425,15 +426,41 @@ export default function CropPage() {
 
           <div
             ref={containerRef}
-            className="flex-1 flex items-center justify-center p-12 relative overflow-auto custom-scrollbar touch-none"
+            className={`flex-1 flex items-center justify-center p-12 relative overflow-auto custom-scrollbar touch-none transition-colors ${
+              isDraggingUpload && images.length > 0 ? "bg-primary-brand/5" : ""
+            }`}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDraggingUpload(true);
+            }}
+            onDragLeave={() => setIsDraggingUpload(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDraggingUpload(false);
+              if (e.dataTransfer.files) {
+                handleMultipleFiles(e.dataTransfer.files);
+              }
+            }}
           >
             {images.length === 0 ? (
               <div className="max-w-md w-full text-center">
-                <div className="bg-white dark:bg-slate-900 p-12 rounded-[2.5rem] border-2 border-dashed border-slate-300 dark:border-slate-700 shadow-xl">
-                  <div className="size-20 bg-primary-brand/10 rounded-3xl flex items-center justify-center mb-6 mx-auto text-primary-brand">
+                <div
+                  className={`bg-white dark:bg-slate-900 p-12 rounded-[2.5rem] border-2 border-dashed transition-all duration-300 shadow-xl ${
+                    isDraggingUpload
+                      ? "border-primary-brand bg-primary-brand/5 scale-[1.02]"
+                      : "border-slate-300 dark:border-slate-700"
+                  }`}
+                >
+                  <div
+                    className={`size-20 rounded-3xl flex items-center justify-center mb-6 mx-auto transition-colors ${
+                      isDraggingUpload
+                        ? "bg-primary-brand text-white"
+                        : "bg-primary-brand/10 text-primary-brand"
+                    }`}
+                  >
                     <Crop className="size-10" />
                   </div>
                   <h3 className="text-xl font-bold mb-4">{t.crop.title}</h3>
