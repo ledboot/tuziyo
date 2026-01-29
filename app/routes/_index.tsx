@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { Link } from "react-router";
 import {
   Wand2,
   Scaling,
@@ -7,67 +7,85 @@ import {
   ShieldCheck,
   ArrowRight,
   Zap,
-} from 'lucide-react'
-import type { Route } from './+types/_index'
-import { useI18n } from '~/lib/i18n'
-import { SEOMeta } from '~/components/SeoMeta'
+} from "lucide-react";
+import type { Route } from "./+types/_index";
+import { useI18n } from "~/lib/i18n";
+import { SEOMeta } from "~/components/SeoMeta";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: 'tuziyo - Professional AI Image Tools | Free & Secure' },
+    { title: "tuziyo - Professional AI Image Tools | Free & Secure" },
     {
-      name: 'description',
+      name: "description",
       content:
-        'Professional image editing tools powered by AI. Remove watermarks, resize, crop, and convert images - all free and secure in your browser. No registration required.',
+        "Professional image editing tools powered by AI. Remove watermarks, resize, crop, and convert images - all free and secure in your browser. No registration required.",
     },
     {
-      name: 'keywords',
+      name: "keywords",
       content:
-        'free ai image tools, remove watermark online, batch image resizer, image cropper free, photo converter browser',
+        "free ai image tools, remove watermark online, batch image resizer, image cropper free, photo converter browser",
     },
-    { property: 'og:title', content: 'tuziyo - Professional AI Image Tools' },
+    { property: "og:title", content: "tuziyo - Professional AI Image Tools" },
     {
-      property: 'og:description',
+      property: "og:description",
       content:
-        'Professional image editing tools powered by AI. 100% private and free.',
+        "Professional image editing tools powered by AI. 100% private and free.",
     },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:url', content: 'https://tuziyo.com' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'robots', content: 'index, follow' },
-    { name: 'author', content: 'tuziyo' },
-  ]
+    { property: "og:type", content: "website" },
+    { property: "og:url", content: "https://tuziyo.com" },
+    {
+      property: "og:image",
+      content:
+        "https://tuziyo.com/og?page=home&title=tuziyo&description=Professional%20AI%20Image%20Tools%20%7C%20Free%20%26%20Secure",
+    },
+    { name: "twitter:card", content: "summary_large_image" },
+    { property: "twitter:domain", content: "tuziyo.com" },
+    { property: "twitter:url", content: "https://tuziyo.com" },
+    { name: "twitter:title", content: "tuziyo - Professional AI Image Tools" },
+    {
+      name: "twitter:description",
+      content:
+        "Professional image editing tools powered by AI. 100% private and free.",
+    },
+    {
+      name: "twitter:image",
+      content:
+        "https://tuziyo.com/og?page=home&title=tuziyo&description=Professional%20AI%20Image%20Tools%20%7C%20Free%20%26%20Secure",
+    },
+    { name: "robots", content: "index, follow" },
+    { name: "author", content: "tuziyo" },
+  ];
 }
 
 export default function Index() {
-  const { t } = useI18n()
+  const { t } = useI18n();
 
   const tools = [
     {
       title: t.inpainting.title,
       description: t.inpainting.description,
-      to: '/inpainting',
+      to: "/inpainting",
       icon: Wand2,
     },
     {
       title: t.resize.title,
       description: t.resize.description,
-      to: '/resize',
+      to: "/resize",
       icon: Scaling,
     },
     {
       title: t.crop.title,
       description: t.crop.description,
-      to: '/crop',
+      to: "/crop",
       icon: Crop,
     },
     {
       title: t.convert.title,
       description: t.convert.description,
-      to: '/convert',
+      to: "/convert",
       icon: Repeat,
     },
-  ]
+  ];
 
   return (
     <>
@@ -80,10 +98,10 @@ export default function Index() {
             {t.common.freeForever}
           </div>
           <h1 className="text-5xl font-black tracking-tight text-slate-900 dark:text-white sm:text-7xl leading-[1.1] mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-            {t.home.heroTitle.split('.').map((part, i) => (
-              <span key={i} className={i === 1 ? 'text-primary-brand' : ''}>
+            {t.home.heroTitle.split(".").map((part, i) => (
+              <span key={i} className={i === 1 ? "text-primary-brand" : ""}>
                 {part}
-                {i === 0 && part.length > 0 ? '. ' : ''}
+                {i === 0 && part.length > 0 ? ". " : ""}
               </span>
             ))}
           </h1>
@@ -95,8 +113,8 @@ export default function Index() {
               type="button"
               className="rounded-2xl bg-primary-brand px-10 py-5 text-lg font-black text-white shadow-[0_20px_40px_-10px_rgba(0,194,184,0.3)] hover:shadow-[0_25px_50px_-12px_rgba(0,194,184,0.4)] hover:-translate-y-1 active:translate-y-0 transition-all font-display uppercase tracking-widest"
               onClick={() => {
-                const toolsSection = document.getElementById('tools')
-                toolsSection?.scrollIntoView({ behavior: 'smooth' })
+                const toolsSection = document.getElementById("tools");
+                toolsSection?.scrollIntoView({ behavior: "smooth" });
               }}
             >
               {t.home.getStarted}
@@ -201,8 +219,8 @@ export default function Index() {
             <button
               type="button"
               onClick={() => {
-                const toolsSection = document.getElementById('tools')
-                toolsSection?.scrollIntoView({ behavior: 'smooth' })
+                const toolsSection = document.getElementById("tools");
+                toolsSection?.scrollIntoView({ behavior: "smooth" });
               }}
               className="inline-flex items-center gap-3 rounded-2xl bg-white px-10 py-5 text-lg font-black text-slate-900 shadow-xl hover:bg-slate-50 transition-all uppercase tracking-widest"
             >
@@ -217,5 +235,5 @@ export default function Index() {
         </div>
       </section>
     </>
-  )
+  );
 }

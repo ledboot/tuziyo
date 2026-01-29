@@ -65,7 +65,28 @@ export function meta({}: Route.MetaArgs) {
     },
     { property: "og:type", content: "website" },
     { property: "og:url", content: "https://tuziyo.com/convert" },
+    {
+      property: "og:image",
+      content:
+        "https://tuziyo.com/og?page=convert&title=Batch%20Image%20Converter&description=Convert%20images%20securely%20in%20your%20browser",
+    },
     { name: "twitter:card", content: "summary_large_image" },
+    { property: "twitter:domain", content: "tuziyo.com" },
+    { property: "twitter:url", content: "https://tuziyo.com/convert" },
+    {
+      name: "twitter:title",
+      content: "Private Batch Image Converter | Free & Secure",
+    },
+    {
+      name: "twitter:description",
+      content:
+        "Convert images between formats instantly. Secure batch processing without uploads.",
+    },
+    {
+      name: "twitter:image",
+      content:
+        "https://tuziyo.com/og?page=convert&title=Batch%20Image%20Converter&description=Convert%20images%20securely%20in%20your%20browser",
+    },
     { name: "robots", content: "index, follow" },
   ];
 }

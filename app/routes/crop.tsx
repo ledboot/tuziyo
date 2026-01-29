@@ -69,7 +69,28 @@ export function meta({}: Route.MetaArgs) {
     },
     { property: "og:type", content: "website" },
     { property: "og:url", content: "https://tuziyo.com/crop" },
+    {
+      property: "og:image",
+      content:
+        "https://tuziyo.com/og?page=crop&title=Precise%20Image%20Cropper&description=Crop%20with%20pixel-perfect%20accuracy",
+    },
     { name: "twitter:card", content: "summary_large_image" },
+    { property: "twitter:domain", content: "tuziyo.com" },
+    { property: "twitter:url", content: "https://tuziyo.com/crop" },
+    {
+      name: "twitter:title",
+      content: "Precise Image Cropper | Free Online Photo Tool",
+    },
+    {
+      name: "twitter:description",
+      content:
+        "Crop images with pixel-perfect accuracy. High-quality lossless rendering.",
+    },
+    {
+      name: "twitter:image",
+      content:
+        "https://tuziyo.com/og?page=crop&title=Precise%20Image%20Cropper&description=Crop%20with%20pixel-perfect%20accuracy",
+    },
     { name: "robots", content: "index, follow" },
   ];
 }
