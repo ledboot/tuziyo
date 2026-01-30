@@ -1,6 +1,5 @@
 import { Link, NavLink } from "react-router";
 import { Globe, ChevronDown } from "lucide-react";
-import Logo from "./Logo";
 import { useI18n, type Language } from "../lib/i18n";
 import { useState, useRef, useEffect } from "react";
 
@@ -40,7 +39,13 @@ export default function Header() {
     <header className="sticky top-0 z-40 w-full border-b border-gray-200/50 bg-white/80 backdrop-blur-md dark:border-gray-800/50 dark:bg-slate-900/80 transition-colors duration-300">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-12">
         <Link to="/">
-          <Logo />
+          <div className="flex items-center h-10 select-none">
+            <img
+              src="/logo-with-brand.svg"
+              alt="tuziyo"
+              className="h-full w-auto"
+            />
+          </div>
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">

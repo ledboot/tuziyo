@@ -1,5 +1,4 @@
 import { Link } from "react-router";
-import Logo from "~/components/Logo";
 import { useI18n, type Language } from "~/lib/i18n";
 
 import { XIcon, GithubIcon } from "~/lib/socialIcons";
@@ -22,8 +21,16 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl">
         <div className="grid grid-cols-2 gap-12 md:grid-cols-4 lg:grid-cols-6 mb-12">
           <div className="col-span-2 space-y-6">
-            <Logo />
-            <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400 max-w-xs font-medium">
+            <Link to="/">
+              <div className="flex items-center h-10 select-none">
+                <img
+                  src="/logo-with-brand.svg"
+                  alt="tuziyo"
+                  className="h-full w-auto"
+                />
+              </div>
+            </Link>
+            <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400 max-w-xs font-medium mt-4">
               {t.home.heroSubtitle}
             </p>
             <div className="flex gap-4">
@@ -96,7 +103,9 @@ export default function Footer() {
               <li>
                 <Link
                   className="hover:text-primary-brand transition-colors"
-                  to="/"
+                  to="https://x.com/@ledboot_"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   {t.nav.contactAuthor}
                 </Link>

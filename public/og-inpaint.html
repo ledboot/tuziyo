@@ -1,0 +1,274 @@
+<!doctype html>
+<html class="light" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>tuziyo OG: Watermark Removal</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#2beee4",
+              "background-light": "#f6f8f8",
+              "background-dark": "#102221",
+            },
+            fontFamily: {
+              display: ["Space Grotesk"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style type="text/tailwindcss">
+      .og-container {
+        width: 1200px;
+        height: 630px;
+      }
+      .watermark-overlay {
+        text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        user-select: none;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gray-200 flex items-center justify-center min-h-screen font-display"
+  >
+    <div
+      class="og-container bg-background-light dark:bg-background-dark relative overflow-hidden shadow-2xl border border-gray-100 flex flex-col"
+    >
+      <header class="flex items-center justify-between px-16 pt-12">
+        <div class="flex items-center gap-3">
+          <div class="h-10 text-primary">
+            <svg
+              viewBox="0 0 258 73"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-full w-auto"
+            >
+              <path
+                d="M78.3782 16.28L108.928 16.23L108.648 28.11L100.298 28.44L99.2882 54.45L87.4582 55.07L86.3982 29.06L78.0382 29.51L78.3782 16.28ZM143.928 16.28C143.088 22.86 142.368 29.4033 141.768 35.91C141.168 42.4233 140.598 48.9767 140.058 55.57L128.568 56.41L129.078 52.1C128.705 52.5267 128.268 52.9 127.768 53.22C127.275 53.5333 126.748 53.79 126.188 53.99C125.628 54.1833 125.048 54.3233 124.448 54.41C123.855 54.49 123.285 54.5233 122.738 54.51C121.472 54.49 120.278 54.24 119.158 53.76C118.032 53.2867 117.002 52.6533 116.068 51.86C115.135 51.0667 114.295 50.14 113.548 49.08C112.802 48.0267 112.172 46.9167 111.658 45.75C111.145 44.5833 110.752 43.3933 110.478 42.18C110.212 40.96 110.078 39.7833 110.078 38.65C110.078 36.9633 110.108 35.22 110.168 33.42C110.235 31.6133 110.352 29.8067 110.518 28C110.692 26.1867 110.912 24.3933 111.178 22.62C111.452 20.84 111.795 19.1367 112.208 17.51C114.482 17.6233 116.768 17.7267 119.068 17.82C121.368 17.9133 123.658 17.9433 125.938 17.91C125.505 19.5367 125.078 21.1667 124.658 22.8C124.238 24.4333 123.862 26.0767 123.528 27.73C123.188 29.3833 122.915 31.04 122.708 32.7C122.508 34.3667 122.408 36.05 122.408 37.75C122.408 38.1433 122.425 38.7033 122.458 39.43C122.498 40.1567 122.598 40.8767 122.758 41.59C122.918 42.2967 123.162 42.9167 123.488 43.45C123.815 43.9833 124.275 44.25 124.868 44.25C125.582 44.25 126.218 43.9467 126.778 43.34C127.338 42.7333 127.832 41.9167 128.258 40.89C128.692 39.8633 129.062 38.6767 129.368 37.33C129.675 35.9833 129.938 34.5767 130.158 33.11C130.372 31.6433 130.542 30.1633 130.668 28.67C130.802 27.1767 130.902 25.77 130.968 24.45C131.035 23.1367 131.082 21.9567 131.108 20.91C131.135 19.8633 131.148 19.05 131.148 18.47C131.148 18.0967 131.138 17.73 131.118 17.37C131.098 17.0167 131.072 16.6533 131.038 16.28C132.252 16.32 133.455 16.35 134.648 16.37C135.848 16.3833 137.055 16.39 138.268 16.39C139.202 16.39 140.138 16.3867 141.078 16.38C142.025 16.3733 142.975 16.34 143.928 16.28ZM171.388 16L171.898 26.09L159.058 42.29H170.888L171.278 54.17L146.278 55.18L145.158 44.19L159.788 26.26L145.268 27.27L145.158 16H171.388ZM173.778 17.07L188.678 16.28L186.718 54.45L174.898 55.07L173.778 17.07ZM212.058 16.84L225.508 17.8L212.338 39.32L212.728 55.18H198.318L198.658 39.43L188.398 18.64L202.698 16.84L207.178 28.95L212.058 16.84ZM257.288 34.27C257.288 35.97 257.092 37.61 256.698 39.19C256.305 40.77 255.738 42.25 254.998 43.63C254.265 45.0167 253.368 46.2833 252.308 47.43C251.255 48.5767 250.068 49.5633 248.748 50.39C247.435 51.21 246.002 51.85 244.448 52.31C242.902 52.7633 241.258 52.99 239.518 52.99C237.838 52.99 236.235 52.7767 234.708 52.35C233.188 51.9167 231.765 51.3133 230.438 50.54C229.112 49.7667 227.912 48.8333 226.838 47.74C225.765 46.6467 224.848 45.4333 224.088 44.1C223.335 42.76 222.748 41.3233 222.328 39.79C221.908 38.2633 221.698 36.6667 221.698 35C221.698 33.3733 221.895 31.78 222.288 30.22C222.675 28.66 223.238 27.19 223.978 25.81C224.718 24.43 225.612 23.16 226.658 22C227.705 20.84 228.875 19.84 230.168 19C231.468 18.16 232.875 17.5067 234.388 17.04C235.902 16.5733 237.498 16.34 239.178 16.34C241.892 16.34 244.365 16.76 246.598 17.6C248.832 18.44 250.735 19.64 252.308 21.2C253.888 22.76 255.112 24.6467 255.978 26.86C256.852 29.0733 257.288 31.5433 257.288 34.27ZM244.838 35C244.838 34.2 244.722 33.42 244.488 32.66C244.255 31.9067 243.915 31.2333 243.468 30.64C243.022 30.0533 242.465 29.58 241.798 29.22C241.138 28.8533 240.378 28.67 239.518 28.67C238.638 28.67 237.855 28.8267 237.168 29.14C236.475 29.46 235.882 29.8967 235.388 30.45C234.888 30.9967 234.508 31.64 234.248 32.38C233.988 33.12 233.858 33.9 233.858 34.72C233.858 35.5067 233.972 36.2933 234.198 37.08C234.418 37.86 234.752 38.57 235.198 39.21C235.652 39.8433 236.208 40.3567 236.868 40.75C237.535 41.1433 238.305 41.34 239.178 41.34C240.058 41.34 240.848 41.1667 241.548 40.82C242.248 40.4733 242.842 40.0067 243.328 39.42C243.815 38.8267 244.188 38.1467 244.448 37.38C244.708 36.62 244.838 35.8267 244.838 35Z"
+                fill="#333333"
+              />
+              <g clip-path="url(#clip0_71_2)">
+                <path
+                  d="M36.5 73C56.6584 73 73 56.6584 73 36.5C73 16.3416 56.6584 0 36.5 0C16.3416 0 0 16.3416 0 36.5C0 56.6584 16.3416 73 36.5 73Z"
+                  fill="#00C2B8"
+                />
+                <path
+                  d="M48.5 38.5C50.5 35.5 52.5 32 53.5 28C55.5 19 56 12 53 11.5C50 11 44.5 18 41.5 25C40.5 27.5 39.5 30 38.5 33C37.8 32.8 37.2 32.7 36.5 32.7C35.8 32.7 35.2 32.8 34.5 33C33.5 30 32.5 27.5 31.5 25C28.5 18 23 11 20 11.5C17 12 17.5 19 19.5 28C20.5 32 22.5 35.5 24.5 38.5C21.5 41 19 44 17.5 48C16 52 15.5 56 15.5 60H57.5C57.5 56 57 52 55.5 48C54 44 51.5 41 48.5 38.5Z"
+                  fill="white"
+                />
+              </g>
+              <defs>
+                <clipPath id="clip0_71_2">
+                  <rect width="73" height="73" fill="white" />
+                </clipPath>
+              </defs>
+            </svg>
+          </div>
+        </div>
+      </header>
+      <main class="flex-1 flex px-16 items-center">
+        <div class="w-1/2 flex flex-col gap-6">
+          <div>
+            <h1
+              class="text-[#0d1b1b] dark:text-white text-7xl font-bold leading-[1.1] tracking-tight mb-4"
+            >
+              AI Watermark <br /><span class="text-primary">Remover</span>
+            </h1>
+            <p
+              class="text-[#0d1b1b]/70 dark:text-white/70 text-2xl max-w-md leading-relaxed"
+            >
+              Remove watermarks instantly with AI. Clean your photos in seconds
+              with professional precision.
+            </p>
+          </div>
+          <div class="flex gap-4">
+            <div
+              class="flex items-center gap-2 bg-white dark:bg-white/5 border border-primary/20 rounded-lg px-4 py-2"
+            >
+              <span class="material-symbols-outlined text-primary"
+                >auto_fix_high</span
+              >
+              <span class="text-[#0d1b1b] dark:text-white font-medium text-lg"
+                >Smart Detection</span
+              >
+            </div>
+            <div
+              class="flex items-center gap-2 bg-white dark:bg-white/5 border border-primary/20 rounded-lg px-4 py-2"
+            >
+              <span class="material-symbols-outlined text-primary"
+                >high_quality</span
+              >
+              <span class="text-[#0d1b1b] dark:text-white font-medium text-lg"
+                >HD Quality</span
+              >
+            </div>
+          </div>
+        </div>
+        <div class="w-1/2 flex justify-center items-center relative h-full">
+          <div class="relative w-[480px] h-[340px]">
+            <div
+              class="absolute inset-0 bg-white rounded-2xl shadow-2xl overflow-hidden border-2 border-white flex"
+            >
+              <div
+                class="relative w-1/2 h-full overflow-hidden border-r-2 border-white/50"
+              >
+                <img
+                  alt="Landscape with watermark"
+                  class="absolute inset-0 w-full h-full object-cover"
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZZ2V3ffIJbiMJM-0KDAH205vgpGSyR7w0IGF9Ry_W3qATX3u8Awa1VH7mx5rllPsApLCjB5lM77D5N6Ws5IGK2xyHtGDJY-LnoJgNJrt0Aa0haOKLvGj3udDDzd51o3Z_K4kE7wvHeHzyZFJq_JC-KdUFS9u_vLHN8plK6r8hg9hz6-VO_GzqMchd3l_wiZE14B_M8XqdRnm9uy4YzVtZpOn_86JTEI3RXVAhnI09ii0_1dehpnYo_rEbifNS9H0j1OIxo2UAQHRH"
+                />
+                <div
+                  class="absolute inset-0 flex items-center justify-center pointer-events-none"
+                >
+                  <div
+                    class="grid grid-cols-2 gap-8 opacity-40 rotate-[-25deg] watermark-overlay"
+                  >
+                    <span
+                      class="text-xl font-bold text-white tracking-widest border-2 border-white/30 px-2 py-1"
+                      >COPYRIGHT</span
+                    >
+                    <span
+                      class="text-xl font-bold text-white tracking-widest border-2 border-white/30 px-2 py-1"
+                      >COPYRIGHT</span
+                    >
+                    <span
+                      class="text-xl font-bold text-white tracking-widest border-2 border-white/30 px-2 py-1"
+                      >COPYRIGHT</span
+                    >
+                    <span
+                      class="text-xl font-bold text-white tracking-widest border-2 border-white/30 px-2 py-1"
+                      >COPYRIGHT</span
+                    >
+                  </div>
+                </div>
+                <div
+                  class="absolute bottom-3 left-3 bg-black/40 backdrop-blur-md px-2 py-1 rounded text-[10px] font-bold text-white uppercase tracking-wider"
+                >
+                  Before
+                </div>
+              </div>
+              <div class="relative w-1/2 h-full overflow-hidden">
+                <img
+                  alt="Landscape without watermark"
+                  class="absolute inset-0 w-full h-full object-cover"
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMw3QTYwGniPmvcf03atx3gM26OfiW81r7WwyocThir1-_52FJQH75xRI9AvCTRhDlAhuUdubMLeyfheAa3czGy2Pl6pcdJz075_4vv5uv489sHJjdJKZQ8rD76-8yxrbqZfxEjbUKlp6W9bznrILoG20DOM6ofxQV9DT9Fd-yLv1Lwn5H7iMQjTv5P2fPD3H2pY1PfvMYbBPjxubs3iPcdEeQwtDTZS4sxK5BxeH8VcNRQS1z00dqQn6ZZNaJEMaUDZOE28J9lP4i"
+                />
+                <div
+                  class="absolute bottom-3 right-3 bg-primary/80 backdrop-blur-md px-2 py-1 rounded text-[10px] font-bold text-white uppercase tracking-wider"
+                >
+                  After
+                </div>
+              </div>
+            </div>
+            <div
+              class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
+            >
+              <div class="relative">
+                <span
+                  class="material-symbols-outlined text-primary text-9xl drop-shadow-[0_0_20px_rgba(43,238,228,0.7)]"
+                  style="
+                    font-variation-settings:
+                      &quot;wght&quot; 300,
+                      &quot;FILL&quot; 1;
+                  "
+                  >magic_button</span
+                >
+                <span
+                  class="material-symbols-outlined absolute -top-4 -right-2 text-primary text-4xl"
+                  >auto_awesome</span
+                >
+              </div>
+            </div>
+            <div
+              class="absolute -top-4 -right-8 bg-white dark:bg-gray-800 p-3 rounded-xl shadow-2xl border border-primary/20 flex items-center gap-3 z-30"
+            >
+              <div
+                class="size-10 rounded-lg bg-primary/20 flex items-center justify-center"
+              >
+                <span class="material-symbols-outlined text-primary text-xl"
+                  >check_circle</span
+                >
+              </div>
+              <div>
+                <p
+                  class="text-[9px] uppercase tracking-widest text-[#0d1b1b]/50 dark:text-white/50 font-bold"
+                >
+                  Process Status
+                </p>
+                <p class="text-base font-bold text-[#0d1b1b] dark:text-white">
+                  Watermark Gone
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <footer
+        class="h-24 px-16 flex items-center justify-between bg-primary/5 dark:bg-white/5 border-t border-primary/10"
+      >
+        <div class="flex items-center gap-6">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-xl"
+              >bolt</span
+            >
+            <span class="text-[#0d1b1b] dark:text-white font-semibold text-xl"
+              >Free</span
+            >
+          </div>
+          <div class="w-1.5 h-1.5 bg-primary/40 rounded-full"></div>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-xl"
+              >lock</span
+            >
+            <span class="text-[#0d1b1b] dark:text-white font-semibold text-xl"
+              >No Account</span
+            >
+          </div>
+          <div class="w-1.5 h-1.5 bg-primary/40 rounded-full"></div>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-xl"
+              >cloud_done</span
+            >
+            <span class="text-[#0d1b1b] dark:text-white font-semibold text-xl"
+              >Online</span
+            >
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <p class="text-[#0d1b1b] dark:text-white text-xl font-medium">
+            tuziyo.com
+          </p>
+          <span class="material-symbols-outlined text-primary font-bold text-xl"
+            >arrow_outward</span
+          >
+        </div>
+      </footer>
+      <div
+        class="absolute -top-24 -right-24 size-64 bg-primary/10 rounded-full blur-3xl"
+      ></div>
+      <div
+        class="absolute -bottom-24 -left-24 size-64 bg-primary/5 rounded-full blur-3xl"
+      ></div>
+    </div>
+  </body>
+</html>

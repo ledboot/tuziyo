@@ -339,9 +339,9 @@ export const translations: Record<Language, Translations> = {
       contactAuthor: "联系作者",
     },
     home: {
-      heroTitle: "专业图像工具，AI 重塑体验。",
+      heroTitle: "专业图像工具，AI重塑体验。",
       heroSubtitle:
-        "集水印移除、尺寸调整、裁剪与转换于一体的终极套件。基于本地 AI 驱动，100% 隐私安全。",
+        "集水印移除、尺寸调整、裁剪与转换于一体的终极套件。基于本地AI驱动，100%隐私安全。",
       getStarted: "立即开始",
       featuresTitle: "为什么选择 tuziyo？",
       privacyTitle: "极致隐私保护",
