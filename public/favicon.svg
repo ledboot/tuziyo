@@ -1,5 +1,13 @@
-<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M10 4L13 12V16H8V12L10 4Z" fill="#00C2B8" />
-  <path d="M22 4L19 12V16H24V12L22 4Z" fill="#00C2B8" />
-  <path d="M16 14L25 20V27C25 28.1046 24.1046 29 23 29H9C7.89543 29 7 28.1046 7 27V20L16 14Z" fill="#00C2B8" />
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="73" height="73"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="73" height="73"><svg width="73" height="73" viewBox="0 0 73 73" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_78_149)">
+<path d="M36.5 73C56.6584 73 73 56.6584 73 36.5C73 16.3416 56.6584 0 36.5 0C16.3416 0 0 16.3416 0 36.5C0 56.6584 16.3416 73 36.5 73Z" fill="#00C2B8"></path>
+<path d="M48.5 38.5C50.5 35.5 52.5 32 53.5 28C55.5 19 56 12 53 11.5C50 11 44.5 18 41.5 25C40.5 27.5 39.5 30 38.5 33C37.8 32.8 37.2 32.7 36.5 32.7C35.8 32.7 35.2 32.8 34.5 33C33.5 30 32.5 27.5 31.5 25C28.5 18 23 11 20 11.5C17 12 17.5 19 19.5 28C20.5 32 22.5 35.5 24.5 38.5C21.5 41 19 44 17.5 48C16 52 15.5 56 15.5 60H57.5C57.5 56 57 52 55.5 48C54 44 51.5 41 48.5 38.5Z" fill="white"></path>
+</g>
+<defs>
+<clipPath id="clip0_78_149">
+<rect width="73" height="73" fill="white"></rect>
+</clipPath>
+</defs>
+</svg></svg><style>@media (prefers-color-scheme: light) { :root { filter: none; } }
+@media (prefers-color-scheme: dark) { :root { filter: none; } }
+</style></svg>

@@ -61,16 +61,6 @@ bun install
 bun dev
 ```
 
-### Production Build & Local Preview
-
-```bash
-# Build the project
-bun run build
-
-# Preview the Cloudflare deployment locally
-bun start
-```
-
 ---
 
 ## 📈 Star History

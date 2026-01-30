@@ -35,8 +35,7 @@ export function meta({}: Route.MetaArgs) {
     { property: "og:url", content: "https://tuziyo.com" },
     {
       property: "og:image",
-      content:
-        "https://tuziyo.com/og?page=home&title=tuziyo&description=Professional%20AI%20Image%20Tools%20%7C%20Free%20%26%20Secure",
+      content: "https://tuziyo.com/og-index.png",
     },
     { name: "twitter:card", content: "summary_large_image" },
     { property: "twitter:domain", content: "tuziyo.com" },
@@ -49,8 +48,7 @@ export function meta({}: Route.MetaArgs) {
     },
     {
       name: "twitter:image",
-      content:
-        "https://tuziyo.com/og?page=home&title=tuziyo&description=Professional%20AI%20Image%20Tools%20%7C%20Free%20%26%20Secure",
+      content:"https://tuziyo.com/og-index.png",
     },
     { name: "robots", content: "index, follow" },
     { name: "author", content: "tuziyo" },
@@ -142,9 +140,9 @@ export default function Index() {
             <Link
               to={tool.to}
               key={tool.to}
-              className="group relative flex flex-col gap-6 rounded-[2.5rem] border border-slate-100 bg-white p-8 transition-all hover:border-primary-brand/30 hover:shadow-2xl hover:shadow-primary-brand/5 hover:-translate-y-2 dark:border-slate-800 dark:bg-slate-900/50"
+              className="group relative flex flex-col gap-6 rounded-[2.5rem] border border-primary-brand/30 bg-white p-8 shadow-2xl shadow-primary-brand/5 transition-all hover:-translate-y-2 hover:border-primary-brand/30 hover:shadow-2xl hover:shadow-primary-brand/5 sm:border-slate-100 sm:shadow-none dark:border-primary-brand/30 dark:bg-slate-900/50 dark:sm:border-slate-800"
             >
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 group-hover:bg-primary-brand group-hover:text-white transition-all duration-300 group-hover:rotate-6 dark:bg-slate-800">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-brand text-white transition-all duration-300 group-hover:rotate-6 sm:bg-slate-50 sm:text-slate-400 dark:bg-primary-brand dark:sm:bg-slate-800 sm:group-hover:bg-primary-brand sm:group-hover:text-white">
                 <tool.icon className="size-7" />
               </div>
               <div className="space-y-3">
@@ -156,7 +154,7 @@ export default function Index() {
                 </p>
               </div>
               <div className="mt-auto pt-4 flex items-center justify-between">
-                <div className="size-8 rounded-full border-2 border-slate-100 dark:border-slate-800 flex items-center justify-center group-hover:border-primary-brand group-hover:bg-primary-brand group-hover:text-white transition-all">
+                <div className="size-8 rounded-full border-2 border-primary-brand bg-primary-brand text-white flex items-center justify-center transition-all sm:border-slate-100 sm:bg-transparent sm:text-inherit dark:border-primary-brand dark:sm:border-slate-800 group-hover:border-primary-brand group-hover:bg-primary-brand group-hover:text-white">
                   <ArrowRight className="size-4" />
                 </div>
               </div>

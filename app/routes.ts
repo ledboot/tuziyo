@@ -6,5 +6,4 @@ export default [
   route("resize", "routes/resize.tsx"),
   route("crop", "routes/crop.tsx"),
   route("convert", "routes/convert.tsx"),
-  route("og", "routes/og.tsx"),
 ] satisfies RouteConfig;

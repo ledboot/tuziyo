@@ -67,8 +67,7 @@ export function meta({}: Route.MetaArgs) {
     { property: "og:url", content: "https://tuziyo.com/convert" },
     {
       property: "og:image",
-      content:
-        "https://tuziyo.com/og?page=convert&title=Batch%20Image%20Converter&description=Convert%20images%20securely%20in%20your%20browser",
+      content: "https://tuziyo.com/og-convert.png",
     },
     { name: "twitter:card", content: "summary_large_image" },
     { property: "twitter:domain", content: "tuziyo.com" },
@@ -84,10 +83,10 @@ export function meta({}: Route.MetaArgs) {
     },
     {
       name: "twitter:image",
-      content:
-        "https://tuziyo.com/og?page=convert&title=Batch%20Image%20Converter&description=Convert%20images%20securely%20in%20your%20browser",
+      content: "https://tuziyo.com/og-convert.png",
     },
     { name: "robots", content: "index, follow" },
+    { name: "author", content: "tuziyo" },
   ];
 }
 

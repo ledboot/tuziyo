@@ -5,9 +5,7 @@
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
-    "start": "wrangler pages dev ./build/client",
-    "typecheck": "react-router typegen && tsc",
-    "deploy": "react-router build && wrangler pages deploy ./build/client"
+    "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
     "@react-router/cloudflare": "^7.13.0",

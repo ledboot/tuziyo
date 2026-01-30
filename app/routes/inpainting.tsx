@@ -27,8 +27,7 @@ export function meta() {
     { property: "og:url", content: "https://tuziyo.com/inpainting" },
     {
       property: "og:image",
-      content:
-        "https://tuziyo.com/og?page=inpainting&title=AI%20Image%20Inpainting&description=Remove%20unwanted%20objects%20with%20AI",
+      content: "https://tuziyo.com/og-inpainting.png",
     },
     { name: "twitter:card", content: "summary_large_image" },
     { property: "twitter:domain", content: "tuziyo.com" },
@@ -44,10 +43,10 @@ export function meta() {
     },
     {
       name: "twitter:image",
-      content:
-        "https://tuziyo.com/og?page=inpainting&title=AI%20Image%20Inpainting&description=Remove%20unwanted%20objects%20with%20AI",
+      content: "https://tuziyo.com/og-inpainting.png",  
     },
     { name: "robots", content: "index, follow" },
+    { name: "author", content: "tuziyo" },
   ];
 }
 

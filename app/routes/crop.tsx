@@ -11,7 +11,6 @@ import {
   Scaling,
   Square,
   RectangleHorizontal,
-  RectangleVertical,
   Image as ImageIcon,
   Smartphone,
 } from "lucide-react";
@@ -71,8 +70,7 @@ export function meta({}: Route.MetaArgs) {
     { property: "og:url", content: "https://tuziyo.com/crop" },
     {
       property: "og:image",
-      content:
-        "https://tuziyo.com/og?page=crop&title=Precise%20Image%20Cropper&description=Crop%20with%20pixel-perfect%20accuracy",
+      content: "https://tuziyo.com/og-crop.png",
     },
     { name: "twitter:card", content: "summary_large_image" },
     { property: "twitter:domain", content: "tuziyo.com" },
@@ -88,10 +86,10 @@ export function meta({}: Route.MetaArgs) {
     },
     {
       name: "twitter:image",
-      content:
-        "https://tuziyo.com/og?page=crop&title=Precise%20Image%20Cropper&description=Crop%20with%20pixel-perfect%20accuracy",
+      content: "https://tuziyo.com/og-crop.png",
     },
     { name: "robots", content: "index, follow" },
+    { name: "author", content: "tuziyo" },
   ];
 }
 
