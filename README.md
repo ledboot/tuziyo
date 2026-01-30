@@ -1,4 +1,7 @@
-# tuziyo 🎨
+<h1 align="center">
+  <img src="https://raw.githubusercontent.com/ledboot/tuziyo/main/public/logo.svg" alt="tuziyo" width="200" height="200">
+  <br>tuziyo<br>
+</h1>
 
 **Professional. Private. Powerful. AI-driven Image Tools in your Browser.**
 
