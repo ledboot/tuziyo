@@ -53,11 +53,7 @@ export function meta({}: Route.MetaArgs) {
     },
     { property: "og:type", content: "website" },
     { property: "og:url", content: "https://tuziyo.com/resize" },
-    {
-      property: "og:image",
-      content:
-        "https://tuziyo.com/og?page=resize&title=Batch%20Image%20Resizer&description=Resize%20images%20with%20precision",
-    },
+    { property: "og:image", content: "https://tuziyo.com/og-resizer.png" },
     { name: "twitter:card", content: "summary_large_image" },
     { property: "twitter:domain", content: "tuziyo.com" },
     { property: "twitter:url", content: "https://tuziyo.com/resize" },
@@ -70,11 +66,7 @@ export function meta({}: Route.MetaArgs) {
       content:
         "Resize multiple images at once with precision. 100% private and fast.",
     },
-    {
-      name: "twitter:image",
-      content:
-        "https://tuziyo.com/og?page=resize&title=Batch%20Image%20Resizer&description=Resize%20images%20with%20precision",
-    },
+    { name: "twitter:image", content: "https://tuziyo.com/og-resizer.png" },
     { name: "robots", content: "index, follow" },
   ];
 }
