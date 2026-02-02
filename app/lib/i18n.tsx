@@ -266,35 +266,35 @@ export const translations: Record<Language, Translations> = {
       description:
         "Free browser-based AI tools for watermark removal, batch resizing, precise cropping, and format conversion. No uploads, total privacy.",
       keywords:
-        "free ai image tools, remove watermark online free, batch resize images browser, professional photo cropper, private image converter heic",
+        "tuziyo, free ai image editor, remove watermark online, bulk image resizer, free image cropper, photo converter",
       watermarkTitle:
         "AI Watermark Remover | Remove Objects from Photos Online Free",
       watermarkDesc:
         "Use AI to remove watermarks, text, and unwanted objects from photos instantly in your browser. No registration, no watermarks left behind.",
       watermarkKeywords:
-        "remove watermark from photo online, ai object remover free, delete text from image, photo cleanup tool browser",
+        "tuziyo, ai inpainting, remove object from image, powered by ai, photo inpainting, ai image editor",
       resizeTitle:
         "Batch Image Resizer | Resize Images by Percentage or Pixels",
       resizeDesc:
         "Resize multiple images at once with precision. Support for aspect ratio locking and percentage scaling. 100% private and fast.",
       resizeKeywords:
-        "batch resize images online, image resizer percentage, social media image resizer free, fast photo scaler browser",
+        "tuziyo, bulk image resizer, image resizer online, ai image editor, resize images, image resizer percentage",
       cropTitle: "Precise Image Cropper | Crop Photos to Fixed Aspect Ratios",
       cropDesc:
         "Crop images with pixel-perfect accuracy. Presets for 16:9, 4:3, and 1:1. High-quality lossless rendering in your browser.",
       cropKeywords:
-        "crop image online free, photo cropper 4:3, pixel perfect crop tool, resize and crop image browser",
+        "tuziyo, free image cropping tool, crop image online free, photo crop online, crop image online, online image crop, image cropping tool",
       convertTitle: "Private Batch Image Converter | HEIC to PNG, JPG, WebP",
       convertDesc:
         "Convert images between formats instantly. Secure batch processing for HEIC, PNG, and JPEG. Images stay on your device.",
       convertKeywords:
-        "heic to png converter free, batch image converter no upload, secure photo format changer, webp converter online",
+        "tuziyo, heic to jpg converter, batch image converter, webp jpg converter, png converter, jpg converter",
       inpaintingTitle:
         "AI Image Inpainting | High-Definition Photo Restoration Online",
       inpaintingDesc:
         "Professional AI-powered image inpainting tool. Remove unwanted objects, restore photos, and fill missing areas with high-quality results. WebGPU accelerated, 100% private.",
       inpaintingKeywords:
-        "ai inpainting online, image restoration tool, photo repair free, remove objects from photos, fill missing areas, webgpu inpainting, mi-gan",
+        "tuziyo, ai inpainting, remove object from image, powered by ai, photo inpainting, ai image editor",
     },
   },
   zh: {
