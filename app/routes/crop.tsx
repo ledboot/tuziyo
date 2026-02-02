@@ -55,7 +55,7 @@ export function meta({}: Route.MetaArgs) {
     {
       name: "keywords",
       content:
-        "crop image online free, photo cropper 4:3, pixel perfect crop tool, resize and crop image browser",
+        "tuziyo, free image cropping tool, crop image online free, photo crop online, crop image online, online image crop, image cropping tool",
     },
     {
       property: "og:title",

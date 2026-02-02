@@ -52,7 +52,7 @@ export function meta({}: Route.MetaArgs) {
     {
       name: "keywords",
       content:
-        "heic to png converter free, batch image converter no upload, secure photo format changer, webp converter online",
+        "tuziyo, heic to jpg converter, batch image converter, webp jpg converter, png converter, jpg converter",
     },
     {
       property: "og:title",

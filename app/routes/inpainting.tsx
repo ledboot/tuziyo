@@ -12,7 +12,7 @@ export function meta() {
     {
       name: "keywords",
       content:
-        "ai inpainting, image restoration, photo repair, remove objects, fill missing areas, webgpu, browser-based, mi-gan",
+        "tuziyo, ai inpainting, remove object from image, powered by ai, photo inpainting, ai image editor",
     },
     {
       property: "og:title",

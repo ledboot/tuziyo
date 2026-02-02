@@ -23,7 +23,7 @@ export function meta({}: Route.MetaArgs) {
     {
       name: "keywords",
       content:
-        "free ai image tools, remove watermark online, batch image resizer, image cropper free, photo converter browser",
+        "tuziyo, free ai image editor, remove watermark online, bulk image resizer, free image cropper, photo converter",
     },
     { property: "og:title", content: "tuziyo - Professional AI Image Tools" },
     {
