@@ -40,7 +40,7 @@ export function meta({}: Route.MetaArgs) {
     {
       name: "keywords",
       content:
-        "batch resize images online, image resizer percentage, social media image resizer free, fast photo scaler browser",
+        "tuziyo, bulk image resizer, image resizer online, , ai image editor",
     },
     {
       property: "og:title",
