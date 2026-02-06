@@ -65,7 +65,7 @@ export default function Footer() {
                   className="hover:text-primary-brand transition-colors"
                   to="/inpainting"
                 >
-                  {t.nav.watermark}
+                  {t.nav.inpainting}
                 </Link>
               </li>
               <li>
@@ -170,8 +170,7 @@ export default function Footer() {
 
         <div className="pt-8 border-t border-slate-100 dark:border-slate-900 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm font-black tracking-widest text-slate-400">
-            © {new Date().getFullYear()} tuziyo. All rights reserved. 100% Free
-            Processing.
+            © {new Date().getFullYear()} tuziyo.com All rights reserved.
           </p>
         </div>
       </div>

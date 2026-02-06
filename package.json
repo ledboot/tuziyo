@@ -4,10 +4,16 @@
   "private": true,
   "scripts": {
     "build": "react-router build",
+    "build:all": "bun run build:blog && bun run build",
+    "build:blog": "bunx --bun astro build --root blog",
     "dev": "react-router dev",
+    "dev:all": "bun run dev:blog && bun run dev",
+    "dev:blog": "bunx --bun astro dev --root blog",
+    "preview:blog": "bunx --bun astro preview --root blog",
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
+    "@lucide/astro": "^0.563.0",
     "@react-router/cloudflare": "^7.13.0",
     "@react-router/node": "^7.13.0",
     "@react-router/serve": "^7.13.0",
@@ -20,15 +26,23 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-router": "^7.13.0",
-    "react-use": "^17.6.0"
+    "react-use": "^17.6.0",
+    "sonner": "^1.7.0"
   },
   "devDependencies": {
+    "@astrojs/react": "^4.2.0",
+    "@astrojs/sitemap": "^3.7.0",
     "@react-router/dev": "^7.13.0",
+    "@rollup/rollup-darwin-x64": "^4.57.1",
+    "@tailwindcss/postcss": "^4.1.18",
+    "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/vite": "^4.1.13",
     "@types/bun": "latest",
     "@types/node": "^22",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "astro": "^5.1.1",
+    "lucide-static": "^0.563.0",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",
     "vite": "^7.1.7",
