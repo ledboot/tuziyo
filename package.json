@@ -33,7 +33,6 @@
     "@astrojs/react": "^4.2.0",
     "@astrojs/sitemap": "^3.7.0",
     "@react-router/dev": "^7.13.0",
-    "@rollup/rollup-darwin-x64": "^4.57.1",
     "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/vite": "^4.1.13",
