@@ -8,7 +8,7 @@ const posts = (await getCollection("blog")).sort(
   (a, b) => b.data.date.getTime() - a.data.date.getTime()
 );
 const { pagePosts, totalPages } = paginatePosts(posts, 1);
-const base = "/blog/";
+const base = import.meta.env.BASE_URL;
 const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN;
 ---
 <BaseLayout

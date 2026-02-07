@@ -24,7 +24,7 @@ const { posts, page, totalPages } = Astro.props as {
   totalPages: number;
 };
 const { pagePosts } = paginatePosts(posts, page);
-const base = "/blog/";
+const base = import.meta.env.BASE_URL;
 const prevPage = page > 1 ? page - 1 : null;
 const nextPage = page < totalPages ? page + 1 : null;
 const prevHref = prevPage === 1 ? `${base}` : `${base}page/${prevPage}/`;
