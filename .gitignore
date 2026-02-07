@@ -43,3 +43,10 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # astro
 .astro
 public/blog
+public/_astro
+public/sitemap-index.xml
+public/sitemap-0.xml
+
+# agents
+.agent/
+.agents/

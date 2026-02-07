@@ -1,18 +1,37 @@
 ---
 import { getCollection } from "astro:content";
-import BaseLayout from "../layouts/BaseLayout.astro";
-import { paginatePosts } from "../lib/pagination";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import { paginatePosts, PAGE_SIZE } from "../../../lib/pagination";
 import { ArrowLeft,ArrowRight } from "@lucide/astro";
 
-const posts = (await getCollection("blog")).sort(
-  (a, b) => b.data.date.getTime() - a.data.date.getTime()
-);
-const { pagePosts, totalPages } = paginatePosts(posts, 1);
+export async function getStaticPaths() {
+  const posts = (await getCollection("blog")).sort(
+    (a, b) => b.data.date.getTime() - a.data.date.getTime()
+  );
+  const totalPages = Math.max(1, Math.ceil(posts.length / PAGE_SIZE));
+  return Array.from({ length: totalPages }, (_, index) => {
+    const page = index + 1;
+    return {
+      params: { page: String(page) },
+      props: { posts, page, totalPages },
+    };
+  });
+}
+
+const { posts, page, totalPages } = Astro.props as {
+  posts: Awaited<ReturnType<typeof getCollection<"blog">>>;
+  page: number;
+  totalPages: number;
+};
+const { pagePosts } = paginatePosts(posts, page);
 const base = import.meta.env.BASE_URL;
-const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN;
+const prevPage = page > 1 ? page - 1 : null;
+const nextPage = page < totalPages ? page + 1 : null;
+const prevHref = prevPage === 1 ? `${base}` : `${base}page/${prevPage}/`;
+const nextHref = nextPage ? `${base}page/${nextPage}/` : null;
 ---
 <BaseLayout
-  title="Blog | tuziyo"
+  title={`Blog | tuziyo - Page ${page}`}
   description="Product updates, tips, and workflows for fast, private image editing in your browser."
   ogType="website"
   ogImage="https://tuziyo.com/og-index.png"
@@ -33,7 +52,6 @@ const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN;
   </section>
 
   <section class="mt-16 space-y-16">
-  <section class="mt-16 space-y-16">
     {pagePosts.map((post) => (
       <a
         class="group grid gap-8 md:grid-cols-2 md:items-center"
@@ -41,7 +59,7 @@ const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN;
       >
         <div class="overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-100 dark:border-slate-800 dark:bg-slate-900 shadow-sm transition-all duration-500 group-hover:shadow-2xl">
           <img
-            src={post.data.cover === "" || post.data.cover === null ? `${MAIN_ORIGIN}/default-cover.png` : post.data.cover}
+            src={post.data.cover ?? "/default-cover.png"}
             alt={post.data.title}
             loading="lazy"
             class="aspect-[16/10] w-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -70,39 +88,49 @@ const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN;
       </a>
     ))}
   </section>
-  </section>
 
   {totalPages > 1 ? (
     <nav class="mt-12 flex items-center justify-center gap-6 text-sm font-bold text-slate-500 dark:text-slate-400">
-      <span class="inline-flex items-center gap-2 opacity-50">
-        <ArrowLeft class="size-4" />
-        Previous
-      </span>
+      {prevPage ? (
+        <a class="inline-flex items-center gap-2 hover:text-primary-brand transition-colors" href={prevHref}>
+          <ArrowLeft class="size-4" />
+          Previous
+        </a>
+      ) : (
+        <span class="inline-flex items-center gap-2 opacity-50">
+          <ArrowLeft class="size-4" />
+          Previous
+        </span>
+      )}
       <div class="flex items-center gap-2">
         {Array.from({ length: totalPages }).map((_, index) => {
-          const page = index + 1;
-          const href = page === 1 ? `${base}` : `${base}page/${page}/`;
+          const pageNumber = index + 1;
+          const href = pageNumber === 1 ? `${base}` : `${base}page/${pageNumber}/`;
           return (
             <a
               class={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-black transition-colors ${
-                page === 1
+                pageNumber === page
                   ? "bg-primary-brand text-white"
                   : "text-slate-500 hover:text-primary-brand dark:text-slate-400"
               }`}
               href={href}
             >
-              {page}
+              {pageNumber}
             </a>
           );
         })}
       </div>
-      <a
-        class="inline-flex items-center gap-2 hover:text-primary-brand transition-colors"
-        href={`${base}page/2/`}
-      >
-        Next
-        <ArrowRight class="size-4" />
-      </a>
+      {nextPage ? (
+        <a class="inline-flex items-center gap-2 hover:text-primary-brand transition-colors" href={nextHref!}>
+          Next
+          <ArrowRight class="size-4" />
+        </a>
+      ) : (
+        <span class="inline-flex items-center gap-2 opacity-50">
+          Next
+          <ArrowRight class="size-4" />
+        </span>
+      )}
     </nav>
   ) : null}
 </BaseLayout>
