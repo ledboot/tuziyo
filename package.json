@@ -5,7 +5,7 @@
   "scripts": {
     "build": "react-router build",
     "build:all": "bun run build:blog && bun run build",
-    "build:blog": "bunx --bun astro build",
+    "build:blog": "bunx --bun astro build && mv build/blog public/blog",
     "dev": "react-router dev",
     "dev:all": "bun run dev:blog && bun run dev",
     "dev:blog": "bunx --bun astro dev",
