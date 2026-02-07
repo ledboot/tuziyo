@@ -1,0 +1,108 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { paginatePosts } from "../lib/pagination";
+import { ArrowLeft,ArrowRight } from "@lucide/astro";
+
+const posts = (await getCollection("blog")).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime()
+);
+const { pagePosts, totalPages } = paginatePosts(posts, 1);
+const base = import.meta.env.BASE_URL;
+const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN;
+---
+<BaseLayout
+  title="Blog | tuziyo"
+  description="Product updates, tips, and workflows for fast, private image editing in your browser."
+  ogType="website"
+  ogImage="https://tuziyo.com/og-index.png"
+>
+  <section class="relative overflow-hidden rounded-5xl border border-primary-brand/10 bg-slate-50 px-8 py-12 hero-pattern dark:border-slate-800 dark:bg-slate-900/30">
+    <div class="relative z-10 space-y-4">
+      <p class="text-xs font-black uppercase tracking-[0.3em] text-primary-brand">
+        Blog
+      </p>
+      <h1 class="text-4xl font-black tracking-tight text-slate-900 dark:text-white sm:text-5xl">
+        Insights, tips, and updates
+      </h1>
+      <p class="text-lg text-slate-500 dark:text-slate-400 font-medium max-w-2xl">
+        Practical guides for private, fast image editing. Fresh ideas on
+        workflows, formats, and product updates.
+      </p>
+    </div>
+  </section>
+
+  <section class="mt-16 space-y-16">
+  <section class="mt-16 space-y-16">
+    {pagePosts.map((post) => (
+      <a
+        class="group grid gap-8 md:grid-cols-2 md:items-center"
+        href={`${base}${post.slug}/`}
+      >
+        <div class="overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-100 dark:border-slate-800 dark:bg-slate-900 shadow-sm transition-all duration-500 group-hover:shadow-2xl">
+          <img
+            src={post.data.cover === "" || post.data.cover === null ? `${MAIN_ORIGIN}/default-cover.png` : post.data.cover}
+            alt={post.data.title}
+            loading="lazy"
+            class="aspect-[16/10] w-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+        <div class="space-y-6 p-2">
+          <div class="flex flex-wrap items-center gap-4 text-xs font-bold uppercase tracking-widest text-primary-brand">
+            <span>{post.data.date.toLocaleDateString("en-US")}</span>
+            <span class="text-slate-300 dark:text-slate-700">•</span>
+            <span>{post.data.readTime ?? "5 min read"}</span>
+          </div>
+          <h2 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white sm:text-4xl group-hover:text-primary-brand transition-colors duration-300 grid-title">
+            {post.data.title}
+          </h2>
+          <p class="text-lg text-slate-500 dark:text-slate-400 font-medium line-clamp-3 leading-relaxed">
+            {post.data.description}
+          </p>
+          <div class="flex flex-wrap gap-2 pt-2">
+             {post.data.tags.map((tag) => (
+                <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 group-hover:border-primary-brand/30 group-hover:text-primary-brand transition-colors">
+                  {tag}
+                </span>
+              ))}
+          </div>
+        </div>
+      </a>
+    ))}
+  </section>
+  </section>
+
+  {totalPages > 1 ? (
+    <nav class="mt-12 flex items-center justify-center gap-6 text-sm font-bold text-slate-500 dark:text-slate-400">
+      <span class="inline-flex items-center gap-2 opacity-50">
+        <ArrowLeft class="size-4" />
+        Previous
+      </span>
+      <div class="flex items-center gap-2">
+        {Array.from({ length: totalPages }).map((_, index) => {
+          const page = index + 1;
+          const href = page === 1 ? `${base}` : `${base}page/${page}/`;
+          return (
+            <a
+              class={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-black transition-colors ${
+                page === 1
+                  ? "bg-primary-brand text-white"
+                  : "text-slate-500 hover:text-primary-brand dark:text-slate-400"
+              }`}
+              href={href}
+            >
+              {page}
+            </a>
+          );
+        })}
+      </div>
+      <a
+        class="inline-flex items-center gap-2 hover:text-primary-brand transition-colors"
+        href={`${base}page/2/`}
+      >
+        Next
+        <ArrowRight class="size-4" />
+      </a>
+    </nav>
+  ) : null}
+</BaseLayout>

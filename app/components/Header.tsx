@@ -1,5 +1,6 @@
-import { Link, NavLink } from "react-router";
-import { Globe, ChevronDown } from "lucide-react";
+import { Link, NavLink, useLocation } from "react-router";
+import { createPortal } from "react-dom";
+import { Globe, ChevronDown, Menu, X } from "lucide-react";
 import { useI18n, type Language } from "../lib/i18n";
 import { useState, useRef, useEffect } from "react";
 
@@ -16,7 +17,9 @@ const LANG_NAMES: Record<Language, string> = {
 export default function Header() {
   const { lang, setLang, t } = useI18n();
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -29,44 +32,73 @@ export default function Header() {
   }, []);
 
   const navItems = [
-    { title: t.nav.inpainting, to: "/inpainting" },
-    { title: t.nav.resize, to: "/resize" },
-    { title: t.nav.crop, to: "/crop" },
-    { title: t.nav.convert, to: "/convert" },
+    { title: t.nav.inpainting, to: "/inpainting", external: false },
+    { title: t.nav.resize, to: "/resize", external: false },
+    { title: t.nav.crop, to: "/crop", external: false },
+    { title: t.nav.convert, to: "/convert", external: false },
+    { title: t.nav.blog, to: "/blog", external: true },
   ];
+
+  // Check if current path is in blog (for external static site)
+  const isBlogActive = location.pathname.startsWith("/blog");
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-200/50 bg-white/80 backdrop-blur-md dark:border-gray-800/50 dark:bg-slate-900/80 transition-colors duration-300">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-12">
-        <Link to="/">
-          <div className="flex items-center h-10 select-none">
-            <img
-              src="/logo-with-brand.svg"
-              alt="tuziyo"
-              className="h-full w-auto"
-            />
-          </div>
-        </Link>
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:grid md:grid-cols-[1fr_2fr_1fr] lg:px-12">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            className="md:hidden -ml-2 p-2 text-slate-600 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-colors"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <Menu className="size-6" />
+          </button>
+          <Link to="/">
+            <div className="flex items-center h-10 select-none">
+              <img
+                src="/logo-with-brand.svg"
+                alt="tuziyo"
+                className="h-full w-auto"
+              />
+            </div>
+          </Link>
+        </div>
 
-        <nav className="hidden md:flex items-center gap-8">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `text-sm font-bold transition-all hover:text-primary-brand ${
-                  isActive
+        <nav className="hidden md:flex items-center justify-center gap-6 lg:gap-8">
+          {navItems.map((item) =>
+            item.external ? (
+              <a
+                key={item.to}
+                href={item.to}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`text-sm font-bold transition-all hover:text-primary-brand ${
+                  isBlogActive
                     ? "text-primary-brand"
                     : "text-slate-600 dark:text-slate-400"
-                }`
-              }
-            >
-              {item.title}
-            </NavLink>
-          ))}
+                }`}
+              >
+                {item.title}
+              </a>
+            ) : (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `text-sm font-bold transition-all hover:text-primary-brand ${
+                    isActive
+                      ? "text-primary-brand"
+                      : "text-slate-600 dark:text-slate-400"
+                  }`
+                }
+              >
+                {item.title}
+              </NavLink>
+            ),
+          )}
         </nav>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-end gap-4">
           <div className="relative" ref={menuRef}>
             <button
               type="button"
@@ -110,6 +142,74 @@ export default function Header() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Drawer */}
+      {/* Mobile Drawer */}
+      {mobileMenuOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex justify-start md:hidden">
+            <div
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <div className="relative w-[300px] max-w-[85vw] h-full bg-white dark:bg-slate-950 p-6 shadow-2xl animate-in slide-in-from-left duration-300 flex flex-col">
+              <div className="flex items-center justify-between mb-10">
+                <Link to="/" onClick={() => setMobileMenuOpen(false)}>
+                  <img
+                    src="/logo-with-brand.svg"
+                    alt="tuziyo"
+                    className="h-10 w-auto"
+                  />
+                </Link>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 -mr-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+                >
+                  <X className="size-6" />
+                </button>
+              </div>
+
+              <nav className="flex flex-col gap-2">
+                {navItems.map((item) =>
+                  item.external ? (
+                    <a
+                      key={item.to}
+                      href={item.to}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center py-3 text-base font-bold text-slate-600 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-colors border-b border-slate-100 dark:border-slate-900/50"
+                    >
+                      {item.title}
+                    </a>
+                  ) : (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center py-3 text-base font-bold transition-colors border-b border-slate-100 dark:border-slate-900/50 ${
+                          isActive
+                            ? "text-primary-brand"
+                            : "text-slate-600 hover:text-primary-brand dark:text-slate-400"
+                        }`
+                      }
+                    >
+                      {item.title}
+                    </NavLink>
+                  ),
+                )}
+              </nav>
+
+              <div className="mt-auto">
+                <p className="text-xs font-bold text-slate-400 text-center">
+                  © {new Date().getFullYear()} tuziyo.com
+                </p>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </header>
   );
 }

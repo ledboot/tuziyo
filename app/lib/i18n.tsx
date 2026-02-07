@@ -38,7 +38,6 @@ export interface Translations {
     contactSupport: string;
   };
   nav: {
-    watermark: string;
     inpainting: string;
     resize: string;
     crop: string;
@@ -154,7 +153,7 @@ export const translations: Record<Language, Translations> = {
       loading: "Loading...",
       processing: "AI Processing...",
       ready: "Engine Ready",
-      freeForever: "Free Forever • No Account Required",
+      freeForever: "No Account Required",
       safetyPrivate: "Safe & Private • Local Processing",
       status: "Status",
       actions: "Actions",
@@ -167,14 +166,13 @@ export const translations: Record<Language, Translations> = {
       back: "Go Back",
       explore: "Explore Tools",
       ctaDesc:
-        "Experience professional-grade tools at zero cost. tuziyo is and will always be 100% free to use.",
+        "Experience professional-grade image tools with complete privacy. All processing happens locally in your browser.",
       privacyPolicy: "Privacy Policy",
       termsOfService: "Terms of Service",
       contactSupport: "Contact Support",
     },
     nav: {
-      watermark: "Watermark Removal",
-      inpainting: "Image Inpainting",
+      inpainting: "Inpainting",
       resize: "Resize",
       crop: "Crop",
       convert: "Convert",
@@ -262,13 +260,13 @@ export const translations: Record<Language, Translations> = {
       outputFormats: "Output: WebP, PNG, JPEG",
     },
     seo: {
-      title: "tuziyo - Professional AI Image Tools | 100% Free & Private",
+      title: "tuziyo.com - Professional AI Image Tools | 100% Private",
       description:
-        "Free browser-based AI tools for watermark removal, batch resizing, precise cropping, and format conversion. No uploads, total privacy.",
+        "Browser-based AI tools for watermark removal, batch resizing, precise cropping, and format conversion. No uploads, total privacy.",
       keywords:
-        "tuziyo, free ai image editor, remove watermark online, bulk image resizer, free image cropper, photo converter",
+        "tuziyo, ai image editor, remove watermark online, bulk image resizer, image cropper, photo converter",
       watermarkTitle:
-        "AI Watermark Remover | Remove Objects from Photos Online Free",
+        "AI Watermark Remover | Remove Objects from Photos Online",
       watermarkDesc:
         "Use AI to remove watermarks, text, and unwanted objects from photos instantly in your browser. No registration, no watermarks left behind.",
       watermarkKeywords:
@@ -283,7 +281,7 @@ export const translations: Record<Language, Translations> = {
       cropDesc:
         "Crop images with pixel-perfect accuracy. Presets for 16:9, 4:3, and 1:1. High-quality lossless rendering in your browser.",
       cropKeywords:
-        "tuziyo, free image cropping tool, crop image online free, photo crop online, crop image online, online image crop, image cropping tool",
+        "tuziyo, image cropping tool, crop image online, photo crop online, crop image online, online image crop, image cropping tool",
       convertTitle: "Private Batch Image Converter | HEIC to PNG, JPG, WebP",
       convertDesc:
         "Convert images between formats instantly. Secure batch processing for HEIC, PNG, and JPEG. Images stay on your device.",
@@ -309,7 +307,7 @@ export const translations: Record<Language, Translations> = {
       loading: "加载中...",
       processing: "AI 处理中...",
       ready: "引擎就绪",
-      freeForever: "永久免费 • 无需注册",
+      freeForever: "无需注册",
       safetyPrivate: "安全隐私 • 本地处理",
       status: "状态",
       actions: "操作",
@@ -321,13 +319,12 @@ export const translations: Record<Language, Translations> = {
       total: "合计",
       back: "返回",
       explore: "浏览工具",
-      ctaDesc: "零成本体验专业级工具。tuziyo 现在及未来都将 100% 免费。",
+      ctaDesc: "体验专业级图像工具，完全隐私保护。所有处理均在浏览器本地完成。",
       privacyPolicy: "隐私政策",
       termsOfService: "服务条款",
       contactSupport: "联系支持",
     },
     nav: {
-      watermark: "水印移除",
       inpainting: "图像修复",
       resize: "调整尺寸",
       crop: "图片裁剪",
@@ -411,19 +408,19 @@ export const translations: Record<Language, Translations> = {
       outputFormats: "输出：WebP, PNG, JPEG",
     },
     seo: {
-      title: "tuziyo - 专业 AI 图像工具 | 100% 免费隐私安全",
+      title: "tuziyo - 专业AI图像工具 | 100%免费隐私安全",
       description:
         "基于浏览器的免费 AI 工具，集水印移除、批量调整尺寸、精准裁剪与格式转换于一体集。无需上传，全本地处理。",
       keywords:
-        "免费 AI 图像工具, 在线消水印, 浏览器批量调整图片尺寸, 专业图片裁剪, 隐私保护格式转换 HEIC",
+        "AI图像工具, 在线移除水印, 浏览器批量调整图片尺寸, 专业图片裁剪, 隐私保护格式转换HEIC",
       watermarkTitle: "AI 智能消水印 | 在线免费移除图片水印与杂物",
       watermarkDesc:
-        "使用 AI 瞬间移除图片中的水印、文字和多余物体。无需注册，不在图片上留痕，浏览器直出。",
+        "使用AI瞬间移除图片中的水印、文字和多余物体。无需注册，不在图片上留痕，浏览器直出。",
       watermarkKeywords:
         "在线移除图片水印, AI 杂物清除工具免费, 擦除图片文字, 浏览器图片清理工具",
       resizeTitle: "批量图片缩放 | 按百分比或像素调整图片尺寸",
       resizeDesc:
-        "精准批量缩放多张图片。支持纵横比锁定和百分比缩放，100% 隐私安全且速度极快。",
+        "精准批量缩放多张图片。支持纵横比锁定和百分比缩放，100%隐私安全且速度极快。",
       resizeKeywords:
         "在线批量缩放图片, 图片百分比缩放, 社交媒体图片尺寸调整, 浏览器快速缩放图片",
       cropTitle: "高精度图片裁剪 | 支持固定比例的在线裁剪工具",
@@ -455,7 +452,7 @@ export const translations: Record<Language, Translations> = {
       loading: "Chargement...",
       processing: "Traitement IA...",
       ready: "Moteur prêt",
-      freeForever: "Gratuit à vie • Sans compte",
+      freeForever: "Sans compte",
       safetyPrivate: "Sûr & Privé • Traitement local",
       status: "Statut",
       actions: "Actions",
@@ -468,14 +465,13 @@ export const translations: Record<Language, Translations> = {
       back: "Retour",
       explore: "Explorer les Outils",
       ctaDesc:
-        "Découvrez des outils de qualité professionnelle sans frais. tuziyo est et restera 100 % gratuit.",
+        "Découvrez des outils d'image professionnels avec une confidentialité totale. Tout le traitement se fait localement dans votre navigateur.",
       privacyPolicy: "Politique de Confidentialité",
       termsOfService: "Conditions d'Utilisation",
       contactSupport: "Contacter le Support",
     },
     nav: {
-      watermark: "Retrait de Filigrane",
-      inpainting: "Inpainting Image",
+      inpainting: "Inpainting",
       resize: "Redimensionner",
       crop: "Recadrer",
       convert: "Convertir",
@@ -563,7 +559,7 @@ export const translations: Record<Language, Translations> = {
       outputFormats: "Sortie : WebP, PNG, JPEG",
     },
     seo: {
-      title: "tuziyo - Outils Image IA Professionnels | 100% Gratuit et Privé",
+      title: "tuziyo - Outils Image IA Professionnels | 100% Privé",
       description:
         "Outils IA gratuits dans le navigateur pour supprimer les filigranes, redimensionner en lot, recadrer avec précision et convertir.",
       keywords:
@@ -610,7 +606,7 @@ export const translations: Record<Language, Translations> = {
       loading: "読み込み中...",
       processing: "AI処理中...",
       ready: "準備完了",
-      freeForever: "永久無料 • 登録不要",
+      freeForever: "登録不要",
       safetyPrivate: "安全・プライバシー • ローカル処理",
       status: "ステータス",
       actions: "操作",
@@ -623,13 +619,12 @@ export const translations: Record<Language, Translations> = {
       back: "戻る",
       explore: "ツールを見る",
       ctaDesc:
-        "プロ仕様のツールを無料で。tuziyoはこれまでも、これからも100%無料で提供します。",
+        "完全なプライバシー保護でプロ仕様の画像ツールを体験。すべての処理はブラウザ内でローカルに実行されます。",
       privacyPolicy: "プライバシーポリシー",
       termsOfService: "利用規約",
       contactSupport: "お問い合わせ",
     },
     nav: {
-      watermark: "透かし消去",
       inpainting: "画像修復",
       resize: "リサイズ",
       crop: "切り抜き",
@@ -772,13 +767,12 @@ export const translations: Record<Language, Translations> = {
       back: "뒤로 가기",
       explore: "도구 둘러보기",
       ctaDesc:
-        "비용 부담 없이 전문가용 도구를 경험하세요. tuziyo는 앞으로도 영구히 100% 무료로 제공됩니다.",
+        "완벽한 개인정보 보호로 전문가급 이미지 도구를 경험하세요. 모든 처리는 브라우저에서 로컬로 진행됩니다.",
       privacyPolicy: "개인정보 처리방침",
       termsOfService: "이용 약관",
       contactSupport: "고객 지원 문의",
     },
     nav: {
-      watermark: "워터마크 제거",
       inpainting: "이미지 복원",
       resize: "크기 조정",
       crop: "자르기",
@@ -908,7 +902,7 @@ export const translations: Record<Language, Translations> = {
       loading: "Загрузка...",
       processing: "AI Обработка...",
       ready: "Движок готов",
-      freeForever: "Бесплатно навсегда • Без регистрации",
+      freeForever: "Без регистрации",
       safetyPrivate: "Безопасно и приватно • Локально",
       status: "Статус",
       actions: "Действия",
@@ -921,13 +915,12 @@ export const translations: Record<Language, Translations> = {
       back: "Назад",
       explore: "К инструментам",
       ctaDesc:
-        "Профессиональные инструменты бесплатно. tuziyo всегда будет 100% бесплатным для всех.",
+        "Испытайте профессиональные инструменты для изображений с полной конфиденциальностью. Вся обработка происходит локально в вашем браузере.",
       privacyPolicy: "Политика конфиденциальности",
       termsOfService: "Условия использования",
       contactSupport: "Служба поддержки",
     },
     nav: {
-      watermark: "Удаление водяных знаков",
       inpainting: "Восстановление изображений",
       resize: "Изменение размера",
       crop: "Обрезка",
@@ -1065,7 +1058,7 @@ export const translations: Record<Language, Translations> = {
       loading: "Caricamento...",
       processing: "Elaborazione IA...",
       ready: "Motore Pronto",
-      freeForever: "Gratis per sempre • Senza account",
+      freeForever: "Senza account",
       safetyPrivate: "Sicuro & Privato • Locale",
       status: "Stato",
       actions: "Azioni",
@@ -1078,13 +1071,12 @@ export const translations: Record<Language, Translations> = {
       back: "Torna Indietro",
       explore: "Esplora Strumenti",
       ctaDesc:
-        "Prova strumenti professionali a costo zero. tuziyo è e sarà sempre gratuito al 100%.",
+        "Prova strumenti per immagini professionali con completa privacy. Tutta l'elaborazione avviene localmente nel tuo browser.",
       privacyPolicy: "Privacy Policy",
       termsOfService: "Termini di Servizio",
       contactSupport: "Contatta il Supporto",
     },
     nav: {
-      watermark: "Rimozione Filigrana",
       inpainting: "Restauro Immagini",
       resize: "Ridimensiona",
       crop: "Ritaglia",

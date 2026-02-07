@@ -6,4 +6,6 @@ export default [
   route("resize", "routes/resize.tsx"),
   route("crop", "routes/crop.tsx"),
   route("convert", "routes/convert.tsx"),
+  route("sitemap.xml", "routes/sitemap[.]xml.ts"),
+  route("robots.txt", "routes/robots[.]txt.ts"),
 ] satisfies RouteConfig;

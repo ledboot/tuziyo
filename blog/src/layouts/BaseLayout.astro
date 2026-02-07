@@ -1,0 +1,318 @@
+---
+import "../styles/tailwind.css";
+import { Menu, X } from "@lucide/astro";
+
+const { title, description, ogType = "article", ogImage, keywords } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN;
+const canonical = `${MAIN_ORIGIN}${Astro.url.pathname}`;
+const resolvedOgImage = ogImage ?? `${MAIN_ORIGIN}/og-index.png`;
+---
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title ?? "Blog | tuziyo"}</title>
+    {description ? <meta name="description" content={description} /> : null}
+    {keywords && keywords.length > 0 ? (
+      <meta name="keywords" content={Array.isArray(keywords) ? keywords.join(", ") : keywords} />
+    ) : null}
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:title" content={title ?? "Blog | tuziyo"} />
+    {description ? (
+      <meta property="og:description" content={description} />
+    ) : null}
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={resolvedOgImage} />
+    <meta property="og:site_name" content="tuziyo" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title ?? "Blog | tuziyo"} />
+    {description ? (
+      <meta name="twitter:description" content={description} />
+    ) : null}
+    <meta name="twitter:image" content={resolvedOgImage} />
+    <link rel="icon" type="image/svg+xml" href={`${MAIN_ORIGIN}/favicon.svg`} />
+    <link rel="icon" type="image/png" href={`${MAIN_ORIGIN}/favicon-96x96.png`} />
+    <link rel="shortcut icon" href={`${MAIN_ORIGIN}/favicon.ico`} />
+    <link rel="apple-touch-icon" sizes="180x180" href={`${MAIN_ORIGIN}/apple-touch-icon.png`} />
+    <link rel="manifest" href={`${MAIN_ORIGIN}/site.webmanifest`} />
+  </head>
+  <body>
+    <div class="min-h-screen bg-white dark:bg-background-dark font-display flex flex-col transition-colors duration-300">
+      <header class="sticky top-0 z-40 w-full border-b border-gray-200/50 bg-white/80 backdrop-blur-md dark:border-gray-800/50 dark:bg-slate-900/80 transition-colors duration-300">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:grid md:grid-cols-[1fr_2fr_1fr] lg:px-12">
+          <div class="flex items-center gap-4">
+            <button
+              id="menu-btn"
+              type="button"
+              class="md:hidden -ml-2 p-2 text-slate-600 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-colors"
+              aria-label="Open menu"
+            >
+              <Menu class="size-6" />
+            </button>
+            <a href={`${MAIN_ORIGIN}/`}>
+              <div class="flex items-center h-10 select-none">
+                <img src={`${MAIN_ORIGIN}/logo-with-brand.svg`} alt="tuziyo" class="h-full w-auto" />
+              </div>
+            </a>
+          </div>
+
+          <nav class="hidden md:flex items-center justify-center gap-6 lg:gap-8">
+            <a
+              href={`${MAIN_ORIGIN}/inpainting`}
+              class="text-sm font-bold transition-all hover:text-primary-brand text-slate-600 dark:text-slate-400"
+            >
+              Inpainting
+            </a>
+            <a
+              href={`${MAIN_ORIGIN}/resize`}
+              class="text-sm font-bold transition-all hover:text-primary-brand text-slate-600 dark:text-slate-400"
+            >
+              Resize
+            </a>
+            <a
+              href={`${MAIN_ORIGIN}/crop`}
+              class="text-sm font-bold transition-all hover:text-primary-brand text-slate-600 dark:text-slate-400"
+            >
+              Crop
+            </a>
+            <a
+              href={`${MAIN_ORIGIN}/convert`}
+              class="text-sm font-bold transition-all hover:text-primary-brand text-slate-600 dark:text-slate-400"
+            >
+              Convert
+            </a>
+            <a
+              href={`${base}`}
+              class="text-sm font-bold transition-all text-primary-brand"
+            >
+              Blog
+            </a>
+          </nav>
+          
+          <!-- Spacer for layout balance on desktop -->
+          <div class="hidden md:block"></div>
+
+          
+        </div>
+      </header>
+
+      <main class="flex-1">
+        <div class="mx-auto max-w-7xl px-6 py-16 lg:px-12">
+          <slot />
+        </div>
+      </main>
+
+      <footer class="border-t border-slate-200 bg-white px-6 py-16 dark:border-slate-800 dark:bg-slate-950 lg:px-12 transition-colors duration-300">
+        <div class="mx-auto max-w-7xl">
+          <div class="grid grid-cols-2 gap-12 md:grid-cols-4 lg:grid-cols-6 mb-12">
+            <div class="col-span-2 space-y-6">
+              <a href={`${MAIN_ORIGIN}/`}>
+                <div class="flex items-center h-10 select-none">
+                  <img src={`${MAIN_ORIGIN}/logo-with-brand.svg`} alt="tuziyo" class="h-full w-auto" />
+                </div>
+              </a>
+              <p class="text-sm leading-relaxed text-slate-500 dark:text-slate-400 max-w-xs font-medium mt-4">
+                The ultimate suite for image watermark removal, resizing, cropping,
+                and conversion. Powered by local AI, 100% private and secure.
+              </p>
+              <div class="flex gap-4">
+                <a
+                  href="https://x.com/@ledboot_"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-primary-brand/10 hover:text-primary-brand transition-all"
+                  title="X (Twitter)"
+                >
+                  <svg viewBox="0 0 24 24" class="size-5" aria-hidden="true">
+                    <path
+                      d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </a>
+                <a
+                  href="https://github.com/ledboot/tuziyo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-primary-brand/10 hover:text-primary-brand transition-all"
+                  title="GitHub"
+                >
+                  <svg viewBox="0 0 24 24" class="size-5" aria-hidden="true">
+                    <path
+                      d="M12 0C5.372 0 0 5.372 0 12c0 5.303 3.438 9.8 8.207 11.387.6.111.793-.26.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.085 1.84 1.237 1.84 1.237 1.07 1.835 2.807 1.305 3.492.998.108-.775.418-1.305.762-1.605-2.665-.304-5.466-1.332-5.466-5.931 0-1.312.469-2.382 1.236-3.222-.124-.303-.536-1.523.117-3.176 0 0 1.008-.322 3.301 1.23a11.49 11.49 0 0 1 3.003-.404c1.018.005 2.044.138 3.003.404 2.292-1.552 3.298-1.23 3.298-1.23.654 1.653.242 2.873.118 3.176.77.84 1.235 1.91 1.235 3.222 0 4.61-2.804 5.624-5.476 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.565 21.796 24 17.302 24 12c0-6.628-5.372-12-12-12Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <h4 class="text-2xs font-black uppercase tracking-[0.2em] text-slate-400 mb-6">
+                Tools
+              </h4>
+              <ul class="space-y-4 text-sm font-bold text-slate-600 dark:text-slate-400">
+                <li>
+                  <a class="hover:text-primary-brand transition-colors" href={`${MAIN_ORIGIN}/inpainting`}>
+                    Inpainting
+                  </a>
+                </li>
+                <li>
+                  <a class="hover:text-primary-brand transition-colors" href={`${MAIN_ORIGIN}/resize`}>
+                    Resize
+                  </a>
+                </li>
+                <li>
+                  <a class="hover:text-primary-brand transition-colors" href={`${MAIN_ORIGIN}/crop`}>
+                    Crop
+                  </a>
+                </li>
+                <li>
+                  <a class="hover:text-primary-brand transition-colors" href={`${MAIN_ORIGIN}/convert`}>
+                    Convert
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 class="text-2xs font-black uppercase tracking-[0.2em] text-slate-400 mb-6">
+                About
+              </h4>
+              <ul class="space-y-4 text-sm font-bold text-slate-600 dark:text-slate-400">
+                <li>
+                  <a
+                    class="hover:text-primary-brand transition-colors"
+                    href="https://x.com/@ledboot_"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Contact Author
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 class="text-2xs font-black uppercase tracking-[0.2em] text-slate-400 mb-6">
+                Resources
+              </h4>
+              <ul class="space-y-4 text-sm font-bold text-slate-600 dark:text-slate-400">
+                <li>
+                  <a class="hover:text-primary-brand transition-colors" href={`${MAIN_ORIGIN}/`}>
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a class="hover:text-primary-brand transition-colors" href={`${MAIN_ORIGIN}/`}>
+                    Terms of Service
+                  </a>
+                </li>
+                <li>
+                  <a class="hover:text-primary-brand transition-colors" href={`${MAIN_ORIGIN}/`}>
+                    Contact Support
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 class="text-2xs font-black uppercase tracking-[0.2em] text-slate-400 mb-6">
+                Languages
+              </h4>
+              <ul class="grid grid-cols-1 gap-4 text-sm font-bold">
+                <li><span class="text-slate-600 dark:text-slate-400">English</span></li>
+                <li><span class="text-slate-600 dark:text-slate-400">中文</span></li>
+                <li><span class="text-slate-600 dark:text-slate-400">Français</span></li>
+                <li><span class="text-slate-600 dark:text-slate-400">日本語</span></li>
+                <li><span class="text-slate-600 dark:text-slate-400">한국어</span></li>
+                <li><span class="text-slate-600 dark:text-slate-400">Русский</span></li>
+                <li><span class="text-slate-600 dark:text-slate-400">Italiano</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="pt-8 dark:border-slate-900 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p class="text-sm font-black tracking-widest text-slate-400">
+              © {new Date().getFullYear()} tuziyo.com All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Mobile Drawer -->
+    <div id="mobile-menu" class="fixed inset-0 z-[100] hidden" aria-hidden="true">
+        <div id="menu-backdrop" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm opacity-0 transition-opacity duration-300"></div>
+        <div id="menu-panel" class="relative w-[300px] max-w-[85vw] h-full bg-white dark:bg-slate-950 p-6 shadow-2xl -translate-x-full transition-transform duration-300 flex flex-col">
+          <div class="flex items-center justify-between mb-10">
+            <a href={`${MAIN_ORIGIN}/`} id="drawer-logo">
+              <img src={`${MAIN_ORIGIN}/logo-with-brand.svg`} alt="tuziyo" class="h-10 w-auto" />
+            </a>
+            <button 
+              id="close-btn"
+              class="p-2 -mr-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+            >
+              <X class="size-6" />
+            </button>
+          </div>
+
+          <nav class="flex flex-col gap-2">
+            <a href={`${MAIN_ORIGIN}/inpainting`} class="flex items-center py-3 text-base font-bold text-slate-600 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-colors border-b border-slate-100 dark:border-slate-900/50">Inpainting</a>
+            <a href={`${MAIN_ORIGIN}/resize`} class="flex items-center py-3 text-base font-bold text-slate-600 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-colors border-b border-slate-100 dark:border-slate-900/50">Resize</a>
+            <a href={`${MAIN_ORIGIN}/crop`} class="flex items-center py-3 text-base font-bold text-slate-600 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-colors border-b border-slate-100 dark:border-slate-900/50">Crop</a>
+            <a href={`${MAIN_ORIGIN}/convert`} class="flex items-center py-3 text-base font-bold text-slate-600 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-colors border-b border-slate-100 dark:border-slate-900/50">Convert</a>
+            <a href={`${base}`} class="flex items-center py-3 text-base font-bold text-primary-brand transition-colors border-b border-slate-100 dark:border-slate-900/50">Blog</a>
+          </nav>
+          
+          <div class="mt-auto">
+              <p class="text-xs font-bold text-slate-400 text-center">
+                © {new Date().getFullYear()} tuziyo.com
+              </p>
+          </div>
+        </div>
+    </div>
+
+    <script>
+      const menuBtn = document.getElementById('menu-btn');
+      const closeBtn = document.getElementById('close-btn');
+      const mobileMenu = document.getElementById('mobile-menu');
+      const backdrop = document.getElementById('menu-backdrop');
+      const panel = document.getElementById('menu-panel');
+      const drawerLogo = document.getElementById('drawer-logo');
+      const drawerLinks = mobileMenu?.querySelectorAll('a');
+
+      function openMenu() {
+        if(!mobileMenu || !backdrop || !panel) return;
+        mobileMenu.classList.remove('hidden');
+        // Force reflow
+        void mobileMenu.offsetWidth;
+        requestAnimationFrame(() => {
+            backdrop.classList.remove('opacity-0');
+            panel.classList.remove('-translate-x-full');
+        });
+      }
+      
+      function closeMenu() {
+          if(!mobileMenu || !backdrop || !panel) return;
+          backdrop.classList.add('opacity-0');
+          panel.classList.add('-translate-x-full');
+          setTimeout(() => {
+            mobileMenu.classList.add('hidden');
+          }, 300);
+      }
+
+      menuBtn?.addEventListener('click', openMenu);
+      closeBtn?.addEventListener('click', closeMenu);
+      backdrop?.addEventListener('click', closeMenu);
+      drawerLogo?.addEventListener('click', closeMenu);
+      drawerLinks?.forEach(link => {
+          link.addEventListener('click', closeMenu);
+      });
+    </script>
+  </body>
+</html>

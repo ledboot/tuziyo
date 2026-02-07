@@ -1,0 +1,339 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { ArrowLeft, ArrowRight, Twitter, Share2 } from '@lucide/astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog");
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props as { post: CollectionEntry<"blog"> };
+const base = import.meta.env.BASE_URL;
+const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN;
+const articleUrl = `${MAIN_ORIGIN}${base}${post.slug}/`;
+
+const posts = (await getCollection("blog")).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime()
+);
+const currentIndex = posts.findIndex((entry) => entry.slug === post.slug);
+const prevPost = currentIndex >= 0 ? posts[currentIndex + 1] : undefined;
+const nextPost = currentIndex > 0 ? posts[currentIndex - 1] : undefined;
+
+const tagSet = new Set(post.data.tags);
+const relatedPosts = posts
+  .filter((entry) => entry.slug !== post.slug)
+  .map((entry) => {
+    const score = entry.data.tags.reduce(
+      (total, tag) => total + (tagSet.has(tag) ? 1 : 0),
+      0
+    );
+    return { entry, score };
+  })
+  .sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return b.entry.data.date.getTime() - a.entry.data.date.getTime();
+  })
+  .map(({ entry }) => entry)
+  .slice(0, 3);
+
+const fillCount = 3 - relatedPosts.length;
+if (fillCount > 0) {
+  const fallback = posts
+    .filter((entry) => entry.slug !== post.slug)
+    .filter((entry) => !relatedPosts.find((rel) => rel.slug === entry.slug))
+    .slice(0, fillCount);
+  relatedPosts.push(...fallback);
+}
+
+const { Content, headings } = await post.render();
+const tocItems = headings.filter((heading) => heading.depth <= 3);
+const postCover = post.data.cover ? post.data.cover : "/default-cover.png";
+// ... in related posts loop ...
+// (I will target specific blocks to replace)
+---
+<BaseLayout
+  title={`${post.data.title} | tuziyo`}
+  description={post.data.description}
+  ogType="article"
+  ogImage={postCover}
+  keywords={post.data.keywords}
+>
+  <head>
+    <meta property="article:published_time" content={post.data.date.toISOString()} />
+    <meta property="article:author" content="tuziyo" />
+    {post.data.tags.map((tag) => (
+      <meta property="article:tag" content={tag} />
+    ))}
+  </head>
+
+  <div class="mx-auto grid gap-10 lg:grid-cols-[240px_1fr]">
+    <aside class="hidden lg:block">
+      <div class="sticky top-24 space-y-6">
+        <a
+          class="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.3em] text-primary-brand"
+          href={`${base}`}
+        >
+          <ArrowLeft class="size-4" />
+          Back to Blog
+        </a>
+
+        {tocItems.length > 0 ? (
+          <div class="space-y-4">
+            <p class="text-2xs font-black uppercase tracking-[0.3em] text-slate-400">
+              Contents
+            </p>
+            <ul class="space-y-2 text-sm font-semibold text-slate-500 dark:text-slate-400">
+              {tocItems.map((item) => (
+                <li class={item.depth === 3 ? "pl-4" : ""}>
+                  <a
+                    class="hover:text-primary-brand transition-colors"
+                    href={`#${item.slug}`}
+                  >
+                    {item.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <div class="space-y-3">
+          <p class="text-2xs font-black uppercase tracking-[0.3em] text-slate-400">
+            Share
+          </p>
+          <div class="flex items-center gap-3">
+            <a
+              class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:text-primary-brand dark:border-slate-800"
+              href={`https://x.com/intent/tweet?url=${encodeURIComponent(articleUrl)}&text=${encodeURIComponent(post.data.title)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Share on X"
+            >
+              <Twitter class="size-4" />
+            </a>
+            <button
+              class="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:text-primary-brand dark:border-slate-800"
+              type="button"
+              data-copy-link
+              data-url={articleUrl}
+              aria-label="Copy link"
+            >
+              <Share2 class="size-4" />
+              <span class="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-full bg-slate-900 px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white opacity-0 transition-opacity" data-copy-label>
+                Copied!
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <article class="space-y-10">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <a
+          class="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.3em] text-primary-brand lg:hidden"
+          href={`${base}`}
+        >
+          <ArrowLeft class="size-4" />
+          Back to Blog
+        </a>
+        <div class="flex items-center gap-3 lg:hidden">
+          <a
+            class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:text-primary-brand dark:border-slate-800"
+            href={`https://x.com/intent/tweet?url=${encodeURIComponent(articleUrl)}&text=${encodeURIComponent(post.data.title)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Share on X"
+          >
+            <Twitter class="size-4" />
+          </a>
+          <button
+            class="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:text-primary-brand dark:border-slate-800"
+            type="button"
+            data-copy-link
+            data-url={articleUrl}
+            aria-label="Copy link"
+          >
+            <Share2 class="size-4" />
+            <span class="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-full bg-slate-900 px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white opacity-0 transition-opacity" data-copy-label>
+              Copied!
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {postCover ? (
+        <div class="overflow-hidden rounded-4xl border border-slate-200/70 bg-white/60 dark:border-slate-800 dark:bg-slate-900">
+          <img
+            src={postCover}
+            alt={post.data.title}
+            class="h-full w-full object-cover"
+          />
+        </div>
+      ) : null}
+
+      <div class="space-y-4">
+        <h1 class="text-4xl font-black tracking-tight text-slate-900 dark:text-white sm:text-5xl">
+          {post.data.title}
+        </h1>
+        <div class="flex flex-wrap items-center gap-4 text-xs font-bold uppercase tracking-widest text-slate-400">
+          <span>{post.data.date.toLocaleDateString("en-US")}</span>
+          <span>{post.data.readTime ?? "5 min read"}</span>
+        </div>
+        <p class="text-lg text-slate-500 dark:text-slate-400 font-medium">
+          {post.data.description}
+        </p>
+        <div class="flex flex-wrap gap-2 text-xs font-bold uppercase tracking-widest text-primary-brand">
+          {post.data.tags.map((tag) => (
+            <span class="rounded-full bg-primary-brand/10 px-3 py-1">{tag}</span>
+          ))}
+        </div>
+      </div>
+
+      <div class="prose">
+        <Content />
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-6 border-t border-slate-200/70 pt-6 dark:border-slate-800">
+        <div class="flex items-center gap-3 text-xs font-black uppercase tracking-[0.3em] text-slate-400">
+          Share this article
+          <div class="flex items-center gap-2">
+            <a
+              class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:text-primary-brand dark:border-slate-800"
+              href={`https://x.com/intent/tweet?url=${encodeURIComponent(articleUrl)}&text=${encodeURIComponent(post.data.title)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Share on X"
+            >
+              <Twitter class="size-4" />
+            </a>
+            <button
+              class="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:text-primary-brand dark:border-slate-800"
+              type="button"
+              data-copy-link
+              data-url={articleUrl}
+              aria-label="Copy link"
+            >
+              <Share2 class="size-4" />
+              <span class="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-full bg-slate-900 px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white opacity-0 transition-opacity" data-copy-label>
+                Copied!
+              </span>
+            </button>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 text-sm font-bold">
+          {prevPost ? (
+            <a class="inline-flex h-9 items-center hover:text-primary-brand transition-colors" href={`${base}${prevPost.slug}/`}>
+              <span class="inline-flex items-center gap-2">
+                <ArrowLeft class="size-4" />
+                Prev Article
+              </span>
+            </a>
+          ) : null}
+          {nextPost ? (
+            <a class="inline-flex h-9 items-center hover:text-primary-brand transition-colors" href={`${base}${nextPost.slug}/`}>
+              <span class="inline-flex items-center gap-2">
+                Next Article
+                <ArrowRight class="size-4" />
+              </span>
+            </a>
+          ) : null}
+        </div>
+      </div>
+
+      </div>
+    </article>
+  </div>
+
+  {relatedPosts.length > 0 ? (
+    <section class="mt-16 border-t border-slate-200/70 pt-10 dark:border-slate-800">
+      <div class="mx-auto max-w-7xl">
+        <h2 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+          Related Articles
+        </h2>
+        <div class="mt-6 grid gap-6 md:grid-cols-3">
+          {relatedPosts.map((entry) => (
+            <a
+              class="group space-y-3"
+              href={`${base}${entry.slug}/`}
+            >
+              <div class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/40">
+                <img
+                  src={entry.data.cover}
+                  alt={entry.data.title}
+                  loading="lazy"
+                  class="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                />
+              </div>
+              <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary-brand">
+                {entry.data.tags[0] ?? "Blog"}
+              </p>
+              <h3 class="text-lg font-black text-slate-900 dark:text-white">
+                {entry.data.title}
+              </h3>
+              <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                {entry.data.description}
+              </p>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  ) : null}
+
+
+  <script is:inline>
+    const bindCopyButtons = () => {
+      const buttons = document.querySelectorAll("[data-copy-link]");
+      buttons.forEach((button) => {
+        button.addEventListener("click", async () => {
+          const url = button.getAttribute("data-url") ?? window.location.href;
+          const label = button.querySelector("[data-copy-label]");
+          try {
+            if (navigator.clipboard?.writeText) {
+              await navigator.clipboard.writeText(url);
+            } else {
+              throw new Error("Clipboard API not available");
+            }
+            button.classList.add("text-primary-brand");
+            if (label) {
+              label.classList.add("opacity-100");
+            }
+            setTimeout(() => button.classList.remove("text-primary-brand"), 1200);
+          } catch (err) {
+            const temp = document.createElement("textarea");
+            temp.value = url;
+            temp.setAttribute("readonly", "");
+            temp.style.position = "absolute";
+            temp.style.left = "-9999px";
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand("copy");
+            document.body.removeChild(temp);
+            button.classList.add("text-primary-brand");
+            if (label) {
+              label.classList.add("opacity-100");
+            }
+            setTimeout(() => button.classList.remove("text-primary-brand"), 1200);
+          }
+          if (label) {
+            setTimeout(() => label.classList.remove("opacity-100"), 1200);
+          }
+        });
+      });
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", bindCopyButtons, {
+        once: true,
+      });
+    } else {
+      bindCopyButtons();
+    }
+  </script>
+</BaseLayout>
