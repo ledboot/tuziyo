@@ -5,11 +5,11 @@
   "scripts": {
     "build": "react-router build",
     "build:all": "bun run build:blog && bun run build",
-    "build:blog": "astro build",
+    "build:blog": "bunx --bun astro build",
     "dev": "react-router dev",
     "dev:all": "bun run dev:blog && bun run dev",
-    "dev:blog": "astro dev",
-    "preview:blog": "astro preview",
+    "dev:blog": "bunx --bun astro dev",
+    "preview:blog": "bunx --bun astro preview",
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
