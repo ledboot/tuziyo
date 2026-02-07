@@ -4,10 +4,9 @@ import sitemap from "@astrojs/sitemap";
 
 export default defineConfig({
   site: "https://tuziyo.com",
-  base: "/blog",
   srcDir: "./blog/src",
   publicDir: "./blog/public",
-  outDir: "./public/blog",
+  outDir: "./public",
   trailingSlash: "always",
   integrations: [react(), sitemap()],
 });

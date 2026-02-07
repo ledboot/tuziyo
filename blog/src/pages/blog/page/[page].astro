@@ -1,7 +1,7 @@
 ---
 import { getCollection } from "astro:content";
-import BaseLayout from "../../layouts/BaseLayout.astro";
-import { paginatePosts, PAGE_SIZE } from "../../lib/pagination";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import { paginatePosts, PAGE_SIZE } from "../../../lib/pagination";
 import { ArrowLeft,ArrowRight } from "@lucide/astro";
 
 export async function getStaticPaths() {
@@ -24,7 +24,7 @@ const { posts, page, totalPages } = Astro.props as {
   totalPages: number;
 };
 const { pagePosts } = paginatePosts(posts, page);
-const base = import.meta.env.BASE_URL;
+const base = "/blog/";
 const prevPage = page > 1 ? page - 1 : null;
 const nextPage = page < totalPages ? page + 1 : null;
 const prevHref = prevPage === 1 ? `${base}` : `${base}page/${prevPage}/`;

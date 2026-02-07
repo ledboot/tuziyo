@@ -1,14 +1,14 @@
 ---
 import { getCollection } from "astro:content";
-import BaseLayout from "../layouts/BaseLayout.astro";
-import { paginatePosts } from "../lib/pagination";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { paginatePosts } from "../../lib/pagination";
 import { ArrowLeft,ArrowRight } from "@lucide/astro";
 
 const posts = (await getCollection("blog")).sort(
   (a, b) => b.data.date.getTime() - a.data.date.getTime()
 );
 const { pagePosts, totalPages } = paginatePosts(posts, 1);
-const base = import.meta.env.BASE_URL;
+const base = "/blog/";
 const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN;
 ---
 <BaseLayout
