@@ -7,13 +7,10 @@ export default defineConfig({
   site: "https://tuziyo.com",
   srcDir: "./blog/src",
   publicDir: "./blog/public",
-  outDir: "./build/client",
+  outDir: "./public/blog",
   trailingSlash: "always",
   integrations: [react(), sitemap()],
   vite: {
     plugins: [tailwindcss()],
-    build: {
-      emptyOutDir: false,
-    },
   },
 });
