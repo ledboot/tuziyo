@@ -11,6 +11,7 @@
         "@react-router/serve": "^7.13.0",
         "heic2any": "^0.0.4",
         "isbot": "^5.1.31",
+        "jose": "^6.1.3",
         "jszip": "^3.10.1",
         "localforage": "^1.10.0",
         "lucide-react": "^0.562.0",
@@ -20,6 +21,7 @@
         "react-router": "^7.13.0",
         "react-use": "^17.6.0",
         "sonner": "^1.7.0",
+        "uuid": "^13.0.0",
       },
       "devDependencies": {
         "@astrojs/react": "^4.2.0",
@@ -32,6 +34,7 @@
         "@types/node": "^22",
         "@types/react": "^19.2.7",
         "@types/react-dom": "^19.2.3",
+        "@types/uuid": "^10.0.0",
         "astro": "^5.17.1",
         "lucide-static": "^0.563.0",
         "tailwindcss": "^4.1.13",
@@ -442,6 +445,8 @@
 
     "@types/unist": ["@types/unist@3.0.3", "https://registry.npmmirror.com/@types/unist/-/unist-3.0.3.tgz", {}, "sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q=="],
 
+    "@types/uuid": ["@types/uuid@10.0.0", "https://registry.npmmirror.com/@types/uuid/-/uuid-10.0.0.tgz", {}, "sha512-7gqG38EyHgyP1S+7+xomFtL+ZNHcKv6DwNaCZmJmo1vgMugyF3TCnXVg4t1uk89mLNwnLtnY3TpOpCOyp1/xHQ=="],
+
     "@ungap/structured-clone": ["@ungap/structured-clone@1.3.0", "https://registry.npmmirror.com/@ungap/structured-clone/-/structured-clone-1.3.0.tgz", {}, "sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g=="],
 
     "@vitejs/plugin-react": ["@vitejs/plugin-react@4.7.0", "https://registry.npmmirror.com/@vitejs/plugin-react/-/plugin-react-4.7.0.tgz", { "dependencies": { "@babel/core": "^7.28.0", "@babel/plugin-transform-react-jsx-self": "^7.27.1", "@babel/plugin-transform-react-jsx-source": "^7.27.1", "@rolldown/pluginutils": "1.0.0-beta.27", "@types/babel__core": "^7.20.5", "react-refresh": "^0.17.0" }, "peerDependencies": { "vite": "^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0" } }, "sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA=="],
@@ -771,6 +776,8 @@
     "isbot": ["isbot@5.1.34", "https://registry.npmmirror.com/isbot/-/isbot-5.1.34.tgz", {}, "sha512-aCMIBSKd/XPRYdiCQTLC8QHH4YT8B3JUADu+7COgYIZPvkeoMcUHMRjZLM9/7V8fCj+l7FSREc1lOPNjzogo/A=="],
 
     "jiti": ["jiti@2.6.1", "https://registry.npmmirror.com/jiti/-/jiti-2.6.1.tgz", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ=="],
+
+    "jose": ["jose@6.1.3", "https://registry.npmmirror.com/jose/-/jose-6.1.3.tgz", {}, "sha512-0TpaTfihd4QMNwrz/ob2Bp7X04yuxJkjRGi4aKmOqwhov54i6u79oCv7T+C7lo70MKH6BesI3vscD1yb/yzKXQ=="],
 
     "js-cookie": ["js-cookie@2.2.1", "https://registry.npmmirror.com/js-cookie/-/js-cookie-2.2.1.tgz", {}, "sha512-HvdH2LzI/EAZcUwA8+0nKNtWHqS+ZmijLA30RwZA0bo7ToCckjK5MkGhjED9KoRcXO6BaGI3I9UIzSA1FKFPOQ=="],
 
@@ -1241,6 +1248,8 @@
     "util-deprecate": ["util-deprecate@1.0.2", "https://registry.npmmirror.com/util-deprecate/-/util-deprecate-1.0.2.tgz", {}, "sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw=="],
 
     "utils-merge": ["utils-merge@1.0.1", "https://registry.npmmirror.com/utils-merge/-/utils-merge-1.0.1.tgz", {}, "sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA=="],
+
+    "uuid": ["uuid@13.0.0", "https://registry.npmmirror.com/uuid/-/uuid-13.0.0.tgz", { "bin": { "uuid": "dist-node/bin/uuid" } }, "sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w=="],
 
     "valibot": ["valibot@1.2.0", "https://registry.npmmirror.com/valibot/-/valibot-1.2.0.tgz", { "peerDependencies": { "typescript": ">=5" }, "optionalPeers": ["typescript"] }, "sha512-mm1rxUsmOxzrwnX5arGS+U4T25RdvpPjPN4yR0u9pUBov9+zGVtO84tif1eY4r6zWxVxu3KzIyknJy3rxfRZZg=="],
 

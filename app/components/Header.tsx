@@ -33,6 +33,7 @@ export default function Header() {
 
   const navItems = [
     { title: t.nav.inpainting, to: "/inpainting", external: false },
+    { title: "Nano Banana", to: "/nano-banana", external: false },
     { title: t.nav.resize, to: "/resize", external: false },
     { title: t.nav.crop, to: "/crop", external: false },
     { title: t.nav.convert, to: "/convert", external: false },
@@ -148,12 +149,12 @@ export default function Header() {
       {mobileMenuOpen &&
         typeof document !== "undefined" &&
         createPortal(
-          <div className="fixed inset-0 z-[100] flex justify-start md:hidden">
+          <div className="fixed inset-0 z-100 flex justify-start md:hidden">
             <div
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
               onClick={() => setMobileMenuOpen(false)}
             />
-            <div className="relative w-[300px] max-w-[85vw] h-full bg-white dark:bg-slate-950 p-6 shadow-2xl animate-in slide-in-from-left duration-300 flex flex-col">
+            <div className="relative w-75 max-w-[85vw] h-full bg-white dark:bg-slate-950 p-6 shadow-2xl animate-in slide-in-from-left duration-300 flex flex-col">
               <div className="flex items-center justify-between mb-10">
                 <Link to="/" onClick={() => setMobileMenuOpen(false)}>
                   <img

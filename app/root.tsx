@@ -66,16 +66,24 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 }
 
 import { I18nProvider } from "./lib/i18n";
+import { useLocation } from "react-router";
 
 export default function App() {
+  const location = useLocation();
+  const isNanoBanana = location.pathname.startsWith("/nano-banana");
+
   return (
     <I18nProvider>
-      <div className="min-h-screen bg-white dark:bg-background-dark font-display flex flex-col transition-colors duration-300">
+      <div
+        className={`${isNanoBanana ? "h-screen overflow-hidden" : "min-h-screen"} bg-white dark:bg-background-dark font-display flex flex-col transition-colors duration-300`}
+      >
         <Header />
-        <main className="flex-1">
+        <main
+          className={`flex-1 ${isNanoBanana ? "overflow-hidden flex flex-col" : ""}`}
+        >
           <Outlet />
         </main>
-        <Footer />
+        {!isNanoBanana && <Footer />}
       </div>
     </I18nProvider>
   );

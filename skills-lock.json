@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "cloudflare": {
+      "source": "cloudflare/skills",
+      "sourceType": "github",
+      "computedHash": "5e3cd2bb90ee02796d0158fadaa6a1a90ef24b71f86f2abc6d668541010285b1"
+    },
+    "react-router-v7": {
+      "source": "existential-birds/beagle",
+      "sourceType": "github",
+      "computedHash": "194c9e7306024d5ff9f8c2327754d07675fe816870574faa93986f9bd59a830b"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "a6a44d5498f7e8f68289902f3dedfc6f38ae0cee1e96527c80724cf27f727c2a"
+    }
+  }
+}
