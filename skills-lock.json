@@ -6,15 +6,30 @@
       "sourceType": "github",
       "computedHash": "5e3cd2bb90ee02796d0158fadaa6a1a90ef24b71f86f2abc6d668541010285b1"
     },
+    "design-md": {
+      "source": "google-labs-code/stitch-skills",
+      "sourceType": "github",
+      "computedHash": "d3a4c7d2f2715a33662c8b06ffc16035d01965a8b4ed81c2958fb22ae94760f8"
+    },
     "react-router-v7": {
       "source": "existential-birds/beagle",
       "sourceType": "github",
       "computedHash": "194c9e7306024d5ff9f8c2327754d07675fe816870574faa93986f9bd59a830b"
     },
+    "stitch-design": {
+      "source": "google-labs-code/stitch-skills",
+      "sourceType": "github",
+      "computedHash": "6df709345652460b4d4fdf214476a20c75d76a2ae011a958a51de2c88e6d86d1"
+    },
     "web-design-guidelines": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
       "computedHash": "a6a44d5498f7e8f68289902f3dedfc6f38ae0cee1e96527c80724cf27f727c2a"
+    },
+    "zustand": {
+      "source": "lobehub/lobehub",
+      "sourceType": "github",
+      "computedHash": "57e393ad366e48d80a23950ef1393d4ec131abf81fca7def35adac602f820931"
     }
   }
 }

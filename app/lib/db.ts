@@ -14,6 +14,7 @@ export interface Session {
   id: string;
   user_id: string;
   title: string;
+  is_persistent: number;
   created_at: number;
   updated_at: number;
 }
@@ -107,19 +108,21 @@ export async function createSession(
   id: string,
   userId: string,
   title: string = "新对话",
+  isPersistent: number = 1,
 ): Promise<Session> {
   const timestamp = Math.floor(Date.now() / 1000);
   await db
     .prepare(
-      "INSERT INTO sessions (id, user_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO sessions (id, user_id, title, is_persistent, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
     )
-    .bind(id, userId, title, timestamp, timestamp)
+    .bind(id, userId, title, isPersistent, timestamp, timestamp)
     .run();
 
   return {
     id,
     user_id: userId,
     title,
+    is_persistent: isPersistent,
     created_at: timestamp,
     updated_at: timestamp,
   };
@@ -162,4 +165,40 @@ export async function addMessage(
     )
     .run();
   return { ...message, created_at: timestamp };
+}
+
+export async function updateSessionPersistent(
+  db: D1Database,
+  sessionId: string,
+  isPersistent: number,
+): Promise<void> {
+  const timestamp = Math.floor(Date.now() / 1000);
+  await db
+    .prepare(
+      "UPDATE sessions SET is_persistent = ?, updated_at = ? WHERE id = ?",
+    )
+    .bind(isPersistent, timestamp, sessionId)
+    .run();
+}
+
+export async function updateSessionTitle(
+  db: D1Database,
+  sessionId: string,
+  title: string,
+): Promise<void> {
+  const timestamp = Math.floor(Date.now() / 1000);
+  await db
+    .prepare(
+      "UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?",
+    )
+    .bind(title, timestamp, sessionId)
+    .run();
+}
+
+export async function deleteSession(
+  db: D1Database,
+  sessionId: string,
+): Promise<void> {
+  await db.prepare("DELETE FROM messages WHERE session_id = ?").bind(sessionId).run();
+  await db.prepare("DELETE FROM sessions WHERE id = ?").bind(sessionId).run();
 }

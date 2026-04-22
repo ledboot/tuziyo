@@ -10,6 +10,7 @@ import {
 import type { Route } from "./+types/root";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import LoginModal from "./components/LoginModal";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
@@ -18,21 +19,12 @@ export const links: Route.LinksFunction = () => [
   { rel: "shortcut icon", href: "/favicon.ico" },
   { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
   { rel: "manifest", href: "/site.webmanifest" },
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
-  },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
-  },
+  { rel: "stylesheet", href: "/fonts/fonts.css" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="bumblebee">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -70,20 +62,21 @@ import { useLocation } from "react-router";
 
 export default function App() {
   const location = useLocation();
-  const isNanoBanana = location.pathname.startsWith("/nano-banana");
+  const isSpecialPage = location.pathname.startsWith("/nano-banana") || location.pathname.startsWith("/ai-toolkit");
 
   return (
     <I18nProvider>
       <div
-        className={`${isNanoBanana ? "h-screen overflow-hidden" : "min-h-screen"} bg-white dark:bg-background-dark font-display flex flex-col transition-colors duration-300`}
+        className={`min-h-screen bg-base-100 font-display flex flex-col transition-colors duration-300`}
       >
         <Header />
         <main
-          className={`flex-1 ${isNanoBanana ? "overflow-hidden flex flex-col" : ""}`}
+          className={`flex-1 ${isSpecialPage ? "overflow-hidden" : "overflow-y-auto"}`}
         >
           <Outlet />
         </main>
-        {!isNanoBanana && <Footer />}
+        {!isSpecialPage && <Footer />}
+        <LoginModal />
       </div>
     </I18nProvider>
   );

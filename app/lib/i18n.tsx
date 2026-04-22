@@ -38,6 +38,8 @@ export interface Translations {
     contactSupport: string;
   };
   nav: {
+    freeTools: string;
+    aiToolkit: string;
     inpainting: string;
     resize: string;
     crop: string;
@@ -59,6 +61,15 @@ export interface Translations {
     speedDesc: string;
     aiTitle: string;
     aiDesc: string;
+  };
+  aiToolkit: {
+    promptPlaceholder: string;
+    generating: string;
+    pressEnter: string;
+    settings: string;
+    aspectRatio: string;
+    quality: string;
+    numberOfImages: string;
   };
   inpainting: {
     title: string;
@@ -172,6 +183,8 @@ export const translations: Record<Language, Translations> = {
       contactSupport: "Contact Support",
     },
     nav: {
+      freeTools: "Free Tools",
+      aiToolkit: "AI Toolkit",
       inpainting: "Inpainting",
       resize: "Resize",
       crop: "Crop",
@@ -197,6 +210,15 @@ export const translations: Record<Language, Translations> = {
       aiTitle: "State-of-the-art AI",
       aiDesc:
         "Advanced neural networks deliver professional-grade image inpainting and upscaling.",
+    },
+    aiToolkit: {
+      promptPlaceholder: "Describe your image...",
+      generating: "Generating...",
+      pressEnter: "Press Enter to generate · Shift+Enter for new line",
+      settings: "Settings",
+      aspectRatio: "Aspect Ratio",
+      quality: "Quality",
+      numberOfImages: "Number of Images",
     },
     inpainting: {
       title: "AI Image Inpainting",
@@ -325,6 +347,8 @@ export const translations: Record<Language, Translations> = {
       contactSupport: "联系支持",
     },
     nav: {
+      freeTools: "免费工具",
+      aiToolkit: "AI 工具箱",
       inpainting: "图像修复",
       resize: "调整尺寸",
       crop: "图片裁剪",
@@ -347,6 +371,15 @@ export const translations: Record<Language, Translations> = {
       speedDesc: "采用高度优化的 WASM 和 GPU 加速，秒级呈现处理结果。",
       aiTitle: "顶尖 AI 技术",
       aiDesc: "先进的神经网络算法，提供专业级的图像修复与增强。",
+    },
+    aiToolkit: {
+      promptPlaceholder: "描述你的图片...",
+      generating: "生成中...",
+      pressEnter: "按 Enter 生成 · Shift+Enter 换行",
+      settings: "设置",
+      aspectRatio: "宽高比",
+      quality: "质量",
+      numberOfImages: "图片数量",
     },
     inpainting: {
       title: "AI 图像修复",
@@ -471,6 +504,8 @@ export const translations: Record<Language, Translations> = {
       contactSupport: "Contacter le Support",
     },
     nav: {
+      freeTools: "Outils Gratuits",
+      aiToolkit: "IA Toolkit",
       inpainting: "Inpainting",
       resize: "Redimensionner",
       crop: "Recadrer",
@@ -496,6 +531,15 @@ export const translations: Record<Language, Translations> = {
       aiTitle: "IA de Pointe",
       aiDesc:
         "Des réseaux neuronaux avancés pour une retouche d'image professionnelle.",
+    },
+    aiToolkit: {
+      promptPlaceholder: "Décrivez votre image...",
+      generating: "Génération...",
+      pressEnter: "Appuyez sur Entrée pour générer · Maj+Entrée pour nouvelle ligne",
+      settings: "Paramètres",
+      aspectRatio: "Format",
+      quality: "Qualité",
+      numberOfImages: "Nombre d'images",
     },
     inpainting: {
       title: "Inpainting IA",
@@ -625,6 +669,8 @@ export const translations: Record<Language, Translations> = {
       contactSupport: "お問い合わせ",
     },
     nav: {
+      freeTools: "無料ツール",
+      aiToolkit: "AI ツールキット",
       inpainting: "画像修復",
       resize: "リサイズ",
       crop: "切り抜き",
@@ -648,6 +694,15 @@ export const translations: Record<Language, Translations> = {
       speedDesc: "最適化されたWASMとGPU加速により、一瞬で処理を完了します。",
       aiTitle: "最先端のAI技術",
       aiDesc: "高度なニューラルネットワークが、プロ品質の画像修復を実現。",
+    },
+    aiToolkit: {
+      promptPlaceholder: "画像を描述してください...",
+      generating: "生成中...",
+      pressEnter: "Enterで生成 · Shift+Enterで改行",
+      settings: "設定",
+      aspectRatio: "アスペクト比",
+      quality: "品質",
+      numberOfImages: "画像数",
     },
     inpainting: {
       title: "AI 画像修復",
@@ -773,6 +828,8 @@ export const translations: Record<Language, Translations> = {
       contactSupport: "고객 지원 문의",
     },
     nav: {
+      freeTools: "무료 도구",
+      aiToolkit: "AI 툴킷",
       inpainting: "이미지 복원",
       resize: "크기 조정",
       crop: "자르기",
@@ -797,6 +854,15 @@ export const translations: Record<Language, Translations> = {
       aiTitle: "최첨단 AI 기술",
       aiDesc:
         "고급 신경망 기술로 전문가 수준의 이미지 복원 및 보정을 실현합니다.",
+    },
+    aiToolkit: {
+      promptPlaceholder: "이미지를 설명하세요...",
+      generating: "생성 중...",
+      pressEnter: "Enter를 눌러 생성 · Shift+Enter로 줄바꿈",
+      settings: "설정",
+      aspectRatio: "종횡비",
+      quality: "품질",
+      numberOfImages: "이미지 수",
     },
     inpainting: {
       title: "AI 이미지 복원",
@@ -921,6 +987,8 @@ export const translations: Record<Language, Translations> = {
       contactSupport: "Служба поддержки",
     },
     nav: {
+      freeTools: "Бесплатные Инструменты",
+      aiToolkit: "AI Инструменты",
       inpainting: "Восстановление изображений",
       resize: "Изменение размера",
       crop: "Обрезка",
@@ -946,6 +1014,15 @@ export const translations: Record<Language, Translations> = {
       aiTitle: "Передовой AI",
       aiDesc:
         "Продвинутые нейросети обеспечивают профессиональное восстановление изображений.",
+    },
+    aiToolkit: {
+      promptPlaceholder: "Опишите ваше изображение...",
+      generating: "Генерация...",
+      pressEnter: "Нажмите Enter для генерации · Shift+Enter для новой строки",
+      settings: "Настройки",
+      aspectRatio: "Соотношение",
+      quality: "Качество",
+      numberOfImages: "Кол-во изображений",
     },
     inpainting: {
       title: "AI Восстановление",
@@ -1077,6 +1154,8 @@ export const translations: Record<Language, Translations> = {
       contactSupport: "Contatta il Supporto",
     },
     nav: {
+      freeTools: "Strumenti Gratuiti",
+      aiToolkit: "Toolkit IA",
       inpainting: "Restauro Immagini",
       resize: "Ridimensiona",
       crop: "Ritaglia",
@@ -1102,6 +1181,15 @@ export const translations: Record<Language, Translations> = {
       aiTitle: "IA all'Avanguardia",
       aiDesc:
         "Reti neurali avanzate per un fotoritocco di livello professionale.",
+    },
+    aiToolkit: {
+      promptPlaceholder: "Descrivi la tua immagine...",
+      generating: "Generazione...",
+      pressEnter: "Premi Invio per generare · Shift+Invio per nuova riga",
+      settings: "Impostazioni",
+      aspectRatio: "Formato",
+      quality: "Qualità",
+      numberOfImages: "Numero di immagini",
     },
     inpainting: {
       title: "Restauro Immagini IA",

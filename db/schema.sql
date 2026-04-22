@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     title TEXT NOT NULL DEFAULT '新对话',
+    is_persistent INTEGER NOT NULL DEFAULT 1,  -- 1 = 持久化会话(存D1+R2)
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE

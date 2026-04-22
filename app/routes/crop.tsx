@@ -110,7 +110,7 @@ export default function CropPage() {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoom, setZoom] = useState(85);
-  const [outputFormat, setOutputFormat] = useState("PNG");
+  const [outputFormat, setOutputFormat] = useState("WEBP");
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -370,7 +370,7 @@ export default function CropPage() {
           canvas.toBlob(
             (blob) => (blob ? resolve(blob) : reject()),
             `image/${outputFormat.toLowerCase()}`,
-            0.95,
+            outputFormat === "PNG" ? undefined : 0.95,
           );
         };
         img.src = item.preview;
