@@ -11,12 +11,10 @@ export default [
   route("resize", "routes/resize.tsx"),
   route("crop", "routes/crop.tsx"),
   route("convert", "routes/convert.tsx"),
-
-  // Auth Routes
+  route("pricing", "routes/pricing.tsx"),
+  route("profile", "routes/profile.tsx"),
   route("login", "routes/login.tsx"),
-  route("logout", "routes/logout.ts"),
-  route("auth/google", "routes/auth.google.ts"),
-  route("auth/google/callback", "routes/auth.google.callback.ts"),
+  route("auth/callback", "routes/auth/callback.tsx"),
 
   route("sitemap.xml", "routes/sitemap[.]xml.ts"),
   route("robots.txt", "routes/robots[.]txt.ts"),

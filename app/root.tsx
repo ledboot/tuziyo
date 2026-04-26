@@ -59,10 +59,18 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
 import { I18nProvider } from "./lib/i18n";
 import { useLocation } from "react-router";
+import { useEffect } from "react";
+import { useUserStore } from "./stores/userStore";
 
 export default function App() {
   const location = useLocation();
-  const isSpecialPage = location.pathname.startsWith("/nano-banana") || location.pathname.startsWith("/ai-toolkit");
+  const { fetchUser } = useUserStore();
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
+
+  const isSpecialPage = location.pathname.startsWith("/ai-toolkit");
 
   return (
     <I18nProvider>
@@ -70,9 +78,7 @@ export default function App() {
         className={`min-h-screen bg-base-100 font-display flex flex-col transition-colors duration-300`}
       >
         <Header />
-        <main
-          className={`flex-1 ${isSpecialPage ? "overflow-hidden" : "overflow-y-auto"}`}
-        >
+        <main className={`flex-1 ${isSpecialPage ? "" : "overflow-y-auto"}`}>
           <Outlet />
         </main>
         {!isSpecialPage && <Footer />}

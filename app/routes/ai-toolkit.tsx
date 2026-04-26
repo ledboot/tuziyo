@@ -1,30 +1,33 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Sparkles,
   Loader2,
-  Upload,
   X,
   Square,
   Maximize,
   Smartphone,
   RectangleHorizontal,
+  Images,
+  ImagePlus,
+  MessageSquare,
+  Trash2,
+  SquarePen,
 } from "lucide-react";
+import { toast, Toaster } from "sonner";
 import { useI18n } from "~/lib/i18n";
 import { CustomSelect, type SelectOption } from "~/components/CustomSelect";
+import { useUserStore } from "~/stores/userStore";
+import { api } from "~/lib/api";
 
-type Model = "gpt-image-1.5" | "wan-2.6-image" | "seedream-5" | "nano-banana-2";
+type ModelId = "google/nano-banana-2" | "alibaba/wan-2.6-image" | "bytedance/seedream-5-lite" | "openai/gpt-image-1.5";
 
-const MODELS: { id: Model; label: string; supportsImage?: boolean }[] = [
-  { id: "gpt-image-1.5", label: "GPT Image 1.5" },
-  { id: "wan-2.6-image", label: "WAN 2.6 Image" },
-  { id: "seedream-5", label: "Seedream 5", supportsImage: true },
-  { id: "nano-banana-2", label: "Nano Banana 2", supportsImage: true },
-];
-
-const MODEL_OPTIONS: SelectOption[] = MODELS.map((m) => ({
-  value: m.id,
-  label: m.label,
-}));
+interface ModelInfo {
+  id: string;
+  name: string;
+  provider: string;
+  icon: string;
+  supportsImage?: boolean;
+}
 
 const QUALITY_OPTIONS = [
   { value: "auto", label: "Auto" },
@@ -52,23 +55,17 @@ const SIZE_OPTIONS_WAN = [
   { value: "1024x1792", label: "1024 × 1792" },
   { value: "512x512", label: "512 × 512" },
   { value: "256x256", label: "256 × 256" },
-  { value: "custom", label: "Custom" },
 ];
 
 const SIZE_OPTIONS_SEEDREAM = [
   { value: "512x512", label: "512 × 512" },
-  { value: "1024x1024", label: "1024 × 1024" },
   { value: "768x768", label: "768 × 768" },
-  { value: "custom", label: "Custom" },
+  { value: "1024x1024", label: "1024 × 1024" },
 ];
 
 const ASPECT_RATIO_OPTIONS: SelectOption[] = [
   { value: "1:1", label: "1:1", icon: <Square className="size-4" /> },
-  {
-    value: "4:3",
-    label: "4:3",
-    icon: <RectangleHorizontal className="size-4" />,
-  },
+  { value: "4:3", label: "4:3", icon: <RectangleHorizontal className="size-4" /> },
   { value: "3:4", label: "3:4", icon: <Smartphone className="size-4" /> },
   { value: "16:9", label: "16:9", icon: <Maximize className="size-4" /> },
   { value: "9:16", label: "9:16", icon: <Maximize className="size-4" /> },
@@ -121,47 +118,12 @@ const SAMPLE_IMAGES = [
   "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=400&h=500&fit=crop",
   "https://images.unsplash.com/photo-1465056836041-7f43ac27dcb5?w=400&h=350&fit=crop",
   "https://images.unsplash.com/photo-1500964757637-c85e8a162699?w=400&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1511884642898-4c92249e20b6?w=400&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&h=350&fit=crop",
-  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=400&h=450&fit=crop",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=550&fit=crop",
-  "https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1465056836041-7f43ac27dcb5?w=400&h=350&fit=crop",
-  "https://images.unsplash.com/photo-1500964757637-c85e8a162699?w=400&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1511884642898-4c92249e20b6?w=400&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&h=350&fit=crop",
-  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=400&h=450&fit=crop",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=550&fit=crop",
-  "https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1465056836041-7f43ac27dcb5?w=400&h=350&fit=crop",
-  "https://images.unsplash.com/photo-1500964757637-c85e8a162699?w=400&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1511884642898-4c92249e20b6?w=400&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&h=350&fit=crop",
-  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=400&h=450&fit=crop",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=550&fit=crop",
-  "https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1465056836041-7f43ac27dcb5?w=400&h=350&fit=crop",
-  "https://images.unsplash.com/photo-1500964757637-c85e8a162699?w=400&h=600&fit=crop",
 ];
 
 export default function AIToolkitPage() {
   const { t } = useI18n();
-  const [selectedModel, setSelectedModel] = useState<Model>("nano-banana-2");
+  const [models, setModels] = useState<ModelInfo[]>([]);
+  const [selectedModel, setSelectedModel] = useState<ModelId>("google/nano-banana-2");
   const [aspectRatio, setAspectRatio] = useState("1:1");
   const [quality, setQuality] = useState("auto");
   const [sizeGpt, setSizeGpt] = useState("1024x1024");
@@ -172,28 +134,160 @@ export default function AIToolkitPage() {
   const [outputFormat, setOutputFormat] = useState("png");
   const [maxImages, setMaxImages] = useState("1");
   const [prompt, setPrompt] = useState("");
+  const [negativePrompt, setNegativePrompt] = useState("");
+  const [showNegativePrompt, setShowNegativePrompt] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [images] = useState<string[]>(SAMPLE_IMAGES);
-  const [uploadedImages, setUploadedImages] = useState<
-    { id: string; url: string }[]
-  >([]);
+  const [uploadedImages, setUploadedImages] = useState<{ id: string; url: string }[]>([]);
+  const [currentSession, setCurrentSession] = useState<{ id: string; title: string } | null>(null);
+  const [sessionHistory, setSessionHistory] = useState<{ id: string; title: string; created_at: number; updated_at: number }[]>([]);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [isNewSession, setIsNewSession] = useState(false);
+  const [messages, setMessages] = useState<{ id: string; role: string; prompt: string; imageUrl?: string; model: string; timestamp: number }[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLTextAreaElement>(null);
 
-  const selectedModelInfo = MODELS.find((m) => m.id === selectedModel);
+  const { user, token, fetchUser } = useUserStore();
+
+  useEffect(() => {
+    fetchUser();
+    api.models.list().then((data) => {
+      if (data.models) {
+        const mappedModels: ModelInfo[] = data.models.map((m) => ({
+          ...m,
+          supportsImage: m.id.includes("seedream") || m.id.includes("nano-banana"),
+        }));
+        setModels(mappedModels);
+      }
+    }).catch(console.error);
+  }, [fetchUser]);
+
+  useEffect(() => {
+    if (user && token) {
+      api.sessions.list().then((data) => {
+        if (data.sessions) {
+          setSessionHistory(data.sessions);
+        }
+      }).catch(console.error);
+    }
+  }, [user, token]);
+
+  const handleCreateSession = () => {
+    setIsNewSession(true);
+    setCurrentSession(null);
+  };
+
+  const handleSelectSession = async (sessionId: string) => {
+    setIsNewSession(false);
+    if (!user || !token) return;
+    try {
+      const data = await api.sessions.get(sessionId);
+      if (data.session) {
+        setCurrentSession(data.session);
+      }
+    } catch (error) {
+      console.error("Failed to load session:", error);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!user || !token) return;
+    try {
+      await api.sessions.delete(sessionId);
+      setSessionHistory((prev) => prev.filter((s) => s.id !== sessionId));
+      if (currentSession?.id === sessionId) {
+        setCurrentSession(null);
+        setIsNewSession(false);
+      }
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+    }
+  };
+
+  const selectedModelInfo = models.find((m) => m.id === selectedModel);
+
+  const MODEL_OPTIONS: SelectOption[] = models.map((m) => ({
+    value: m.id,
+    label: m.name,
+    icon: <img src={m.icon} alt={m.provider} className="size-5 rounded" />,
+    badge: m.isNew ? (
+      <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-primary text-primary-content rounded-full flex items-center gap-0.5">
+        <Sparkles className="size-2.5" />
+        NEW
+      </span>
+    ) : undefined,
+  }));
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
-    const isLoggedIn = false;
-    if (!isLoggedIn) {
+    if (!user) {
       window.dispatchEvent(new CustomEvent("openLoginModal"));
       return;
     }
+
+    if (uploadedImages.length > 0 && !selectedModelInfo?.supportsImage) {
+      toast.error(`[Image 1] ERROR: Model ${selectedModel} does not support image input. Remove uploaded images or select a different model.`);
+      return;
+    }
+
     setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
+    try {
+      let sessionId = currentSession?.id;
+
+      if (isNewSession && token) {
+        const title = prompt.slice(0, 20).trim() || "New Chat";
+        const sessionData = await api.sessions.create(title);
+        if (sessionData.session) {
+          setSessionHistory((prev) => [sessionData.session, ...prev]);
+          setCurrentSession(sessionData.session);
+          setIsNewSession(false);
+          sessionId = sessionData.session.id;
+        }
+      }
+
+      const requestBody: Record<string, unknown> = {
+        prompt,
+        model: selectedModel,
+        sessionId,
+      };
+
+      if (selectedModel === "openai/gpt-image-1.5") {
+        requestBody.size = sizeGpt;
+        requestBody.quality = quality;
+        requestBody.style = style;
+      } else if (selectedModel === "alibaba/wan-2.6-image") {
+        requestBody.size = sizeWan;
+        requestBody.num_images = parseInt(maxImages);
+        if (negativePrompt) requestBody.negative_prompt = negativePrompt;
+      } else if (selectedModel === "bytedance/seedream-5-lite") {
+        requestBody.size = sizeSeedream;
+        requestBody.num_images = parseInt(maxImages);
+        if (negativePrompt) requestBody.negative_prompt = negativePrompt;
+      } else if (selectedModel === "google/nano-banana-2") {
+        requestBody.aspect_ratio = aspectRatio;
+        requestBody.resolution = resolution;
+        requestBody.output_format = outputFormat;
+        requestBody.num_images = parseInt(maxImages);
+      }
+
+      const data = await api.generate.create(requestBody as Parameters<typeof api.generate.create>[0]);
+      if (data.error) {
+        toast.error(`[Image 1] ERROR: ${data.error}`);
+        return;
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: "user", prompt, model: selectedModel, timestamp: Date.now() },
+      ]);
+
       setPrompt("");
-    }, 2000);
+    } catch (error) {
+      console.error("Generate error:", error);
+      toast.error(`[Image 1] ERROR: Failed to generate image. Please try again.`);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -239,65 +333,154 @@ export default function AIToolkitPage() {
         }
       `}</style>
 
-      <main className="p-4">
-        <div className="masonry-grid">
-          {images.map((src, i) => (
+      {user && (
+        <div
+          className={`fixed left-0 top-16 z-30 transition-all duration-300 ${
+            showSidebar ? "w-65" : "w-15"
+          }`}
+          style={{ width: showSidebar ? "320px" : "60px" }}
+          onMouseEnter={() => setShowSidebar(true)}
+          onMouseLeave={() => setShowSidebar(false)}
+        >
+          <div className="relative h-screen">
             <div
-              key={i}
-              className="masonry-item break-inside-avoid group relative overflow-hidden rounded-2xl"
+              className={`absolute left-0 top-0 bottom-0 flex flex-col bg-base-100 border-r border-base-200 transition-all duration-300 ${
+                showSidebar ? "w-[260px] opacity-100" : "w-16 opacity-100"
+              }`}
             >
-              <img
-                src={src}
-                alt={`Generated ${i + 1}`}
-                className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              {!showSidebar && (
+                <div className="p-4 transition-all duration-100">
+                  <button className="h-12 w-full flex items-center justify-center cursor-pointer bg-base-100/80">
+                    <SquarePen className="w-5 h-5 text-base-content/60" />
+                  </button>
+              </div>
+              )}
+
+              <div
+                className={`flex-1 flex flex-col transition-all duration-100 overflow-hidden ${
+                  showSidebar
+                    ? "opacity-100"
+                    : "opacity-0 pointer-events-none w-0"
+                }`}
+              >
+                <div className="p-4 border-b border-base-200">
+                  <button
+                    onClick={handleCreateSession}
+                    className="h-12 w-full flex items-center justify-start gap-4 text-nowrap cursor-pointer bg-base-100/80 backdrop-blur-sm border border-base-200 rounded-lg px-4 hover:bg-base-200/50 transition-colors"
+                  >
+                    <SquarePen className="w-5 h-5 text-base-content/60" />
+                    <span>New Session</span>
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {sessionHistory.length === 0 ? (
+                    <div className="p-4 text-center text-base-content/60 text-sm">
+                      No conversations yet
+                    </div>
+                  ) : (
+                    <div className="menu p-2">
+                      {sessionHistory.map((s) => (
+                        <li key={s.id} className="relative group">
+                          <button
+                            onClick={() => handleSelectSession(s.id)}
+                            className={`w-full pr-8 ${currentSession?.id === s.id ? "bg-primary/10" : ""}`}
+                          >
+                            <MessageSquare className="size-4 shrink-0" />
+                            <span className="truncate">{s.title}</span>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSession(s.id);
+                            }}
+                            className="btn btn-ghost btn-xs btn-circle absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
+                        </li>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
+      )}
+
+      <main className={`p-4 ${user ? "pl-16" : ""}`}>
+        {isNewSession ? (
+          <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold mb-4">What will you create today?</h2>
+              <p className="text-base-content/60">Describe your image in the prompt below</p>
+            </div>
+          </div>
+        ) : (
+          <div className="masonry-grid">
+            {images.map((src, i) => (
+              <div
+                key={i}
+                className="masonry-item break-inside-avoid group relative overflow-hidden rounded-2xl"
+              >
+                <img
+                  src={src}
+                  alt={`Generated ${i + 1}`}
+                  className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
+            ))}
+          </div>
+        )}
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-base-100 via-base-100 to-transparent pt-12">
+      <div
+        className={`fixed bottom-0 right-0 p-4 overflow-visible ${user ? "left-16" : "left-0"}`}
+      >
         <div className="max-w-3xl mx-auto">
-          <div className="card bg-base-100 shadow-2xl border border-base-200">
-            <div className="card-body p-4">
+          <div
+            id="prompt-area"
+            className="relative rounded-4xl bg-base-100 border border-base-200 shadow-2xl backdrop-blur-2xl overflow-visible"
+            style={{
+              boxShadow: `
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+                0 1px 1px rgba(255, 255, 255, 0.4) inset
+              `,
+            }}
+          >
+            <div className="card-body p-4 relative z-10 overflow-visible">
               {selectedModelInfo?.supportsImage && (
                 <div className="mt-4">
-                  <label className="label">
-                    <span className="label-text font-bold text-xs uppercase tracking-wider text-base-content/50">
-                      Image Input
-                    </span>
-                  </label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex gap-2">
+                    <div>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="btn btn-ghost btn-square w-10 h-10"
+                      >
+                        <ImagePlus />
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handleImageUpload}
+                      />
+                    </div>
                     {uploadedImages.map((img) => (
-                      <div key={img.id} className="relative">
-                        <img
-                          src={img.url}
-                          alt="Uploaded"
-                          className="w-20 h-20 object-cover rounded-lg"
-                        />
+                      <div key={img.id} className="relative group">
+                        <img src={img.url} alt="Preview" className="w-10 h-10 rounded-lg object-cover" />
                         <button
                           onClick={() => removeImage(img.id)}
-                          className="btn btn-circle btn-xs btn-error absolute -top-2 -right-2"
+                          className="btn btn-circle h-4 w-4 absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 bg-black text-white opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <X className="size-3" />
+                          <X />
                         </button>
                       </div>
                     ))}
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="btn btn-outline btn-square w-20 h-20"
-                    >
-                      <Upload className="size-5" />
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={handleImageUpload}
-                    />
                   </div>
                 </div>
               )}
@@ -311,47 +494,50 @@ export default function AIToolkitPage() {
                   placeholder={
                     t.aiToolkit?.promptPlaceholder || "Describe your image..."
                   }
-                  className="textarea textarea-bordered w-full text-base resize-none"
+                  className="textarea textarea-ghost w-full text-base resize-none focus:outline-none"
                   rows={2}
                 />
               </div>
 
-              <div className="flex flex-row gap-2">
+              {showNegativePrompt && (
+                <div className="mt-2">
+                  <textarea
+                    value={negativePrompt}
+                    onChange={(e) => setNegativePrompt(e.target.value)}
+                    placeholder="What to avoid..."
+                    className="textarea textarea-ghost textarea-sm w-full resize-none focus:outline-none"
+                    rows={2}
+                  />
+                </div>
+              )}
+
+              <div className="flex flex-row gap-2 overflow-visible">
                 <CustomSelect
-                  label="Model"
+                  label="Models"
                   options={MODEL_OPTIONS}
                   value={selectedModel}
-                  onChange={(v) => setSelectedModel(v as Model)}
-                  className="min-w-28"
+                  onChange={(v) => setSelectedModel(v as ModelId)}
+                  className="min-w-10"
                 />
-                {selectedModel === "gpt-image-1.5" && (
+                {selectedModel === "openai/gpt-image-1.5" && (
                   <>
                     <CustomSelect
                       label="Quality"
-                      options={QUALITY_OPTIONS.map((o) => ({
-                        ...o,
-                        icon: undefined,
-                      }))}
+                      options={QUALITY_OPTIONS.map((o) => ({ ...o, icon: undefined }))}
                       value={quality}
                       onChange={setQuality}
                       className="min-w-8"
                     />
                     <CustomSelect
                       label="Size"
-                      options={SIZE_OPTIONS_GPT.map((o) => ({
-                        ...o,
-                        icon: undefined,
-                      }))}
+                      options={SIZE_OPTIONS_GPT.map((o) => ({ ...o, icon: undefined }))}
                       value={sizeGpt}
                       onChange={setSizeGpt}
                       className="min-w-8"
                     />
                     <CustomSelect
                       label="Style"
-                      options={STYLE_OPTIONS.map((o) => ({
-                        ...o,
-                        icon: undefined,
-                      }))}
+                      options={STYLE_OPTIONS.map((o) => ({ ...o, icon: undefined }))}
                       value={style}
                       onChange={setStyle}
                       className="min-w-8"
@@ -359,61 +545,49 @@ export default function AIToolkitPage() {
                   </>
                 )}
 
-                {selectedModel === "wan-2.6-image" && (
+                {selectedModel === "alibaba/wan-2.6-image" && (
                   <>
                     <CustomSelect
                       label="Size"
-                      options={SIZE_OPTIONS_WAN.map((o) => ({
-                        ...o,
-                        icon: undefined,
-                      }))}
+                      options={SIZE_OPTIONS_WAN.map((o) => ({ ...o, icon: undefined }))}
                       value={sizeWan}
                       onChange={setSizeWan}
                       className="min-w-8"
                     />
-                    <div className="flex-1 min-w-8">
-                      <label className="label">
-                        <span className="label-text font-bold text-xs uppercase tracking-wider text-base-content/50">
-                          Negative Prompt
-                        </span>
-                      </label>
-                      <textarea
-                        placeholder="What to avoid..."
-                        className="textarea textarea-bordered textarea-sm w-full resize-none"
-                        rows={3}
-                      />
+                    <div className="h-full flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => setShowNegativePrompt(!showNegativePrompt)}
+                        className="btn btn-ghost items-center whitespace-nowrap border border-base-200 hover:border-primary hover:bg-base-100"
+                      >
+                        Negative Prompt
+                      </button>
                     </div>
                   </>
                 )}
 
-                {selectedModel === "seedream-5" && (
+                {selectedModel === "bytedance/seedream-5-lite" && (
                   <>
                     <CustomSelect
                       label="Size"
-                      options={SIZE_OPTIONS_SEEDREAM.map((o) => ({
-                        ...o,
-                        icon: undefined,
-                      }))}
+                      options={SIZE_OPTIONS_SEEDREAM.map((o) => ({ ...o, icon: undefined }))}
                       value={sizeSeedream}
                       onChange={setSizeSeedream}
-                      className="flex-1 min-w-32"
+                      className="min-w-8"
                     />
-                    <div className="flex-1 min-w-32">
-                      <label className="label">
-                        <span className="label-text font-bold text-xs uppercase tracking-wider text-base-content/50">
-                          Negative Prompt
-                        </span>
-                      </label>
-                      <textarea
-                        placeholder="What to avoid..."
-                        className="textarea textarea-bordered textarea-sm w-full resize-none"
-                        rows={3}
-                      />
+                    <div className="h-full flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => setShowNegativePrompt(!showNegativePrompt)}
+                        className="btn btn-ghost items-center whitespace-nowrap border border-base-200 hover:border-primary hover:bg-base-100"
+                      >
+                        Negative Prompt
+                      </button>
                     </div>
                   </>
                 )}
 
-                {selectedModel === "nano-banana-2" && (
+                {selectedModel === "google/nano-banana-2" && (
                   <>
                     <CustomSelect
                       label="Aspect Ratio"
@@ -424,30 +598,22 @@ export default function AIToolkitPage() {
                     />
                     <CustomSelect
                       label="Resolution"
-                      options={RESOLUTION_OPTIONS.map((o) => ({
-                        ...o,
-                        icon: undefined,
-                      }))}
+                      options={RESOLUTION_OPTIONS.map((o) => ({ ...o, icon: undefined }))}
                       value={resolution}
                       onChange={setResolution}
                       className="flex-1 min-w-24"
                     />
                     <CustomSelect
                       label="Output Format"
-                      options={OUTPUT_FORMAT_OPTIONS.map((o) => ({
-                        ...o,
-                        icon: undefined,
-                      }))}
+                      options={OUTPUT_FORMAT_OPTIONS.map((o) => ({ ...o, icon: undefined }))}
                       value={outputFormat}
                       onChange={setOutputFormat}
                       className="flex-1 min-w-24"
                     />
                     <CustomSelect
-                      label="Max Images"
-                      options={MAX_IMAGES_OPTIONS.map((o) => ({
-                        ...o,
-                        icon: undefined,
-                      }))}
+                      label="Number of Images"
+                      suffixIcon={<Images className="size-4" />}
+                      options={MAX_IMAGES_OPTIONS.map((o) => ({ ...o, icon: undefined }))}
                       value={maxImages}
                       onChange={setMaxImages}
                       className="flex-1 min-w-24"
@@ -455,30 +621,26 @@ export default function AIToolkitPage() {
                   </>
                 )}
 
-                <div className="ml-auto">
-                  <button
-                    onClick={handleGenerate}
-                    disabled={!prompt.trim() || isGenerating}
-                    className="btn btn-primary"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="size-5 animate-spin" />
-                        {t.aiToolkit?.generating || "Generating..."}
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="size-5" />
-                        Generate
-                      </>
-                    )}
-                  </button>
-                </div>
+                <button
+                  onClick={handleGenerate}
+                  disabled={!prompt.trim() || isGenerating}
+                  className="btn btn-primary"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="size-5 animate-spin" />
+                      {t.aiToolkit?.generating || "Generating..."}
+                    </>
+                  ) : (
+                    "Generate"
+                  )}
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+      <Toaster position="top-center" />
     </div>
   );
 }

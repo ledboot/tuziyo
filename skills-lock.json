@@ -11,6 +11,21 @@
       "sourceType": "github",
       "computedHash": "d3a4c7d2f2715a33662c8b06ffc16035d01965a8b4ed81c2958fb22ae94760f8"
     },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "063a0e6448123cd359ad0044cc46b0e490cc7964d45ef4bb9fd842bd2ffbca67"
+    },
+    "hono": {
+      "source": "yusukebe/hono-skill",
+      "sourceType": "github",
+      "computedHash": "220e5e1b12bbaeec49ec362b6e2262d77632d0536e9758bba9acbbc323fef990"
+    },
+    "react-expert": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "computedHash": "bdb36dac501c9ababfd90c3bf1b5e5653488bb63027aeefff8a6c284f10a75f6"
+    },
     "react-router-v7": {
       "source": "existential-birds/beagle",
       "sourceType": "github",
@@ -20,6 +35,16 @@
       "source": "google-labs-code/stitch-skills",
       "sourceType": "github",
       "computedHash": "6df709345652460b4d4fdf214476a20c75d76a2ae011a958a51de2c88e6d86d1"
+    },
+    "stripe-best-practices": {
+      "source": "stripe/ai",
+      "sourceType": "github",
+      "computedHash": "c89653e4f3a289ecdf1a51b3696ee7b18e172131c9803a981088c8d70536c85e"
+    },
+    "stripe-payments": {
+      "source": "jezweb/claude-skills",
+      "sourceType": "github",
+      "computedHash": "151708caa20e00283c73818e8aad2de6d160bc6ea74a4cb8aac3e85ef5d3006f"
     },
     "web-design-guidelines": {
       "source": "vercel-labs/agent-skills",

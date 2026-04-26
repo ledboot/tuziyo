@@ -1,0 +1,16 @@
+name = "tuziyo-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[ai]
+binding = "AI"
+remote = true
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "tuziyo"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tuziyo-db"
+database_id = "87c3889f-0a77-4252-8cd5-f59dbc523d0f"

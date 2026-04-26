@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Check } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 export interface SelectOption {
   value: string;
   label: string;
   icon?: React.ReactNode;
+  badge?: React.ReactNode;
 }
 
 interface CustomSelectProps {
@@ -14,6 +16,7 @@ interface CustomSelectProps {
   label?: string;
   placeholder?: string;
   direction?: "up" | "down";
+  suffixIcon?: React.ReactNode;
   className?: string;
 }
 
@@ -24,34 +27,59 @@ export function CustomSelect({
   label,
   placeholder = "Select...",
   direction = "up",
+  suffixIcon,
   className = "",
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsOpen((prev) => !prev);
+  };
+
+  const handleOptionClick = (optValue: string) => {
+    onChange(optValue);
+    setIsOpen(false);
+    buttonRef.current?.focus();
+  };
 
   return (
-    <div ref={ref} className={`relative ${className}`}>
+    <div
+      ref={ref}
+      className={`relative ${className}`}
+      style={{ overflow: "visible" }}
+    >
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="btn btn-ghost btn-sm w-full flex items-center justify-between gap-2 border border-base-200 hover:border-primary hover:bg-base-100 whitespace-nowrap"
+        onClick={handleButtonClick}
+        className="btn btn-ghost btn-sm w-full h-full flex items-center justify-between gap-2 border border-base-200 hover:border-primary hover:bg-base-100 whitespace-nowrap"
       >
         {selectedOption ? (
-          <span className="flex items-center gap-2">
-            {selectedOption.icon}
-            <span>{selectedOption.label}</span>
+          <span className="flex items-center gap-2 min-w-0 flex-1">
+            {selectedOption.icon || suffixIcon}
+            <span className="whitespace-nowrap">{selectedOption.label}</span>
           </span>
         ) : (
           <span className="text-base-content/50">{placeholder}</span>
@@ -63,11 +91,12 @@ export function CustomSelect({
 
       {isOpen && (
         <div
-          className={`absolute z-50 shadow-2xl bg-base-100 rounded-box border border-base-200 ${
+          className={`absolute z-[100] shadow-2xl bg-base-100 rounded-box border border-base-200 ${
             direction === "up"
               ? "bottom-full mb-1 left-0"
               : "top-full mt-1 left-0"
           }`}
+          style={{ minWidth: 'max-content' }}
         >
           {label && (
             <div className="px-3 py-2 border-b border-base-200 whitespace-nowrap">
@@ -76,15 +105,12 @@ export function CustomSelect({
               </span>
             </div>
           )}
-          <ul className="p-2">
+          <ul className="p-2 space-y-1 w-fit">
             {options.map((opt) => (
               <li key={opt.value}>
                 <button
                   type="button"
-                  onClick={() => {
-                    onChange(opt.value);
-                    setIsOpen(false);
-                  }}
+                  onClick={() => handleOptionClick(opt.value)}
                   className={`flex items-center gap-2 rounded-lg px-2 py-2 whitespace-nowrap ${
                     value === opt.value
                       ? "text-primary font-semibold"
@@ -92,8 +118,13 @@ export function CustomSelect({
                   }`}
                 >
                   {opt.icon}
-                  <span className="flex-1 text-left">{opt.label}</span>
-                  {value === opt.value && <Check className="size-4" />}
+                  <span className="flex-1 text-left whitespace-nowrap">
+                    {opt.label}
+                  </span>
+                  <span className="flex items-center gap-2 shrink-0">
+                    {opt.badge}
+                    {value === opt.value && <Check className="size-4" />}
+                  </span>
                 </button>
               </li>
             ))}

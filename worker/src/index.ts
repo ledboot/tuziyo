@@ -1,64 +1,73 @@
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
-
-interface Env {
-  AI: Ai;
-  IMAGES: R2Bucket;
-}
-
-const IMAGE_MODELS = ['google/nano-banana-2', 'alibaba/wan-2.6-image', 'bytedance/seedream-5-lite', 'openai/gpt-image-1.5'] as const;
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { authMiddleware, getUser } from "./middleware/auth";
+import { handleGenerate, getModels } from "./routes/image";
+import { handleGoogleCallback, handleLogout } from "./routes/auth";
+import {
+  handleGetProducts,
+  handleCreateCheckoutSession,
+  handleStripeWebhook,
+  handleGetSubscription,
+  handleCreateCustomerPortal,
+} from "./routes/stripe";
+import { handleGetCredits } from "./routes/credits";
+import { handleGetTransactions } from "./routes/transactions";
+import {
+  handleGetSessions,
+  handleCreateSession,
+  handleGetSession,
+  handleDeleteSession,
+  handleUpdateSessionTitle,
+  handleCreateMessage,
+} from "./routes/sessions";
+import type { Env } from "./types";
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use('*', cors());
+app.use(
+  "*",
+  cors({
+    origin: "*",
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+    exposeHeaders: ["Content-Type", "Authorization", "Content-Length"],
+    credentials: true,
+  }),
+);
 
-app.post('/generate', async (c) => {
-  const { prompt, model } = await c.req.json<{
-    prompt?: string;
-    model?: string;
-  }>();
+// public routes
+app.post("/api/auth/google/callback", handleGoogleCallback);
 
-  if (!prompt) {
-    return c.json({ error: 'prompt is required' }, 400);
-  }
-
-  if (!model || !IMAGE_MODELS.includes(model as typeof IMAGE_MODELS[number])) {
-    return c.json({ error: `model must be one of: ${IMAGE_MODELS.join(', ')}` }, 400);
-  }
-
-  const result = await c.env.AI.run(model, { prompt }, { gateway: { id: 'image-ai-gateway' } }) as { image?: string; url?: string };
-
-  const imageUrl = result.url || result.image;
-  if (!imageUrl) {
-    return c.json({ error: 'no image returned from AI' }, 500);
-  }
-
-  const imageResponse = await fetch(imageUrl);
-  const imageBuffer = await imageResponse.arrayBuffer();
-
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const timestamp = now.getTime();
-  const key = `${year}/${month}${day}/${timestamp}.png`;
-
-  await c.env.IMAGES.put(key, imageBuffer);
-
-  return c.json({ key });
+app.get("/api/models", (c) => {
+  return c.json({ models: getModels() });
 });
 
-app.get('/models', (c) => {
-  return c.json({
-    models: [
-      { id: 'google/nano-banana-2', name: 'Google Nano Banana 2' },
-      { id: 'alibaba/wan-2.6-image', name: 'Alibaba Wan 2.6 Image' },
-      { id: 'bytedance/seedream-5-lite', name: 'ByteDance Seedream 5 Lite' },
-      { id: 'openai/gpt-image-1.5', name: 'OpenAI GPT Image 1.5' },
-    ],
-  });
+// authenticated routes
+
+const protectedRoutes = new Hono();
+protectedRoutes.use("*", authMiddleware);
+
+protectedRoutes.post("/api/auth/logout", handleLogout);
+protectedRoutes.get("/api/auth/me", (c) => {
+  const user = getUser(c);
+  return c.json({ user });
 });
 
-export default {
-  fetch: app.fetch,
-};
+protectedRoutes.post("/api/generate", handleGenerate);
+protectedRoutes.get("/api/credits", handleGetCredits);
+protectedRoutes.get("/api/transactions", handleGetTransactions);
+protectedRoutes.get("/api/sessions", handleGetSessions);
+protectedRoutes.post("/api/sessions", handleCreateSession);
+protectedRoutes.get("/api/sessions/:id", handleGetSession);
+protectedRoutes.delete("/api/sessions/:id", handleDeleteSession);
+protectedRoutes.put("/api/sessions/:id", handleUpdateSessionTitle);
+protectedRoutes.post("/api/sessions/:id/messages", handleCreateMessage);
+protectedRoutes.get("/api/stripe/products", handleGetProducts);
+protectedRoutes.post("/api/stripe/checkout", handleCreateCheckoutSession);
+protectedRoutes.post("/api/stripe/webhook", handleStripeWebhook);
+protectedRoutes.get("/api/stripe/subscription", handleGetSubscription);
+protectedRoutes.post("/api/stripe/portal", handleCreateCustomerPortal);
+
+app.route("/", protectedRoutes);
+
+export default app;

@@ -7,10 +7,15 @@
     "deploy": "wrangler deploy"
   },
   "dependencies": {
-    "hono": "^4.0.0"
+    "hono": "^4.0.0",
+    "jose": "^6.2.2",
+    "stripe": "^22.0.2",
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241022.0",
+    "@types/node": "^25.6.0",
+    "@types/uuid": "^11.0.0",
     "typescript": "^5.0.0",
     "wrangler": "^4.0.0"
   }

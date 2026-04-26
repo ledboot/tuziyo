@@ -202,3 +202,42 @@ export async function deleteSession(
   await db.prepare("DELETE FROM messages WHERE session_id = ?").bind(sessionId).run();
   await db.prepare("DELETE FROM sessions WHERE id = ?").bind(sessionId).run();
 }
+
+export interface Subscription {
+  user_id: string;
+  stripe_subscription_id: string;
+  stripe_customer_id: string;
+  plan: "starter" | "pro" | "enterprise";
+  status: "active" | "past_due" | "canceled" | "trialing" | "incomplete";
+  current_period_start: number;
+  current_period_end: number;
+  created_at: number;
+  updated_at: number;
+}
+
+export async function getSubscription(
+  db: D1Database,
+  userId: string,
+): Promise<Subscription | null> {
+  const result = await db
+    .prepare("SELECT * FROM subscriptions WHERE user_id = ?")
+    .bind(userId)
+    .first<Subscription>();
+  return result;
+}
+
+export async function createCustomerPortal(token: string) {
+  const response = await fetch("/api/stripe/portal", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to create portal session");
+  }
+
+  return response.json() as Promise<{ url: string }>;
+}

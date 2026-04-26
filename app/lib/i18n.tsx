@@ -44,6 +44,7 @@ export interface Translations {
     resize: string;
     crop: string;
     convert: string;
+    pricing: string;
     x: string;
     github: string;
     about: string;
@@ -189,6 +190,7 @@ export const translations: Record<Language, Translations> = {
       resize: "Resize",
       crop: "Crop",
       convert: "Convert",
+      pricing: "Pricing",
       x: "X (Twitter)",
       github: "GitHub",
       about: "About Us",
@@ -353,6 +355,7 @@ export const translations: Record<Language, Translations> = {
       resize: "调整尺寸",
       crop: "图片裁剪",
       convert: "格式转换",
+      pricing: "订阅价格",
       x: "X (Twitter)",
       github: "GitHub",
       about: "关于我们",
@@ -510,6 +513,7 @@ export const translations: Record<Language, Translations> = {
       resize: "Redimensionner",
       crop: "Recadrer",
       convert: "Convertir",
+      pricing: "Tarifs",
       x: "X (Twitter)",
       github: "GitHub",
       about: "À propos",
@@ -675,6 +679,7 @@ export const translations: Record<Language, Translations> = {
       resize: "リサイズ",
       crop: "切り抜き",
       convert: "形式変換",
+      pricing: "料金",
       x: "X (Twitter)",
       github: "GitHub",
       about: "運営会社",
@@ -834,6 +839,7 @@ export const translations: Record<Language, Translations> = {
       resize: "크기 조정",
       crop: "자르기",
       convert: "형식 변환",
+      pricing: "가격",
       x: "X (Twitter)",
       github: "GitHub",
       about: "회사 소개",
@@ -993,6 +999,7 @@ export const translations: Record<Language, Translations> = {
       resize: "Изменение размера",
       crop: "Обрезка",
       convert: "Конвертация",
+      pricing: "Цены",
       x: "X (Twitter)",
       github: "GitHub",
       about: "О нас",
@@ -1160,6 +1167,7 @@ export const translations: Record<Language, Translations> = {
       resize: "Ridimensiona",
       crop: "Ritaglia",
       convert: "Converti",
+      pricing: "Prezzi",
       x: "X (Twitter)",
       github: "GitHub",
       about: "Chi Siamo",

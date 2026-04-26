@@ -1,7 +1,8 @@
 import { Link, NavLink, useLocation } from "react-router";
-import { Globe, ChevronDown } from "lucide-react";
+import { Globe, ChevronDown, LogOut, User } from "lucide-react";
 import { useI18n, type Language } from "../lib/i18n";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
+import { useUserStore } from "../stores/userStore";
 
 const LANG_NAMES: Record<Language, string> = {
   en: "English",
@@ -32,20 +33,12 @@ function isNavItemWithChildren(item: NavItem): item is NavItemWithChildren {
 
 export default function Header() {
   const { lang, setLang, t } = useI18n();
-  const [showLangMenu, setShowLangMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowLangMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+  const { user, logout } = useUserStore();
 
   const navItems: NavItem[] = [
     { title: t.nav.aiToolkit, to: "/ai-toolkit" },
@@ -58,13 +51,14 @@ export default function Header() {
         { title: t.nav.convert, to: "/convert" },
       ],
     },
+    { title: t.nav.pricing, to: "/pricing" },
     { title: t.nav.blog, to: "/blog", external: true },
   ];
 
   const isBlogActive = location.pathname.startsWith("/blog");
 
   return (
-    <div className="navbar bg-base-100 border-b border-base-200 sticky top-0 z-40 backdrop-blur-md">
+    <div className="navbar h-15 max-h-15 bg-base-100 border-b border-base-200 sticky top-0 z-40 backdrop-blur-md px-6">
       <div className="navbar-start">
         <Link to="/" className="flex items-center">
           <img src="/logo-with-brand.svg" alt="tuziyo" className="h-8 w-auto" />
@@ -138,20 +132,72 @@ export default function Header() {
       </div>
 
       <div className="navbar-end flex items-center gap-2">
-        <button
-          className="btn btn-primary btn-sm hidden lg:flex"
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent("openLoginModal"));
-          }}
-        >
-          Start Free Now
-        </button>
+        {user ? (
+          <div className="dropdown dropdown-end" ref={userMenuRef}>
+            <button
+              tabIndex={0}
+              role="button"
+              className="btn btn-ghost btn-circle dropdown-toggle"
+            >
+              {user.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.name}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </button>
+            <ul
+              tabIndex={0}
+              className="dropdown-content z-50 menu p-2 shadow-lg bg-base-100 rounded-box w-52 border border-base-200 mt-2"
+            >
+              <li className="menu-title px-4 py-2">
+                <div className="text-sm font-semibold">{user.name}</div>
+                <div className="text-xs text-base-content/60">{user.email}</div>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    window.location.href = "/profile";
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <User className="size-4" />
+                  Profile
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    logout();
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <LogOut className="size-4" />
+                  Logout
+                </button>
+              </li>
+            </ul>
+          </div>
+        ) : (
+          <button
+            className="btn btn-primary btn-sm hidden lg:flex"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent("openLoginModal"));
+            }}
+          >
+            Start Free Now
+          </button>
+        )}
         <div className="dropdown dropdown-end" ref={menuRef}>
           <button
             tabIndex={0}
             role="button"
-            className="btn btn-ghost btn-sm gap-2"
-            onClick={() => setShowLangMenu(!showLangMenu)}
+            className="btn btn-ghost btn-sm gap-2 dropdown-toggle"
           >
             <div className="p-1 rounded-lg bg-base-200">
               <Globe className="size-4" />
