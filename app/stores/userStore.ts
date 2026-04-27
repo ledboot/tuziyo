@@ -12,6 +12,7 @@ interface UserState {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  isFetching: boolean;
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
   login: (code: string, codeVerifier: string) => Promise<{ success: boolean; error?: string }>;
@@ -27,6 +28,7 @@ export const useUserStore = create<UserState>()(
       user: null,
       token: null,
       isLoading: true,
+      isFetching: false,
 
       setUser: (user) => set({ user }),
       setToken: (token) => set({ token }),
@@ -73,26 +75,30 @@ export const useUserStore = create<UserState>()(
       },
 
       fetchUser: () => {
+        const state = get();
+        if (state.isFetching) return;
+        if (state.user && state.token) return;
+
         const stored = localStorage.getItem("tuziyo-user-storage");
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
             if (parsed.state?.token) {
-              set({ token: parsed.state.token, isLoading: true });
+              set({ token: parsed.state.token, isFetching: true });
               fetch(`${API_BASE}/api/auth/me`, {
                 headers: { Authorization: `Bearer ${parsed.state.token}` },
               })
                 .then((res) => res.json())
                 .then((data) => {
                   if (data.user) {
-                    set({ user: data.user, isLoading: false });
+                    set({ user: data.user, isFetching: false });
                   } else {
-                    set({ user: null, token: null, isLoading: false });
+                    set({ user: null, token: null, isFetching: false });
                     localStorage.removeItem("tuziyo-user-storage");
                   }
                 })
                 .catch(() => {
-                  set({ user: null, token: null, isLoading: false });
+                  set({ user: null, token: null, isFetching: false });
                   localStorage.removeItem("tuziyo-user-storage");
                 });
               return;
@@ -100,7 +106,7 @@ export const useUserStore = create<UserState>()(
           } catch {
           }
         }
-        set({ isLoading: false });
+        set({ isLoading: false, isFetching: false });
       },
     }),
     {

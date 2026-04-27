@@ -58,16 +58,16 @@ export const api = {
   },
 
   sessions: {
-    list: () => request<{ sessions: Array<{ id: string; title: string; created_at: number; updated_at: number }> }>("/api/sessions"),
-    create: (title: string) => request<{ session: { id: string; title: string; created_at: number; updated_at: number } }>("/api/sessions", {
+    list: () => request<{ sessions: Array<{ id: string; title: string; is_pinned: number; preview_image: string | null; created_at: number; updated_at: number }> }>("/api/sessions"),
+    create: (title: string) => request<{ session: { id: string; title: string; is_pinned: number; created_at: number; updated_at: number } }>("/api/sessions", {
       method: "POST",
       body: JSON.stringify({ title }),
     }),
     get: (id: string) => request<{ session: { id: string; title: string }; messages: Array<{ id: string; role: string; prompt: string; model: string; image_url?: string }> }>(`/api/sessions/${id}`),
-    delete: (id: string) => request("/api/sessions/${id}", { method: "DELETE" }),
-    updateTitle: (id: string, title: string) => request(`/api/sessions/${id}`, {
-      method: "PUT",
-      body: JSON.stringify({ title }),
+    delete: (id: string) => request(`/api/sessions/${id}`, { method: "DELETE" }),
+    update: (id: string, data: { title?: string; is_pinned?: number }) => request(`/api/sessions/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
     }),
   },
 

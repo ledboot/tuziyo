@@ -17,7 +17,7 @@ import {
   handleCreateSession,
   handleGetSession,
   handleDeleteSession,
-  handleUpdateSessionTitle,
+  handleUpdateSession,
   handleCreateMessage,
 } from "./routes/sessions";
 import type { Env } from "./types";
@@ -28,7 +28,7 @@ app.use(
   "*",
   cors({
     origin: "*",
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowMethods: ["GET", "POST","PATCH", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     exposeHeaders: ["Content-Type", "Authorization", "Content-Length"],
     credentials: true,
@@ -60,7 +60,7 @@ protectedRoutes.get("/api/sessions", handleGetSessions);
 protectedRoutes.post("/api/sessions", handleCreateSession);
 protectedRoutes.get("/api/sessions/:id", handleGetSession);
 protectedRoutes.delete("/api/sessions/:id", handleDeleteSession);
-protectedRoutes.put("/api/sessions/:id", handleUpdateSessionTitle);
+protectedRoutes.patch("/api/sessions/:id", handleUpdateSession);
 protectedRoutes.post("/api/sessions/:id/messages", handleCreateMessage);
 protectedRoutes.get("/api/stripe/products", handleGetProducts);
 protectedRoutes.post("/api/stripe/checkout", handleCreateCheckoutSession);

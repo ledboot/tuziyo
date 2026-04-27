@@ -12,6 +12,8 @@ import {
   MessageSquare,
   Trash2,
   SquarePen,
+  Pin,
+  Pencil,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { useI18n } from "~/lib/i18n";
@@ -140,30 +142,38 @@ export default function AIToolkitPage() {
   const [images] = useState<string[]>(SAMPLE_IMAGES);
   const [uploadedImages, setUploadedImages] = useState<{ id: string; url: string }[]>([]);
   const [currentSession, setCurrentSession] = useState<{ id: string; title: string } | null>(null);
-  const [sessionHistory, setSessionHistory] = useState<{ id: string; title: string; created_at: number; updated_at: number }[]>([]);
+  const [sessionHistory, setSessionHistory] = useState<{ id: string; title: string; is_pinned: number; preview_image: string | null; created_at: number; updated_at: number }[]>([]);
   const [showSidebar, setShowSidebar] = useState(false);
   const [isNewSession, setIsNewSession] = useState(false);
   const [messages, setMessages] = useState<{ id: string; role: string; prompt: string; imageUrl?: string; model: string; timestamp: number }[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
+  const sessionsFetchedRef = useRef(false);
+  const modelsFetchedRef = useRef(false);
 
-  const { user, token, fetchUser } = useUserStore();
-
-  useEffect(() => {
-    fetchUser();
-    api.models.list().then((data) => {
-      if (data.models) {
-        const mappedModels: ModelInfo[] = data.models.map((m) => ({
-          ...m,
-          supportsImage: m.id.includes("seedream") || m.id.includes("nano-banana"),
-        }));
-        setModels(mappedModels);
-      }
-    }).catch(console.error);
-  }, [fetchUser]);
+  const { user, token } = useUserStore();
 
   useEffect(() => {
-    if (user && token) {
+    if (!modelsFetchedRef.current) {
+      modelsFetchedRef.current = true;
+      api.models.list().then((data) => {
+        if (data.models) {
+          const mappedModels: ModelInfo[] = data.models.map((m) => ({
+            ...m,
+            supportsImage: m.id.includes("seedream") || m.id.includes("nano-banana"),
+          }));
+          setModels(mappedModels);
+        }
+      }).catch(console.error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user && token && !sessionsFetchedRef.current) {
+      sessionsFetchedRef.current = true;
       api.sessions.list().then((data) => {
         if (data.sessions) {
           setSessionHistory(data.sessions);
@@ -248,6 +258,7 @@ export default function AIToolkitPage() {
       const requestBody: Record<string, unknown> = {
         prompt,
         model: selectedModel,
+        provider: selectedModelInfo?.provider,
         sessionId,
       };
 
@@ -378,26 +389,101 @@ export default function AIToolkitPage() {
                       No conversations yet
                     </div>
                   ) : (
-                    <div className="menu p-2">
+                    <div className="p-2 space-y-1">
                       {sessionHistory.map((s) => (
-                        <li key={s.id} className="relative group">
-                          <button
-                            onClick={() => handleSelectSession(s.id)}
-                            className={`w-full pr-8 ${currentSession?.id === s.id ? "bg-primary/10" : ""}`}
-                          >
-                            <MessageSquare className="size-4 shrink-0" />
-                            <span className="truncate">{s.title}</span>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteSession(s.id);
-                            }}
-                            className="btn btn-ghost btn-xs btn-circle absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 className="size-3" />
-                          </button>
-                        </li>
+                        <div
+                          key={s.id}
+                          className={`group relative flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-base-200/50 transition-colors ${currentSession?.id === s.id ? "bg-primary/10" : ""}`}
+                          onClick={() => handleSelectSession(s.id)}
+                        >
+                          <div className="size-10 rounded-lg overflow-hidden bg-base-200 shrink-0">
+                            {s.preview_image ? (
+                              <img src={s.preview_image} alt="" className="size-full object-cover" />
+                            ) : (
+                              <div className="size-full flex items-center justify-center">
+                                <MessageSquare className="size-4 text-base-content/40" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            {editingSessionId === s.id ? (
+                              <input
+                                ref={editInputRef}
+                                type="text"
+                                defaultValue={s.title}
+                                className="input input-sm input-bordered w-full"
+                                autoFocus
+                                onBlur={(e) => {
+                                  const newTitle = e.target.value.trim();
+                                  if (!newTitle) {
+                                    setEditingSessionId(null);
+                                    return;
+                                  }
+                                  if (newTitle !== s.title) {
+                                    api.sessions.update(s.id, { title: newTitle }).then(() => {
+                                      setSessionHistory((prev) =>
+                                        prev.map((session) =>
+                                          session.id === s.id ? { ...session, title: newTitle } : session
+                                        )
+                                      );
+                                    });
+                                  }
+                                  setEditingSessionId(null);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.currentTarget.blur();
+                                  } else if (e.key === "Escape") {
+                                    setEditingSessionId(null);
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                {s.is_pinned === 1 && <Pin className="size-3 text-primary shrink-0" />}
+                                <span className="truncate text-sm font-medium">{s.title}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {editingSessionId !== s.id && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingSessionId(s.id);
+                                  setTimeout(() => editInputRef.current?.select(), 0);
+                                }}
+                                className="btn btn-ghost btn-xs btn-circle"
+                              >
+                                <Pencil className="size-3" />
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                api.sessions.update(s.id, { is_pinned: s.is_pinned === 1 ? 0 : 1 }).then(() => {
+                                  setSessionHistory((prev) =>
+                                    prev.map((session) =>
+                                      session.id === s.id ? { ...session, is_pinned: s.is_pinned === 1 ? 0 : 1 } : session
+                                    )
+                                  );
+                                });
+                              }}
+                              className="btn btn-ghost btn-xs btn-circle"
+                            >
+                              <Pin className={`size-3 ${s.is_pinned === 1 ? "fill-primary text-primary" : ""}`} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteSessionId(s.id);
+                              }}
+                              className="btn btn-ghost btn-xs btn-circle hover:text-error"
+                            >
+                              <Trash2 className="size-3" />
+                            </button>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -641,6 +727,33 @@ export default function AIToolkitPage() {
         </div>
       </div>
       <Toaster position="top-center" />
+
+      {deleteSessionId && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">Delete Session</h3>
+            <p className="py-4">Are you sure you want to delete this session? This action cannot be undone.</p>
+            <div className="modal-action">
+              <button
+                className="btn btn-ghost"
+                onClick={() => setDeleteSessionId(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-error"
+                onClick={() => {
+                  handleDeleteSession(deleteSessionId);
+                  setDeleteSessionId(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+          <div className="modal-backdrop" onClick={() => setDeleteSessionId(null)} />
+        </div>
+      )}
     </div>
   );
 }

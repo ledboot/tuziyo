@@ -11,10 +11,11 @@ export async function handleGetSessions(c: Context<{ Bindings: Env }>) {
   const sessions = await c.env.DB
     .prepare(
       `
-      SELECT id, title, created_at, updated_at
-      FROM sessions
-      WHERE user_id = ?
-      ORDER BY updated_at DESC
+      SELECT s.id, s.title, s.is_pinned, s.created_at, s.updated_at,
+        (SELECT m.image_url FROM messages m WHERE m.session_id = s.id AND m.image_url IS NOT NULL ORDER BY m.created_at ASC LIMIT 1) as preview_image
+      FROM sessions s
+      WHERE s.user_id = ?
+      ORDER BY s.is_pinned DESC, s.updated_at DESC
       LIMIT 50
     `
     )
@@ -37,14 +38,14 @@ export async function handleCreateSession(c: Context<{ Bindings: Env }>) {
   await c.env.DB
     .prepare(
       `
-      INSERT INTO sessions (id, user_id, title, is_persistent, created_at, updated_at)
-      VALUES (?, ?, ?, 1, ?, ?)
+      INSERT INTO sessions (id, user_id, title, is_pinned, created_at, updated_at)
+      VALUES (?, ?, ?, 0, ?, ?)
     `
     )
     .bind(sessionId, user.userId, title || "New Chat", now, now)
     .run();
 
-  return c.json({ session: { id: sessionId, title: title || "New Chat", created_at: now, updated_at: now } });
+  return c.json({ session: { id: sessionId, title: title || "New Chat", is_pinned: 0, created_at: now, updated_at: now } });
 }
 
 export async function handleGetSession(c: Context<{ Bindings: Env }>) {
@@ -95,19 +96,45 @@ export async function handleDeleteSession(c: Context<{ Bindings: Env }>) {
   return c.json({ success: true });
 }
 
-export async function handleUpdateSessionTitle(c: Context<{ Bindings: Env }>) {
+export async function handleUpdateSession(c: Context<{ Bindings: Env }>) {
   const user = c.get("user");
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
   const sessionId = c.req.param("id");
-  const { title } = await c.req.json<{ title: string }>();
+  const { title, is_pinned } = await c.req.json<{ title?: string; is_pinned?: number }>();
+
+  const session = await c.env.DB
+    .prepare("SELECT * FROM sessions WHERE id = ? AND user_id = ?")
+    .bind(sessionId, user.userId)
+    .first();
+
+  if (!session) {
+    return c.json({ error: "Session not found" }, 404);
+  }
+
   const now = Math.floor(Date.now() / 1000);
+  const updates: string[] = [];
+  const values: (string | number)[] = [];
+
+  if (title !== undefined) {
+    updates.push("title = ?");
+    values.push(title);
+  }
+
+  if (is_pinned !== undefined) {
+    updates.push("is_pinned = ?");
+    values.push(is_pinned);
+  }
+
+  updates.push("updated_at = ?");
+  values.push(now);
+  values.push(sessionId, user.userId);
 
   await c.env.DB
-    .prepare("UPDATE sessions SET title = ?, updated_at = ? WHERE id = ? AND user_id = ?")
-    .bind(title, now, sessionId, user.userId)
+    .prepare(`UPDATE sessions SET ${updates.join(", ")} WHERE id = ? AND user_id = ?`)
+    .bind(...values)
     .run();
 
   return c.json({ success: true });

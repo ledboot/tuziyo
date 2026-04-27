@@ -64,11 +64,11 @@ import { useUserStore } from "./stores/userStore";
 
 export default function App() {
   const location = useLocation();
-  const { fetchUser } = useUserStore();
 
   useEffect(() => {
+    const { fetchUser } = useUserStore.getState();
     fetchUser();
-  }, [fetchUser]);
+  }, []);
 
   const isSpecialPage = location.pathname.startsWith("/ai-toolkit");
 
