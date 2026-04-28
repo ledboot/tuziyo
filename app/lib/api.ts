@@ -1,4 +1,12 @@
 const API_BASE = import.meta.env.DEV ? "http://localhost:8787" : "https://api.tuziyo.com";
+export const R2_IMAGE_BASE = "https://images.tuziyo.com";
+
+export const MODEL_CREDITS: Record<string, number> = {
+  "google/nano-banana-2": 2,
+  "alibaba/wan-2.6-image": 1,
+  "bytedance/seedream-5-lite": 3,
+  "openai/gpt-image-1.5": 5,
+};
 
 function getToken(): string | null {
   try {
@@ -32,6 +40,11 @@ async function request<T>(
   });
 
   if (!response.ok) {
+    if (response.status === 401 && !endpoint.includes("/api/auth/me")) {
+      localStorage.removeItem("tuziyo-user-storage");
+      window.location.href = "/";
+      throw new Error("Unauthorized");
+    }
     const error = await response.json().catch(() => ({ error: "Request failed" }));
     throw new Error(error.error || "Request failed");
   }
@@ -41,7 +54,7 @@ async function request<T>(
 
 export const api = {
   auth: {
-    me: () => request<{ user: { userId: string; email: string; name: string; avatarUrl?: string } | null }>("/api/auth/me"),
+    me: () => request<{ user: { userId: string; email: string; name: string; avatarUrl?: string; userType: string; credits: number } | null }>("/api/auth/me"),
     logout: () => request("/api/auth/logout", { method: "POST" }),
   },
 
@@ -63,7 +76,26 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ title }),
     }),
-    get: (id: string) => request<{ session: { id: string; title: string }; messages: Array<{ id: string; role: string; prompt: string; model: string; image_url?: string }> }>(`/api/sessions/${id}`),
+    get: (id: string) => request<{
+      session: { id: string; title: string; is_pinned: number; created_at: number; updated_at: number }
+      messages: Array<{
+        id: string
+        role: string
+        provider: string | null
+        model: string
+        prompt: string
+        image_url: string | null
+        aspect_ratio: string | null
+        resolution: string | null
+        image_size: string | null
+        quality: string | null
+        style: string | null
+        negative_prompt: string | null
+        output_format: string | null
+        num_images: number | null
+        created_at: number
+      }>
+    }>(`/api/sessions/${id}`),
     delete: (id: string) => request(`/api/sessions/${id}`, { method: "DELETE" }),
     update: (id: string, data: { title?: string; is_pinned?: number }) => request(`/api/sessions/${id}`, {
       method: "PATCH",
@@ -85,7 +117,7 @@ export const api = {
       output_format?: string;
       num_images?: number;
       negative_prompt?: string;
-    }) => request<{ success: boolean; key?: string; error?: string }>("/api/generate", {
+    }) => request<{ success: boolean; key?: string; imageUrl?: string; error?: string }>("/api/generate", {
       method: "POST",
       body: JSON.stringify(params),
     }),

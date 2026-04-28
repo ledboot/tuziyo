@@ -42,6 +42,8 @@ app.get("/api/models", (c) => {
   return c.json({ models: getModels() });
 });
 
+app.post("/api/stripe/webhook", handleStripeWebhook);
+
 // authenticated routes
 
 const protectedRoutes = new Hono();
@@ -64,7 +66,6 @@ protectedRoutes.patch("/api/sessions/:id", handleUpdateSession);
 protectedRoutes.post("/api/sessions/:id/messages", handleCreateMessage);
 protectedRoutes.get("/api/stripe/products", handleGetProducts);
 protectedRoutes.post("/api/stripe/checkout", handleCreateCheckoutSession);
-protectedRoutes.post("/api/stripe/webhook", handleStripeWebhook);
 protectedRoutes.get("/api/stripe/subscription", handleGetSubscription);
 protectedRoutes.post("/api/stripe/portal", handleCreateCustomerPortal);
 

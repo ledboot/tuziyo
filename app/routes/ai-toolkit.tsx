@@ -16,10 +16,12 @@ import {
   Pencil,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
+import { useNavigate } from "react-router";
 import { useI18n } from "~/lib/i18n";
 import { CustomSelect, type SelectOption } from "~/components/CustomSelect";
 import { useUserStore } from "~/stores/userStore";
-import { api } from "~/lib/api";
+import { useGenerateStore } from "~/stores/generateStore";
+import { api, R2_IMAGE_BASE, MODEL_CREDITS } from "~/lib/api";
 
 type ModelId = "google/nano-banana-2" | "alibaba/wan-2.6-image" | "bytedance/seedream-5-lite" | "openai/gpt-image-1.5";
 
@@ -153,8 +155,26 @@ export default function AIToolkitPage() {
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
   const sessionsFetchedRef = useRef(false);
   const modelsFetchedRef = useRef(false);
+  const navigate = useNavigate();
 
   const { user, token } = useUserStore();
+  const { regenerateData, clearRegenerateData } = useGenerateStore();
+
+  useEffect(() => {
+    if (regenerateData) {
+      setPrompt(regenerateData.prompt);
+      setSelectedModel(regenerateData.model as ModelId);
+      if (regenerateData.size) setSizeGpt(regenerateData.size);
+      if (regenerateData.quality) setQuality(regenerateData.quality);
+      if (regenerateData.style) setStyle(regenerateData.style);
+      if (regenerateData.aspect_ratio) setAspectRatio(regenerateData.aspect_ratio);
+      if (regenerateData.resolution) setResolution(regenerateData.resolution);
+      if (regenerateData.output_format) setOutputFormat(regenerateData.output_format);
+      if (regenerateData.num_images) setMaxImages(String(regenerateData.num_images));
+      if (regenerateData.negative_prompt) setNegativePrompt(regenerateData.negative_prompt);
+      clearRegenerateData();
+    }
+  }, [regenerateData]);
 
   useEffect(() => {
     if (!modelsFetchedRef.current) {
@@ -187,17 +207,11 @@ export default function AIToolkitPage() {
     setCurrentSession(null);
   };
 
+  const requiredCredits = MODEL_CREDITS[selectedModel] || 0;
+  const hasInsufficientCredits = user && (user.credits || 0) < requiredCredits;
+
   const handleSelectSession = async (sessionId: string) => {
-    setIsNewSession(false);
-    if (!user || !token) return;
-    try {
-      const data = await api.sessions.get(sessionId);
-      if (data.session) {
-        setCurrentSession(data.session);
-      }
-    } catch (error) {
-      console.error("Failed to load session:", error);
-    }
+    navigate(`/session/${sessionId}`);
   };
 
   const handleDeleteSession = async (sessionId: string) => {
@@ -709,14 +723,16 @@ export default function AIToolkitPage() {
 
                 <button
                   onClick={handleGenerate}
-                  disabled={!prompt.trim() || isGenerating}
-                  className="btn btn-primary"
+                  disabled={!prompt.trim() || isGenerating || hasInsufficientCredits}
+                  className={`btn ${hasInsufficientCredits ? "btn-disabled" : "btn-primary"}`}
                 >
                   {isGenerating ? (
                     <>
                       <Loader2 className="size-5 animate-spin" />
                       {t.aiToolkit?.generating || "Generating..."}
                     </>
+                  ) : hasInsufficientCredits ? (
+                    <>Credit insufficient</>
                   ) : (
                     "Generate"
                   )}

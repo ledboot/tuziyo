@@ -13,13 +13,22 @@ export const authMiddleware = createMiddleware<{
     try {
       const payload = await verify(token, c.env.JWT_SECRET, "HS256") as unknown as UserPayload;
 
-      const user = await c.env.DB
-        .prepare("SELECT id FROM users WHERE id = ?")
+      const dbUser = await c.env.DB
+        .prepare("SELECT id, user_type FROM users WHERE id = ?")
         .bind(payload.userId)
-        .first();
+        .first<{ id: string; user_type: string }>();
 
-      if (user) {
-        c.set("user", payload);
+      if (dbUser) {
+        const credits = await c.env.DB
+          .prepare("SELECT balance FROM user_credits WHERE user_id = ?")
+          .bind(payload.userId)
+          .first<{ balance: number }>();
+
+        c.set("user", {
+          ...payload,
+          userType: dbUser.user_type,
+          credits: credits?.balance || 0,
+        });
         await next();
         return;
       }

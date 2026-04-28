@@ -6,6 +6,8 @@ interface User {
   email: string;
   name: string;
   avatarUrl?: string;
+  userType: string;
+  credits: number;
 }
 
 interface UserState {
@@ -77,7 +79,6 @@ export const useUserStore = create<UserState>()(
       fetchUser: () => {
         const state = get();
         if (state.isFetching) return;
-        if (state.user && state.token) return;
 
         const stored = localStorage.getItem("tuziyo-user-storage");
         if (stored) {

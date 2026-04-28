@@ -7,6 +7,7 @@ import {
 export default [
   index("routes/_index.tsx"),
   route("ai-toolkit", "routes/ai-toolkit.tsx"),
+  route("session/:id", "routes/session.$id.tsx"),
   route("inpainting", "routes/inpainting.tsx"),
   route("resize", "routes/resize.tsx"),
   route("crop", "routes/crop.tsx"),

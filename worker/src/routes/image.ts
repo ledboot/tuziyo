@@ -1,6 +1,7 @@
 import type { Context } from "hono"
 import { v4 as uuidv4 } from "uuid"
 import { IMAGE_MODEL_IDS, type Env, type IMAGE_MODEL_ID } from "../types"
+import { deductCredits } from "./credits"
 
 export interface GenerateInput {
   prompt: string
@@ -47,7 +48,6 @@ export async function handleGenerate(c: Context<{ Bindings: Env }>) {
   }
 
   const input = await c.req.json<GenerateInput>()
-  console.log("input", input)
 
   if (!input.prompt) {
     return c.json({ error: "prompt is required" }, 400)
@@ -56,6 +56,28 @@ export async function handleGenerate(c: Context<{ Bindings: Env }>) {
   if (!input.model || !IMAGE_MODEL_IDS.includes(input.model as IMAGE_MODEL_ID)) {
     return c.json({ error: `model must be one of: ${IMAGE_MODEL_IDS.join(", ")}` }, 400)
   }
+
+  const deductResult = await deductCredits(c.env.DB, user.userId, 0, input.model)
+  if (!deductResult.success) {
+    return c.json({ error: deductResult.error }, 402)
+  }
+
+  const aiInput = buildAiInput(input)
+  const result = (await c.env.AI.run(input.model, aiInput, {
+    gateway: { id: "image-ai-gateway" },
+  })) as { image?: string; url?: string }
+
+  const imageUrl = result.url || result.image
+  if (!imageUrl) {
+    return c.json({ error: "no image returned from AI" }, 500)
+  }
+
+  const imageResponse = await fetch(imageUrl)
+  const imageBuffer = await imageResponse.arrayBuffer()
+
+  const extension = input.output_format || "png"
+  const key = generateR2Key(extension)
+  await c.env.IMAGES.put(key, imageBuffer)
 
   const now = Math.floor(Date.now() / 1000)
   let sessionId = input.sessionId
@@ -74,8 +96,6 @@ export async function handleGenerate(c: Context<{ Bindings: Env }>) {
     .bind(sessionId, user.userId)
     .first()
 
-  console.log("session", session)
-
   if (session) {
     const sessionTitle = (session as { title: string }).title
     if (sessionTitle === "New Chat" || sessionTitle === "New Session") {
@@ -89,15 +109,15 @@ export async function handleGenerate(c: Context<{ Bindings: Env }>) {
     const toDbValue = (v: unknown) => (v === undefined ? null : v)
     await c.env.DB.prepare(
       `
-        INSERT INTO messages (id, session_id, role, provider, model, prompt, aspect_ratio, resolution, image_size, quality, style, negative_prompt, output_format, num_images, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO messages (id, session_id, role, provider, model, prompt, aspect_ratio, resolution, image_size, quality, style, negative_prompt, output_format, num_images, image_url, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `
     )
       .bind(
         messageId,
         sessionId,
         "user",
-        input.provider,
+        input.provider || null,
         input.model,
         input.prompt,
         toDbValue(input.aspect_ratio),
@@ -108,6 +128,7 @@ export async function handleGenerate(c: Context<{ Bindings: Env }>) {
         toDbValue(input.negative_prompt),
         toDbValue(input.output_format),
         toDbValue(input.num_images),
+        key,
         now
       )
       .run()
@@ -115,35 +136,12 @@ export async function handleGenerate(c: Context<{ Bindings: Env }>) {
     await c.env.DB.prepare("UPDATE sessions SET updated_at = ? WHERE id = ?")
       .bind(now, sessionId)
       .run()
+
+    const fullImageUrl = `https://images.tuziyo.com/${key}`
+    return c.json({ success: true, key, imageUrl: fullImageUrl })
   }
 
-  // Commented out AI generation and credit deduction
-  /*
-  const deductResult = await deductCredits(c.env.DB, user.userId, 0, input.model);
-  if (!deductResult.success) {
-    return c.json({ error: deductResult.error }, 402);
-  }
-
-  const aiInput = buildAiInput(input);
-  const result = (await c.env.AI.run(input.model, aiInput, {
-    gateway: { id: "image-ai-gateway" },
-  })) as { image?: string; url?: string };
-
-  const imageUrl = result.url || result.image;
-  if (!imageUrl) {
-    return c.json({ error: "no image returned from AI" }, 500);
-  }
-
-  const imageResponse = await fetch(imageUrl);
-  const imageBuffer = await imageResponse.arrayBuffer();
-
-  const key = generateR2Key(input.output_format);
-  await c.env.IMAGES.put(key, imageBuffer);
-
-  return c.json({ key });
-  */
-
-  return c.json({ success: true, message: "Generation skipped (AI disabled)" })
+  return c.json({ success: false, error: "Session not found" }, 500)
 }
 
 export function getModels() {

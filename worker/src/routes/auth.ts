@@ -83,8 +83,7 @@ export async function handleGoogleCallback(c: Context<{ Bindings: Env }>) {
 
     let user;
     if (existingAccount) {
-      const userIdFromAccount = (existingAccount as { user_id: string })
-        .user_id;
+      const userIdFromAccount = (existingAccount as { user_id: string }).user_id;
       await c.env.DB.prepare(
         "UPDATE users SET email = ?, name = ?, avatar_url = ?, updated_at = ? WHERE id = ?",
       )
@@ -99,11 +98,11 @@ export async function handleGoogleCallback(c: Context<{ Bindings: Env }>) {
       user = (await c.env.DB.prepare("SELECT * FROM users WHERE id = ?")
         .bind(userIdFromAccount)
         .first()) as
-        | { id: string; email: string; name: string; avatar_url: string | null }
+        | { id: string; email: string; name: string; avatar_url: string | null; user_type: string }
         | undefined;
     } else {
       await c.env.DB.prepare(
-        "INSERT INTO users (id, email, name, avatar_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO users (id, email, name, avatar_url, user_type, created_at, updated_at) VALUES (?, ?, ?, ?, 'free', ?, ?)",
       )
         .bind(
           userId,
@@ -119,10 +118,24 @@ export async function handleGoogleCallback(c: Context<{ Bindings: Env }>) {
       )
         .bind(accountId, userId, "google", profile.id, timestamp, timestamp)
         .run();
+
+      const NEW_USER_CREDITS = 10;
+      const creditId = uuidv4();
+      await c.env.DB.prepare(
+        "INSERT INTO user_credits (id, user_id, balance, total_purchased, total_used, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+        .bind(creditId, userId, NEW_USER_CREDITS, NEW_USER_CREDITS, 0, timestamp)
+        .run();
+      await c.env.DB.prepare(
+        "INSERT INTO credit_transactions (id, user_id, amount, type, description, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+        .bind(uuidv4(), userId, NEW_USER_CREDITS, "onboarding", "New user sign-up bonus", timestamp)
+        .run();
+
       user = (await c.env.DB.prepare("SELECT * FROM users WHERE id = ?")
         .bind(userId)
         .first()) as
-        | { id: string; email: string; name: string; avatar_url: string | null }
+        | { id: string; email: string; name: string; avatar_url: string | null; user_type: string }
         | undefined;
     }
 
@@ -130,12 +143,19 @@ export async function handleGoogleCallback(c: Context<{ Bindings: Env }>) {
       return c.json({ error: "user_creation_failed" }, 500);
     }
 
+    const userCredits = await c.env.DB
+      .prepare("SELECT balance FROM user_credits WHERE user_id = ?")
+      .bind(user.id)
+      .first<{ balance: number }>();
+
     const jwt = await sign(
       {
         userId: user.id,
         email: user.email,
         name: user.name,
         avatarUrl: user.avatar_url || "",
+        userType: (user as { user_type: string }).user_type,
+        credits: userCredits?.balance || 0,
       },
       c.env.JWT_SECRET,
     );
@@ -147,6 +167,8 @@ export async function handleGoogleCallback(c: Context<{ Bindings: Env }>) {
         email: user.email,
         name: user.name,
         avatarUrl: user.avatar_url || "",
+        userType: (user as { user_type: string }).user_type,
+        credits: userCredits?.balance || 0,
       },
     });
   } catch (err) {

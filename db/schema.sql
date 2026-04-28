@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
     avatar_url TEXT,
+    user_type TEXT NOT NULL DEFAULT 'free' CHECK(user_type IN ('free', 'starter', 'professional', 'enterprise')),
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
@@ -64,6 +65,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     stripe_subscription_id TEXT UNIQUE NOT NULL,
     stripe_customer_id TEXT UNIQUE NOT NULL,
     price_id TEXT NOT NULL,
+    plan TEXT NOT NULL DEFAULT 'starter' CHECK(plan IN ('starter', 'professional', 'enterprise')),
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'past_due', 'canceled', 'trialing', 'incomplete')),
     current_period_start INTEGER NOT NULL,
     current_period_end INTEGER NOT NULL,
@@ -96,7 +98,7 @@ CREATE TABLE IF NOT EXISTS credit_transactions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     amount INTEGER NOT NULL,
-    type TEXT NOT NULL CHECK(type IN ('subscription', 'purchase', 'generation', 'refund', 'adjustment')),
+    type TEXT NOT NULL CHECK(type IN ('subscription', 'purchase', 'generation', 'refund', 'adjustment', 'onboarding')),
     description TEXT,
     model TEXT,
     credits_per_image INTEGER,

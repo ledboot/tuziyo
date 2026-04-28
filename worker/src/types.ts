@@ -15,7 +15,11 @@ export interface UserPayload {
   email: string;
   name: string;
   avatarUrl?: string;
+  userType: string;
+  credits: number;
 }
+
+export type UserType = "free" | "starter" | "professional" | "enterprise";
 
 export const IMAGE_MODEL_IDS = ['google/nano-banana-2', 'alibaba/wan-2.6-image', 'bytedance/seedream-5-lite', 'openai/gpt-image-1.5'] as const;
 export type IMAGE_MODEL_ID = typeof IMAGE_MODEL_IDS[number];
