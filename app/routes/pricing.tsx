@@ -1,123 +1,113 @@
-import { useState, useEffect } from "react";
-import { Check, Loader2 } from "lucide-react";
-import { useUserStore } from "~/stores/userStore";
-import { api } from "~/lib/api";
+import { useState, useEffect } from "react"
+import { Check, Loader2 } from "lucide-react"
+import { useUserStore } from "~/stores/userStore"
+import { api } from "~/lib/api"
 
 interface Product {
-  id: string;
-  product_id: string;
-  product_name: string;
-  product_description: string;
-  unit_amount: number;
-  currency: string;
+  id: string
+  product_id: string
+  product_name: string
+  product_description: string
+  unit_amount: number
+  currency: string
   recurring: {
-    interval: string;
-  } | null;
-  interval: string | null;
-  features: string[];
-  credits: number;
-  images: number;
-  sort: number;
-  recommend: boolean;
+    interval: string
+  } | null
+  interval: string | null
+  features: string[]
+  credits: number
+  images: number
+  sort: number
+  recommend: boolean
 }
 
 interface Model {
-  id: string;
-  name: string;
-  provider: string;
-  icon: string;
-  supportsImage: boolean;
+  id: string
+  name: string
+  provider: string
+  icon: string
+  supportsImage?: boolean
 }
 
 export default function PricingPage() {
-  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">(
-    "monthly",
-  );
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [models, setModels] = useState<Model[]>([]);
-  const { user, token } = useUserStore();
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly")
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
+  const [products, setProducts] = useState<Product[]>([])
+  const [models, setModels] = useState<Model[]>([])
+  const { user, token } = useUserStore()
 
   useEffect(() => {
-    api.stripe.products()
-      .then((data) => {
+    api.stripe
+      .products()
+      .then(data => {
         if (data.products) {
-          setProducts(data.products);
+          setProducts(data.products)
         }
       })
-      .catch(console.error);
-  }, []);
+      .catch(console.error)
+  }, [])
 
   useEffect(() => {
-    api.models.list()
-      .then((data) => {
+    api.models
+      .list()
+      .then(data => {
         if (data.models) {
-          setModels(data.models);
+          setModels(data.models)
         }
       })
-      .catch(console.error);
-  }, []);
+      .catch(console.error)
+  }, [])
 
   const handleSubscribe = async (priceId: string) => {
     if (!user) {
-      window.dispatchEvent(new CustomEvent("openLoginModal"));
-      return;
+      window.dispatchEvent(new CustomEvent("openLoginModal"))
+      return
     }
 
     if (!token) {
-      return;
+      return
     }
 
-    setLoadingPlan(priceId);
+    setLoadingPlan(priceId)
     try {
-      const data = await api.stripe.checkout(priceId);
+      const data = await api.stripe.checkout(priceId)
       if (data.url) {
-        window.location.href = data.url;
+        window.location.href = data.url
       }
     } catch (error) {
-      console.error("Checkout error:", error);
+      console.error("Checkout error:", error)
     } finally {
-      setLoadingPlan(null);
+      setLoadingPlan(null)
     }
-  };
+  }
 
   const formatPrice = (amount: number | null, currency: string) => {
-    if (!amount) return "$0";
+    if (!amount) return "$0"
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currency.toUpperCase(),
-    }).format(amount / 100);
-  };
+    }).format(amount / 100)
+  }
 
   return (
     <div className="min-h-screen bg-base-100">
       <div className="container mx-auto px-4 py-16 max-w-6xl">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">
-            Simple, Transparent Pricing
-          </h1>
+          <h1 className="text-4xl font-bold mb-4">Simple, Transparent Pricing</h1>
           <p className="text-lg text-base-content/60 max-w-2xl mx-auto">
             Choose the plan that fits your needs.
           </p>
         </div>
 
         <div className="mb-16">
-          <h2 className="text-2xl font-bold mb-8 text-center">
-            Supported Models
-          </h2>
+          <h2 className="text-2xl font-bold mb-8 text-center">Supported Models</h2>
           <div className="flex flex-wrap justify-center gap-6">
-            {models.map((model) => (
+            {models.map(model => (
               <div key={model.id} className="flex items-center gap-3 px-5 py-3">
-                <img
-                  src={model.icon}
-                  alt={model.name}
-                  className="w-10 h-10 object-contain"
-                />
+                <img src={model.icon} alt={model.name} className="w-10 h-10 object-contain" />
                 <div>
                   <div className="font-semibold text-sm">{model.name}</div>
-                  <div className="text-xs text-base-content/60">
-                    {model.provider}
-                  </div>
+                  <div className="text-xs text-base-content/60">{model.provider}</div>
                 </div>
               </div>
             ))}
@@ -143,10 +133,10 @@ export default function PricingPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
           {products
-            .filter((p) => p.interval === (billingPeriod === "monthly" ? "month" : "year"))
+            .filter(p => p.interval === (billingPeriod === "monthly" ? "month" : "year"))
             .sort((a, b) => a.sort - b.sort)
-            .map((product) => {
-              const isRecommend = product.recommend;
+            .map(product => {
+              const isRecommend = product.recommend
 
               return (
                 <div
@@ -192,7 +182,6 @@ export default function PricingPage() {
                       <>
                         <Loader2 className="size-4 animate-spin mr-2" />
                         Loading...
-
                       </>
                     ) : (
                       "Subscribe"
@@ -200,18 +189,15 @@ export default function PricingPage() {
                   </button>
 
                   <ul className="space-y-3">
-                    {product.features.map((feature) => (
-                      <li
-                        key={feature}
-                        className="flex items-start gap-2 text-sm"
-                      >
+                    {product.features.map(feature => (
+                      <li key={feature} className="flex items-start gap-2 text-sm">
                         <Check className="size-4 text-primary mt-0.5 flex-shrink-0" />
                         <span>{feature}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
-              );
+              )
             })}
         </div>
 
@@ -231,5 +217,5 @@ export default function PricingPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

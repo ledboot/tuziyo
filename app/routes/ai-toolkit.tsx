@@ -1,36 +1,36 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react"
 import {
   Sparkles,
-  Loader2,
   X,
   Square,
   Maximize,
   Smartphone,
   RectangleHorizontal,
   Images,
-  ImagePlus,
   MessageSquare,
   Trash2,
   SquarePen,
   Pin,
   Pencil,
-} from "lucide-react";
-import { toast, Toaster } from "sonner";
-import { useNavigate } from "react-router";
-import { useI18n } from "~/lib/i18n";
-import { CustomSelect, type SelectOption } from "~/components/CustomSelect";
-import { useUserStore } from "~/stores/userStore";
-import { useGenerateStore } from "~/stores/generateStore";
-import { api, R2_IMAGE_BASE, MODEL_CREDITS } from "~/lib/api";
+} from "lucide-react"
+import { toast, Toaster } from "sonner"
+import { useNavigate } from "react-router"
+import { useI18n } from "~/lib/i18n"
+import { CustomSelect, type SelectOption } from "~/components/CustomSelect"
+import PromptArea from "~/components/PromptArea"
+import { useUserStore } from "~/stores/userStore"
+import { useModelStore } from "~/stores/modelStore"
+import { useGenerateStore } from "~/stores/generateStore"
+import { api, getApiErrorMessage, R2_IMAGE_BASE, MODEL_CREDITS } from "~/lib/api"
 
-type ModelId = "google/nano-banana-2" | "alibaba/wan-2.6-image" | "bytedance/seedream-5-lite" | "openai/gpt-image-1.5";
+type ModelId = string
 
 interface ModelInfo {
-  id: string;
-  name: string;
-  provider: string;
-  icon: string;
-  supportsImage?: boolean;
+  id: string
+  name: string
+  provider: string
+  icon: string
+  supportsImage?: boolean
 }
 
 const QUALITY_OPTIONS = [
@@ -38,7 +38,7 @@ const QUALITY_OPTIONS = [
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
-];
+]
 
 const SIZE_OPTIONS_GPT = [
   { value: "1024x1024", label: "1024 × 1024" },
@@ -46,12 +46,12 @@ const SIZE_OPTIONS_GPT = [
   { value: "1024x1792", label: "1024 × 1792" },
   { value: "512x512", label: "512 × 512" },
   { value: "256x256", label: "256 × 256" },
-];
+]
 
 const STYLE_OPTIONS = [
   { value: "vivid", label: "Vivid" },
   { value: "natural", label: "Natural" },
-];
+]
 
 const SIZE_OPTIONS_WAN = [
   { value: "1024x1024", label: "1024 × 1024" },
@@ -59,13 +59,13 @@ const SIZE_OPTIONS_WAN = [
   { value: "1024x1792", label: "1024 × 1792" },
   { value: "512x512", label: "512 × 512" },
   { value: "256x256", label: "256 × 256" },
-];
+]
 
 const SIZE_OPTIONS_SEEDREAM = [
   { value: "512x512", label: "512 × 512" },
   { value: "768x768", label: "768 × 768" },
   { value: "1024x1024", label: "1024 × 1024" },
-];
+]
 
 const ASPECT_RATIO_OPTIONS: SelectOption[] = [
   { value: "1:1", label: "1:1", icon: <Square className="size-4" /> },
@@ -73,29 +73,29 @@ const ASPECT_RATIO_OPTIONS: SelectOption[] = [
   { value: "3:4", label: "3:4", icon: <Smartphone className="size-4" /> },
   { value: "16:9", label: "16:9", icon: <Maximize className="size-4" /> },
   { value: "9:16", label: "9:16", icon: <Maximize className="size-4" /> },
-];
+]
 
 const RESOLUTION_OPTIONS = [
   { value: "1K", label: "1K" },
   { value: "2K", label: "2K" },
   { value: "4K", label: "4K" },
-];
+]
 
 const OUTPUT_FORMAT_OPTIONS = [
   { value: "png", label: "PNG" },
   { value: "jpeg", label: "JPEG" },
-];
+]
 
 const MAX_IMAGES_OPTIONS = [
   { value: "1", label: "1" },
   { value: "2", label: "2" },
   { value: "4", label: "4" },
-];
+]
 
 const SEQUENTIAL_OPTIONS = [
   { value: "disabled", label: "Off" },
   { value: "auto", label: "Auto" },
-];
+]
 
 const SAMPLE_IMAGES = [
   "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=600&fit=crop",
@@ -122,115 +122,125 @@ const SAMPLE_IMAGES = [
   "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=400&h=500&fit=crop",
   "https://images.unsplash.com/photo-1465056836041-7f43ac27dcb5?w=400&h=350&fit=crop",
   "https://images.unsplash.com/photo-1500964757637-c85e8a162699?w=400&h=600&fit=crop",
-];
+]
 
 export default function AIToolkitPage() {
-  const { t } = useI18n();
-  const [models, setModels] = useState<ModelInfo[]>([]);
-  const [selectedModel, setSelectedModel] = useState<ModelId>("google/nano-banana-2");
-  const [aspectRatio, setAspectRatio] = useState("1:1");
-  const [quality, setQuality] = useState("auto");
-  const [sizeGpt, setSizeGpt] = useState("1024x1024");
-  const [style, setStyle] = useState("vivid");
-  const [sizeWan, setSizeWan] = useState("1024x1024");
-  const [sizeSeedream, setSizeSeedream] = useState("1024x1024");
-  const [resolution, setResolution] = useState("2K");
-  const [outputFormat, setOutputFormat] = useState("png");
-  const [maxImages, setMaxImages] = useState("1");
-  const [prompt, setPrompt] = useState("");
-  const [negativePrompt, setNegativePrompt] = useState("");
-  const [showNegativePrompt, setShowNegativePrompt] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [images] = useState<string[]>(SAMPLE_IMAGES);
-  const [uploadedImages, setUploadedImages] = useState<{ id: string; url: string }[]>([]);
-  const [currentSession, setCurrentSession] = useState<{ id: string; title: string } | null>(null);
-  const [sessionHistory, setSessionHistory] = useState<{ id: string; title: string; is_pinned: number; preview_image: string | null; created_at: number; updated_at: number }[]>([]);
-  const [showSidebar, setShowSidebar] = useState(false);
-  const [isNewSession, setIsNewSession] = useState(false);
-  const [messages, setMessages] = useState<{ id: string; role: string; prompt: string; imageUrl?: string; model: string; timestamp: number }[]>([]);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const editInputRef = useRef<HTMLInputElement>(null);
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
-  const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
-  const sessionsFetchedRef = useRef(false);
-  const modelsFetchedRef = useRef(false);
-  const navigate = useNavigate();
+  const { t } = useI18n()
+  const [selectedModel, setSelectedModel] = useState<ModelId>("google/nano-banana-2")
+  const [aspectRatio, setAspectRatio] = useState("1:1")
+  const [quality, setQuality] = useState("auto")
+  const [sizeGpt, setSizeGpt] = useState("1024x1024")
+  const [style, setStyle] = useState("vivid")
+  const [sizeWan, setSizeWan] = useState("1024x1024")
+  const [sizeSeedream, setSizeSeedream] = useState("1024x1024")
+  const [resolution, setResolution] = useState("2K")
+  const [outputFormat, setOutputFormat] = useState("png")
+  const [maxImages, setMaxImages] = useState("1")
+  const [modelOptions, setModelOptions] = useState<Record<string, string>>({})
+  const [prompt, setPrompt] = useState("")
+  const [negativePrompt, setNegativePrompt] = useState("")
+  const [showNegativePrompt, setShowNegativePrompt] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [images] = useState<string[]>(SAMPLE_IMAGES)
+  const [uploadedImages, setUploadedImages] = useState<{ id: string; url: string }[]>([])
+  const [currentSession, setCurrentSession] = useState<{ id: string; title: string } | null>(null)
+  const [sessionHistory, setSessionHistory] = useState<
+    {
+      id: string
+      title: string
+      is_pinned: number
+      preview_image: string | null
+      created_at: number
+      updated_at: number
+    }[]
+  >([])
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [isNewSession, setIsNewSession] = useState(false)
+  const [messages, setMessages] = useState<
+    {
+      id: string
+      role: string
+      prompt: string
+      imageUrl?: string
+      model: string
+      timestamp: number
+    }[]
+  >([])
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const editInputRef = useRef<HTMLInputElement>(null)
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
+  const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null)
+  const sessionsFetchedRef = useRef(false)
+  const navigate = useNavigate()
 
-  const { user, token } = useUserStore();
-  const { regenerateData, clearRegenerateData } = useGenerateStore();
+  const { user, token } = useUserStore()
+  const { regenerateData, clearRegenerateData } = useGenerateStore()
+  const { models, fetchModels } = useModelStore()
 
   useEffect(() => {
     if (regenerateData) {
-      setPrompt(regenerateData.prompt);
-      setSelectedModel(regenerateData.model as ModelId);
-      if (regenerateData.size) setSizeGpt(regenerateData.size);
-      if (regenerateData.quality) setQuality(regenerateData.quality);
-      if (regenerateData.style) setStyle(regenerateData.style);
-      if (regenerateData.aspect_ratio) setAspectRatio(regenerateData.aspect_ratio);
-      if (regenerateData.resolution) setResolution(regenerateData.resolution);
-      if (regenerateData.output_format) setOutputFormat(regenerateData.output_format);
-      if (regenerateData.num_images) setMaxImages(String(regenerateData.num_images));
-      if (regenerateData.negative_prompt) setNegativePrompt(regenerateData.negative_prompt);
-      clearRegenerateData();
+      setPrompt(regenerateData.prompt)
+      setSelectedModel(regenerateData.model as ModelId)
+      if (regenerateData.size) setSizeGpt(regenerateData.size)
+      if (regenerateData.quality) setQuality(regenerateData.quality)
+      if (regenerateData.style) setStyle(regenerateData.style)
+      if (regenerateData.aspect_ratio) setAspectRatio(regenerateData.aspect_ratio)
+      if (regenerateData.resolution) setResolution(regenerateData.resolution)
+      if (regenerateData.output_format) setOutputFormat(regenerateData.output_format)
+      if (regenerateData.num_images) setMaxImages(String(regenerateData.num_images))
+      if (regenerateData.negative_prompt) setNegativePrompt(regenerateData.negative_prompt)
+      clearRegenerateData()
     }
-  }, [regenerateData]);
+  }, [regenerateData])
 
   useEffect(() => {
-    if (!modelsFetchedRef.current) {
-      modelsFetchedRef.current = true;
-      api.models.list().then((data) => {
-        if (data.models) {
-          const mappedModels: ModelInfo[] = data.models.map((m) => ({
-            ...m,
-            supportsImage: m.id.includes("seedream") || m.id.includes("nano-banana"),
-          }));
-          setModels(mappedModels);
-        }
-      }).catch(console.error);
-    }
-  }, []);
+    fetchModels()
+  }, [])
 
   useEffect(() => {
     if (user && token && !sessionsFetchedRef.current) {
-      sessionsFetchedRef.current = true;
-      api.sessions.list().then((data) => {
-        if (data.sessions) {
-          setSessionHistory(data.sessions);
-        }
-      }).catch(console.error);
+      sessionsFetchedRef.current = true
+      api.sessions
+        .list()
+        .then(data => {
+          if (data.sessions) {
+            setSessionHistory(data.sessions)
+          }
+        })
+        .catch(console.error)
     }
-  }, [user, token]);
+  }, [user, token])
 
   const handleCreateSession = () => {
-    setIsNewSession(true);
-    setCurrentSession(null);
-  };
+    setIsNewSession(true)
+    setCurrentSession(null)
+  }
 
-  const requiredCredits = MODEL_CREDITS[selectedModel] || 0;
-  const hasInsufficientCredits = user && (user.credits || 0) < requiredCredits;
+  const requiredCredits = MODEL_CREDITS[selectedModel] || 0
+  const hasInsufficientCredits = user && (user.credits || 0) < requiredCredits
 
   const handleSelectSession = async (sessionId: string) => {
-    navigate(`/session/${sessionId}`);
-  };
+    navigate(`/session/${sessionId}`)
+  }
 
   const handleDeleteSession = async (sessionId: string) => {
-    if (!user || !token) return;
+    if (!user || !token) return
     try {
-      await api.sessions.delete(sessionId);
-      setSessionHistory((prev) => prev.filter((s) => s.id !== sessionId));
+      await api.sessions.delete(sessionId)
+      setSessionHistory(prev => prev.filter(s => s.id !== sessionId))
       if (currentSession?.id === sessionId) {
-        setCurrentSession(null);
-        setIsNewSession(false);
+        setCurrentSession(null)
+        setIsNewSession(false)
       }
     } catch (error) {
-      console.error("Failed to delete session:", error);
+      console.error("Failed to delete session:", error)
     }
-  };
+  }
 
-  const selectedModelInfo = models.find((m) => m.id === selectedModel);
+  const selectedModelInfo = models.find(m => m.id === selectedModel)
 
-  const MODEL_OPTIONS: SelectOption[] = models.map((m) => ({
+  const MODEL_OPTIONS: SelectOption[] = models.map(m => ({
     value: m.id,
     label: m.name,
     icon: <img src={m.icon} alt={m.provider} className="size-5 rounded" />,
@@ -240,32 +250,34 @@ export default function AIToolkitPage() {
         NEW
       </span>
     ) : undefined,
-  }));
+  }))
 
   const handleGenerate = async () => {
-    if (!prompt.trim() || isGenerating) return;
+    if (!prompt.trim() || isGenerating) return
     if (!user) {
-      window.dispatchEvent(new CustomEvent("openLoginModal"));
-      return;
+      window.dispatchEvent(new CustomEvent("openLoginModal"))
+      return
     }
 
     if (uploadedImages.length > 0 && !selectedModelInfo?.supportsImage) {
-      toast.error(`[Image 1] ERROR: Model ${selectedModel} does not support image input. Remove uploaded images or select a different model.`);
-      return;
+      toast.error(
+        `[Image 1] ERROR: Model ${selectedModel} does not support image input. Remove uploaded images or select a different model.`
+      )
+      return
     }
 
-    setIsGenerating(true);
+    setIsGenerating(true)
     try {
-      let sessionId = currentSession?.id;
+      let sessionId = currentSession?.id
 
       if (isNewSession && token) {
-        const title = prompt.slice(0, 20).trim() || "New Chat";
-        const sessionData = await api.sessions.create(title);
+        const title = prompt.slice(0, 20).trim() || "New Chat"
+        const sessionData = await api.sessions.create(title)
         if (sessionData.session) {
-          setSessionHistory((prev) => [sessionData.session, ...prev]);
-          setCurrentSession(sessionData.session);
-          setIsNewSession(false);
-          sessionId = sessionData.session.id;
+          setSessionHistory(prev => [sessionData.session, ...prev])
+          setCurrentSession(sessionData.session)
+          setIsNewSession(false)
+          sessionId = sessionData.session.id
         }
       }
 
@@ -274,66 +286,76 @@ export default function AIToolkitPage() {
         model: selectedModel,
         provider: selectedModelInfo?.provider,
         sessionId,
-      };
+      }
 
       if (selectedModel === "openai/gpt-image-1.5") {
-        requestBody.size = sizeGpt;
-        requestBody.quality = quality;
-        requestBody.style = style;
+        requestBody.size = sizeGpt
+        requestBody.quality = quality
+        requestBody.style = style
       } else if (selectedModel === "alibaba/wan-2.6-image") {
-        requestBody.size = sizeWan;
-        requestBody.num_images = parseInt(maxImages);
-        if (negativePrompt) requestBody.negative_prompt = negativePrompt;
+        requestBody.size = sizeWan
+        requestBody.num_images = parseInt(maxImages)
+        if (negativePrompt) requestBody.negative_prompt = negativePrompt
       } else if (selectedModel === "bytedance/seedream-5-lite") {
-        requestBody.size = sizeSeedream;
-        requestBody.num_images = parseInt(maxImages);
-        if (negativePrompt) requestBody.negative_prompt = negativePrompt;
+        requestBody.size = sizeSeedream
+        requestBody.num_images = parseInt(maxImages)
+        if (negativePrompt) requestBody.negative_prompt = negativePrompt
       } else if (selectedModel === "google/nano-banana-2") {
-        requestBody.aspect_ratio = aspectRatio;
-        requestBody.resolution = resolution;
-        requestBody.output_format = outputFormat;
-        requestBody.num_images = parseInt(maxImages);
+        requestBody.aspect_ratio = aspectRatio
+        requestBody.resolution = resolution
+        requestBody.output_format = outputFormat
+        requestBody.num_images = parseInt(maxImages)
       }
 
-      const data = await api.generate.create(requestBody as Parameters<typeof api.generate.create>[0]);
+      const data = await api.generate.create(
+        requestBody as Parameters<typeof api.generate.create>[0]
+      )
       if (data.error) {
-        toast.error(`[Image 1] ERROR: ${data.error}`);
-        return;
+        toast.error(`[Image 1] ERROR: ${data.error}`)
+        return
       }
 
-      setMessages((prev) => [
+      setMessages(prev => [
         ...prev,
-        { id: crypto.randomUUID(), role: "user", prompt, model: selectedModel, timestamp: Date.now() },
-      ]);
+        {
+          id: crypto.randomUUID(),
+          role: "user",
+          prompt,
+          model: selectedModel,
+          timestamp: Date.now(),
+        },
+      ])
 
-      setPrompt("");
+      setPrompt("")
     } catch (error) {
-      console.error("Generate error:", error);
-      toast.error(`[Image 1] ERROR: Failed to generate image. Please try again.`);
+      console.error("Generate error:", error)
+      toast.error(
+        `[Image 1] ERROR: ${getApiErrorMessage(error, "Failed to generate image. Please try again.")}`
+      )
     } finally {
-      setIsGenerating(false);
+      setIsGenerating(false)
     }
-  };
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleGenerate();
+      e.preventDefault()
+      handleGenerate()
     }
-  };
+  }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    Array.from(files).forEach((file) => {
-      const url = URL.createObjectURL(file);
-      setUploadedImages((prev) => [...prev, { id: crypto.randomUUID(), url }]);
-    });
-  };
+    const files = e.target.files
+    if (!files) return
+    Array.from(files).forEach(file => {
+      const url = URL.createObjectURL(file)
+      setUploadedImages(prev => [...prev, { id: crypto.randomUUID(), url }])
+    })
+  }
 
   const removeImage = (id: string) => {
-    setUploadedImages((prev) => prev.filter((img) => img.id !== id));
-  };
+    setUploadedImages(prev => prev.filter(img => img.id !== id))
+  }
 
   return (
     <div className="bg-base-100 pb-48">
@@ -363,7 +385,7 @@ export default function AIToolkitPage() {
           className={`fixed left-0 top-16 z-30 transition-all duration-300 ${
             showSidebar ? "w-65" : "w-15"
           }`}
-          style={{ width: showSidebar ? "320px" : "60px" }}
+          style={{ width: showSidebar ? "4500px" : "60px" }}
           onMouseEnter={() => setShowSidebar(true)}
           onMouseLeave={() => setShowSidebar(false)}
         >
@@ -378,14 +400,12 @@ export default function AIToolkitPage() {
                   <button className="h-12 w-full flex items-center justify-center cursor-pointer bg-base-100/80">
                     <SquarePen className="w-5 h-5 text-base-content/60" />
                   </button>
-              </div>
+                </div>
               )}
 
               <div
                 className={`flex-1 flex flex-col transition-all duration-100 overflow-hidden ${
-                  showSidebar
-                    ? "opacity-100"
-                    : "opacity-0 pointer-events-none w-0"
+                  showSidebar ? "opacity-100" : "opacity-0 pointer-events-none w-0"
                 }`}
               >
                 <div className="p-4 border-b border-base-200">
@@ -404,7 +424,7 @@ export default function AIToolkitPage() {
                     </div>
                   ) : (
                     <div className="p-2 space-y-1">
-                      {sessionHistory.map((s) => (
+                      {sessionHistory.map(s => (
                         <div
                           key={s.id}
                           className={`group relative flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-base-200/50 transition-colors ${currentSession?.id === s.id ? "bg-primary/10" : ""}`}
@@ -412,14 +432,18 @@ export default function AIToolkitPage() {
                         >
                           <div className="size-10 rounded-lg overflow-hidden bg-base-200 shrink-0">
                             {s.preview_image ? (
-                              <img src={s.preview_image} alt="" className="size-full object-cover" />
+                              <img
+                                src={s.preview_image}
+                                alt=""
+                                className="size-full object-cover"
+                              />
                             ) : (
                               <div className="size-full flex items-center justify-center">
                                 <MessageSquare className="size-4 text-base-content/40" />
                               </div>
                             )}
                           </div>
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 truncate pr-4 group-hover:pr-20 transition-all duration-200">
                             {editingSessionId === s.id ? (
                               <input
                                 ref={editInputRef}
@@ -427,34 +451,38 @@ export default function AIToolkitPage() {
                                 defaultValue={s.title}
                                 className="input input-sm input-bordered w-full"
                                 autoFocus
-                                onBlur={(e) => {
-                                  const newTitle = e.target.value.trim();
+                                onBlur={e => {
+                                  const newTitle = e.target.value.trim()
                                   if (!newTitle) {
-                                    setEditingSessionId(null);
-                                    return;
+                                    setEditingSessionId(null)
+                                    return
                                   }
                                   if (newTitle !== s.title) {
                                     api.sessions.update(s.id, { title: newTitle }).then(() => {
-                                      setSessionHistory((prev) =>
-                                        prev.map((session) =>
-                                          session.id === s.id ? { ...session, title: newTitle } : session
+                                      setSessionHistory(prev =>
+                                        prev.map(session =>
+                                          session.id === s.id
+                                            ? { ...session, title: newTitle }
+                                            : session
                                         )
-                                      );
-                                    });
+                                      )
+                                    })
                                   }
-                                  setEditingSessionId(null);
+                                  setEditingSessionId(null)
                                 }}
-                                onKeyDown={(e) => {
+                                onKeyDown={e => {
                                   if (e.key === "Enter") {
-                                    e.currentTarget.blur();
+                                    e.currentTarget.blur()
                                   } else if (e.key === "Escape") {
-                                    setEditingSessionId(null);
+                                    setEditingSessionId(null)
                                   }
                                 }}
                               />
                             ) : (
                               <div className="flex items-center gap-1">
-                                {s.is_pinned === 1 && <Pin className="size-3 text-primary shrink-0" />}
+                                {s.is_pinned === 1 && (
+                                  <Pin className="size-3 text-primary shrink-0" />
+                                )}
                                 <span className="truncate text-sm font-medium">{s.title}</span>
                               </div>
                             )}
@@ -462,10 +490,10 @@ export default function AIToolkitPage() {
                           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {editingSessionId !== s.id && (
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingSessionId(s.id);
-                                  setTimeout(() => editInputRef.current?.select(), 0);
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  setEditingSessionId(s.id)
+                                  setTimeout(() => editInputRef.current?.select(), 0)
                                 }}
                                 className="btn btn-ghost btn-xs btn-circle"
                               >
@@ -473,24 +501,30 @@ export default function AIToolkitPage() {
                               </button>
                             )}
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                api.sessions.update(s.id, { is_pinned: s.is_pinned === 1 ? 0 : 1 }).then(() => {
-                                  setSessionHistory((prev) =>
-                                    prev.map((session) =>
-                                      session.id === s.id ? { ...session, is_pinned: s.is_pinned === 1 ? 0 : 1 } : session
+                              onClick={e => {
+                                e.stopPropagation()
+                                api.sessions
+                                  .update(s.id, { is_pinned: s.is_pinned === 1 ? 0 : 1 })
+                                  .then(() => {
+                                    setSessionHistory(prev =>
+                                      prev.map(session =>
+                                        session.id === s.id
+                                          ? { ...session, is_pinned: s.is_pinned === 1 ? 0 : 1 }
+                                          : session
+                                      )
                                     )
-                                  );
-                                });
+                                  })
                               }}
                               className="btn btn-ghost btn-xs btn-circle"
                             >
-                              <Pin className={`size-3 ${s.is_pinned === 1 ? "fill-primary text-primary" : ""}`} />
+                              <Pin
+                                className={`size-3 ${s.is_pinned === 1 ? "fill-primary text-primary" : ""}`}
+                              />
                             </button>
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteSessionId(s.id);
+                              onClick={e => {
+                                e.stopPropagation()
+                                setDeleteSessionId(s.id)
                               }}
                               className="btn btn-ghost btn-xs btn-circle hover:text-error"
                             >
@@ -535,212 +569,14 @@ export default function AIToolkitPage() {
         )}
       </main>
 
-      <div
-        className={`fixed bottom-0 right-0 p-4 overflow-visible ${user ? "left-16" : "left-0"}`}
-      >
-        <div className="max-w-3xl mx-auto">
-          <div
-            id="prompt-area"
-            className="relative rounded-4xl bg-base-100 border border-base-200 shadow-2xl backdrop-blur-2xl overflow-visible"
-            style={{
-              boxShadow: `
-                0 8px 32px rgba(0, 0, 0, 0.1),
-                0 0 0 1px rgba(255, 255, 255, 0.1) inset,
-                0 1px 1px rgba(255, 255, 255, 0.4) inset
-              `,
-            }}
-          >
-            <div className="card-body p-4 relative z-10 overflow-visible">
-              {selectedModelInfo?.supportsImage && (
-                <div className="mt-4">
-                  <div className="flex gap-2">
-                    <div>
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="btn btn-ghost btn-square w-10 h-10"
-                      >
-                        <ImagePlus />
-                      </button>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handleImageUpload}
-                      />
-                    </div>
-                    {uploadedImages.map((img) => (
-                      <div key={img.id} className="relative group">
-                        <img src={img.url} alt="Preview" className="w-10 h-10 rounded-lg object-cover" />
-                        <button
-                          onClick={() => removeImage(img.id)}
-                          className="btn btn-circle h-4 w-4 absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 bg-black text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-4">
-                <textarea
-                  ref={inputRef}
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={
-                    t.aiToolkit?.promptPlaceholder || "Describe your image..."
-                  }
-                  className="textarea textarea-ghost w-full text-base resize-none focus:outline-none"
-                  rows={2}
-                />
-              </div>
-
-              {showNegativePrompt && (
-                <div className="mt-2">
-                  <textarea
-                    value={negativePrompt}
-                    onChange={(e) => setNegativePrompt(e.target.value)}
-                    placeholder="What to avoid..."
-                    className="textarea textarea-ghost textarea-sm w-full resize-none focus:outline-none"
-                    rows={2}
-                  />
-                </div>
-              )}
-
-              <div className="flex flex-row gap-2 overflow-visible">
-                <CustomSelect
-                  label="Models"
-                  options={MODEL_OPTIONS}
-                  value={selectedModel}
-                  onChange={(v) => setSelectedModel(v as ModelId)}
-                  className="min-w-10"
-                />
-                {selectedModel === "openai/gpt-image-1.5" && (
-                  <>
-                    <CustomSelect
-                      label="Quality"
-                      options={QUALITY_OPTIONS.map((o) => ({ ...o, icon: undefined }))}
-                      value={quality}
-                      onChange={setQuality}
-                      className="min-w-8"
-                    />
-                    <CustomSelect
-                      label="Size"
-                      options={SIZE_OPTIONS_GPT.map((o) => ({ ...o, icon: undefined }))}
-                      value={sizeGpt}
-                      onChange={setSizeGpt}
-                      className="min-w-8"
-                    />
-                    <CustomSelect
-                      label="Style"
-                      options={STYLE_OPTIONS.map((o) => ({ ...o, icon: undefined }))}
-                      value={style}
-                      onChange={setStyle}
-                      className="min-w-8"
-                    />
-                  </>
-                )}
-
-                {selectedModel === "alibaba/wan-2.6-image" && (
-                  <>
-                    <CustomSelect
-                      label="Size"
-                      options={SIZE_OPTIONS_WAN.map((o) => ({ ...o, icon: undefined }))}
-                      value={sizeWan}
-                      onChange={setSizeWan}
-                      className="min-w-8"
-                    />
-                    <div className="h-full flex items-center">
-                      <button
-                        type="button"
-                        onClick={() => setShowNegativePrompt(!showNegativePrompt)}
-                        className="btn btn-ghost items-center whitespace-nowrap border border-base-200 hover:border-primary hover:bg-base-100"
-                      >
-                        Negative Prompt
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {selectedModel === "bytedance/seedream-5-lite" && (
-                  <>
-                    <CustomSelect
-                      label="Size"
-                      options={SIZE_OPTIONS_SEEDREAM.map((o) => ({ ...o, icon: undefined }))}
-                      value={sizeSeedream}
-                      onChange={setSizeSeedream}
-                      className="min-w-8"
-                    />
-                    <div className="h-full flex items-center">
-                      <button
-                        type="button"
-                        onClick={() => setShowNegativePrompt(!showNegativePrompt)}
-                        className="btn btn-ghost items-center whitespace-nowrap border border-base-200 hover:border-primary hover:bg-base-100"
-                      >
-                        Negative Prompt
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {selectedModel === "google/nano-banana-2" && (
-                  <>
-                    <CustomSelect
-                      label="Aspect Ratio"
-                      options={ASPECT_RATIO_OPTIONS}
-                      value={aspectRatio}
-                      onChange={setAspectRatio}
-                      className="flex-1 min-w-24"
-                    />
-                    <CustomSelect
-                      label="Resolution"
-                      options={RESOLUTION_OPTIONS.map((o) => ({ ...o, icon: undefined }))}
-                      value={resolution}
-                      onChange={setResolution}
-                      className="flex-1 min-w-24"
-                    />
-                    <CustomSelect
-                      label="Output Format"
-                      options={OUTPUT_FORMAT_OPTIONS.map((o) => ({ ...o, icon: undefined }))}
-                      value={outputFormat}
-                      onChange={setOutputFormat}
-                      className="flex-1 min-w-24"
-                    />
-                    <CustomSelect
-                      label="Number of Images"
-                      suffixIcon={<Images className="size-4" />}
-                      options={MAX_IMAGES_OPTIONS.map((o) => ({ ...o, icon: undefined }))}
-                      value={maxImages}
-                      onChange={setMaxImages}
-                      className="flex-1 min-w-24"
-                    />
-                  </>
-                )}
-
-                <button
-                  onClick={handleGenerate}
-                  disabled={!prompt.trim() || isGenerating || hasInsufficientCredits}
-                  className={`btn ${hasInsufficientCredits ? "btn-disabled" : "btn-primary"}`}
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="size-5 animate-spin" />
-                      {t.aiToolkit?.generating || "Generating..."}
-                    </>
-                  ) : hasInsufficientCredits ? (
-                    <>Credit insufficient</>
-                  ) : (
-                    "Generate"
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className={`fixed bottom-0 right-0 p-4 overflow-visible ${user ? "left-16" : "left-0"}`}>
+        <PromptArea
+          models={models}
+          selectedModel={selectedModel}
+          onModelChange={setSelectedModel}
+          modelOptions={modelOptions}
+          onOptionsChange={setModelOptions}
+        />
       </div>
       <Toaster position="top-center" />
 
@@ -748,19 +584,18 @@ export default function AIToolkitPage() {
         <div className="modal modal-open">
           <div className="modal-box">
             <h3 className="font-bold text-lg">Delete Session</h3>
-            <p className="py-4">Are you sure you want to delete this session? This action cannot be undone.</p>
+            <p className="py-4">
+              Are you sure you want to delete this session? This action cannot be undone.
+            </p>
             <div className="modal-action">
-              <button
-                className="btn btn-ghost"
-                onClick={() => setDeleteSessionId(null)}
-              >
+              <button className="btn btn-ghost" onClick={() => setDeleteSessionId(null)}>
                 Cancel
               </button>
               <button
                 className="btn btn-error"
                 onClick={() => {
-                  handleDeleteSession(deleteSessionId);
-                  setDeleteSessionId(null);
+                  handleDeleteSession(deleteSessionId)
+                  setDeleteSessionId(null)
                 }}
               >
                 Delete
@@ -771,5 +606,5 @@ export default function AIToolkitPage() {
         </div>
       )}
     </div>
-  );
+  )
 }

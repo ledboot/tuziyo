@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS messages (
     aspect_ratio TEXT,
     resolution TEXT,
     enable_search INTEGER DEFAULT 0,
+    google_search INTEGER DEFAULT 0,
+    image_search INTEGER DEFAULT 0,
     image_size TEXT,
     quality TEXT,
     style TEXT,

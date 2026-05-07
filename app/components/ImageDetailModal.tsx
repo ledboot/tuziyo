@@ -18,6 +18,8 @@ interface Message {
   negative_prompt: string | null
   output_format: string | null
   num_images: number | null
+  google_search: number | null
+  image_search: number | null
   created_at: number
 }
 
@@ -92,12 +94,22 @@ export default function ImageDetailModal({ image, sessionTitle, onClose }: Image
     }
   }
 
-  const sizeInfo = image.image_size || image.aspect_ratio || image.resolution || null
-  const qualityStyle = [image.quality, image.style].filter(Boolean).join(" | ")
+  const optionItems = [
+    image.image_size && { label: "Size", value: image.image_size },
+    image.aspect_ratio && { label: "Aspect Ratio", value: image.aspect_ratio },
+    image.resolution && { label: "Resolution", value: image.resolution },
+    image.output_format && { label: "Output Format", value: image.output_format },
+    image.num_images && { label: "Num Images", value: String(image.num_images) },
+    image.quality && { label: "Quality", value: image.quality },
+    image.style && { label: "Style", value: image.style },
+    image.google_search === 1 && { label: "Google Search", value: "On" },
+    image.image_search === 1 && { label: "Image Search", value: "On" },
+    image.negative_prompt && { label: "Negative Prompt", value: image.negative_prompt },
+  ].filter(Boolean) as { label: string; value: string }[]
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box max-w-4xl w-[90vw] h-[80vh] flex flex-col p-0 overflow-hidden">
+      <div className="modal-box max-w-7xl w-[95vw] h-[85vh] flex flex-col p-0 overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-base-200">
           <button
             onClick={onClose}
@@ -132,19 +144,12 @@ export default function ImageDetailModal({ image, sessionTitle, onClose }: Image
                 <div className="text-sm break-words">{image.prompt}</div>
               </div>
 
-              {sizeInfo && (
-                <div>
-                  <div className="text-sm text-base-content/60 mb-1">Size</div>
-                  <div className="text-sm">{sizeInfo}</div>
-                </div>
-              )}
-
-              {qualityStyle && (
-                <div>
-                  <div className="text-sm text-base-content/60 mb-1">Settings</div>
-                  <div className="text-sm">{qualityStyle}</div>
-                </div>
-              )}
+              {optionItems.map((item, idx) => (
+                  <div key={idx}>
+                    <div className="text-sm text-base-content/60 mb-1">{item.label}</div>
+                    <div className="text-sm">{item.value}</div>
+                  </div>
+                ))}
 
               <div>
                 <div className="text-sm text-base-content/60 mb-1">Created</div>

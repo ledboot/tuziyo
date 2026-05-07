@@ -1,7 +1,14 @@
 import type { Context } from "hono"
 import { v4 as uuidv4 } from "uuid"
-import { IMAGE_MODEL_IDS, type Env, type IMAGE_MODEL_ID } from "../types"
+import {
+  IMAGE_MODEL_IDS,
+  type Env,
+  type IMAGE_MODEL_ID,
+  type ModelConfig,
+  ReferenceImageFormat,
+} from "../types"
 import { deductCredits } from "./credits"
+import { MODEL_OPTIONS_CONFIG, validateModelOptions } from "../modelOptions"
 
 export interface GenerateInput {
   prompt: string
@@ -16,20 +23,78 @@ export interface GenerateInput {
   num_images?: number
   negative_prompt?: string
   sessionId?: string
+  google_search?: string | boolean
+  image_search?: string | boolean
+  background?: string
 }
 
 export function buildAiInput(input: GenerateInput) {
-  const aiInput: Record<string, unknown> = { prompt: input.prompt || "" }
-  if (input.size) aiInput.size = input.size
-  if (input.quality) aiInput.quality = input.quality
-  if (input.style) aiInput.style = input.style
-  if (input.aspect_ratio) aiInput.aspect_ratio = input.aspect_ratio
-  if (input.resolution) aiInput.resolution = input.resolution
-  if (input.output_format) aiInput.output_format = input.output_format
-  if (input.num_images) aiInput.num_images = input.num_images
-  if (input.negative_prompt) aiInput.negative_prompt = input.negative_prompt
-  else aiInput.negative_prompt = ""
-  return aiInput
+  const {
+    model,
+    prompt,
+    aspect_ratio,
+    resolution,
+    output_format,
+    num_images,
+    negative_prompt,
+    quality,
+    style,
+    size,
+    google_search,
+    image_search,
+    background,
+  } = input
+
+  switch (model) {
+    case "google/nano-banana-2": {
+      const aiInput: Record<string, unknown> = { prompt }
+      if (aspect_ratio) aiInput.aspect_ratio = aspect_ratio
+      if (output_format) aiInput.output_format = output_format
+      if (resolution) aiInput.resolution = resolution
+      if (google_search) aiInput.google_search = google_search === "true"
+      if (image_search) aiInput.image_search = image_search === "true"
+      return aiInput
+    }
+
+    case "alibaba/wan-2.6-image": {
+      const aiInput: Record<string, unknown> = { prompt }
+      if (size) aiInput.size = size
+      if (negative_prompt) aiInput.negative_prompt = negative_prompt
+      return aiInput
+    }
+
+    case "bytedance/seedream-5-lite": {
+      const aiInput: Record<string, unknown> = { prompt }
+      if (aspect_ratio) aiInput.aspect_ratio = aspect_ratio
+      if (resolution) aiInput.size = resolution
+      if (output_format) aiInput.output_format = output_format
+      if (num_images) aiInput.max_images = Math.min(num_images, 15)
+      if (negative_prompt) aiInput.negative_prompt = negative_prompt
+      aiInput.sequential_image_generation = "auto"
+      return aiInput
+    }
+
+    case "openai/gpt-image-1.5": {
+      const aiInput: Record<string, unknown> = { prompt }
+      if (size) aiInput.size = size
+      if (quality) aiInput.quality = quality
+      if (style) aiInput.style = style
+      return aiInput
+    }
+
+    case "openai/gpt-image-2": {
+      const aiInput: Record<string, unknown> = { prompt }
+      if (size) aiInput.size = size
+      if (quality) aiInput.quality = quality
+      if (style) aiInput.style = style
+      if (background) aiInput.background = background
+      if (output_format) aiInput.output_format = output_format
+      return aiInput
+    }
+
+    default:
+      return { prompt }
+  }
 }
 
 export function generateR2Key(extension?: string) {
@@ -57,19 +122,40 @@ export async function handleGenerate(c: Context<{ Bindings: Env }>) {
     return c.json({ error: `model must be one of: ${IMAGE_MODEL_IDS.join(", ")}` }, 400)
   }
 
-  const deductResult = await deductCredits(c.env.DB, user.userId, 0, input.model)
-  if (!deductResult.success) {
-    return c.json({ error: deductResult.error }, 402)
+  const optionValidation = validateModelOptions(
+    input.model,
+    input as unknown as Record<string, string | number | boolean>
+  )
+  if (!optionValidation.valid) {
+    return c.json(
+      {
+        error: `Invalid value for option '${optionValidation.invalidKey}': '${optionValidation.invalidValue}'`,
+      },
+      400
+    )
   }
 
   const aiInput = buildAiInput(input)
-  const result = (await c.env.AI.run(input.model, aiInput, {
-    gateway: { id: "image-ai-gateway" },
-  })) as { image?: string; url?: string }
+  console.log("aiInput model", input.model, JSON.stringify(input), JSON.stringify(aiInput))
+  // TODO: 测试先注释，使用写死的url
+  // const result = await c.env.AI.run(input.model, aiInput, {
+  //   gateway: { id: "image-ai-gateway" },
+  // })
 
-  const imageUrl = result.url || result.image
-  if (!imageUrl) {
-    return c.json({ error: "no image returned from AI" }, 500)
+  // if (result.state !== "Completed") {
+  //   return c.json({ error: "AI generation failed" }, 500)
+  // }
+
+  // const imageUrl = result.result.image || result.result.images?.[0]
+  // if (!imageUrl) {
+  //   return c.json({ error: "no image returned from AI" }, 500)
+  // }
+  const imageUrl =
+    "https://pub-04a6d208d361438ea01b797e6973bd19.r2.dev/catalog/openai__gpt-image-2/simple-generation.png"
+
+  const deductResult = await deductCredits(c.env.DB, user.userId, 0, input.model)
+  if (!deductResult.success) {
+    return c.json({ error: deductResult.error }, 402)
   }
 
   const imageResponse = await fetch(imageUrl)
@@ -83,7 +169,7 @@ export async function handleGenerate(c: Context<{ Bindings: Env }>) {
   let sessionId = input.sessionId
 
   if (!sessionId) {
-    const title = input.prompt.slice(0, 20).trim() || "New Chat"
+    const title = input.prompt.slice(0, 100).trim() || "New Session"
     sessionId = uuidv4()
     await c.env.DB.prepare(
       `INSERT INTO sessions (id, user_id, title, is_pinned, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)`
@@ -98,8 +184,8 @@ export async function handleGenerate(c: Context<{ Bindings: Env }>) {
 
   if (session) {
     const sessionTitle = (session as { title: string }).title
-    if (sessionTitle === "New Chat" || sessionTitle === "New Session") {
-      const title = input.prompt.slice(0, 20).trim() || "New Chat"
+    if (sessionTitle === "New Session") {
+      const title = input.prompt.slice(0, 100).trim() || "New Session"
       await c.env.DB.prepare("UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?")
         .bind(title, now, sessionId)
         .run()
@@ -107,10 +193,12 @@ export async function handleGenerate(c: Context<{ Bindings: Env }>) {
 
     const messageId = uuidv4()
     const toDbValue = (v: unknown) => (v === undefined ? null : v)
+    const googleSearchVal = input.google_search === "true" || input.google_search === true ? 1 : 0
+    const imageSearchVal = input.image_search === "true" || input.image_search === true ? 1 : 0
     await c.env.DB.prepare(
       `
-        INSERT INTO messages (id, session_id, role, provider, model, prompt, aspect_ratio, resolution, image_size, quality, style, negative_prompt, output_format, num_images, image_url, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO messages (id, session_id, role, provider, model, prompt, aspect_ratio, resolution, google_search, image_search, image_size, quality, style, negative_prompt, output_format, num_images, image_url, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `
     )
       .bind(
@@ -122,6 +210,8 @@ export async function handleGenerate(c: Context<{ Bindings: Env }>) {
         input.prompt,
         toDbValue(input.aspect_ratio),
         toDbValue(input.resolution),
+        googleSearchVal,
+        imageSearchVal,
         toDbValue(input.size),
         toDbValue(input.quality),
         toDbValue(input.style),
@@ -137,14 +227,14 @@ export async function handleGenerate(c: Context<{ Bindings: Env }>) {
       .bind(now, sessionId)
       .run()
 
-    const fullImageUrl = `https://images.tuziyo.com/${key}`
+    const fullImageUrl = `https://s3.tuziyo.com/${key}`
     return c.json({ success: true, key, imageUrl: fullImageUrl })
   }
 
   return c.json({ success: false, error: "Session not found" }, 500)
 }
 
-export function getModels() {
+export function getModels(): ModelConfig[] {
   return [
     {
       id: "google/nano-banana-2",
@@ -152,7 +242,10 @@ export function getModels() {
       provider: "Google",
       icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg",
       supportsImage: true,
+      referenceImageCount: 3,
+      referenceImageFormat: ReferenceImageFormat.URL,
       isNew: false,
+      options: MODEL_OPTIONS_CONFIG["google/nano-banana-2"],
     },
     {
       id: "alibaba/wan-2.6-image",
@@ -161,6 +254,7 @@ export function getModels() {
       icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/alibaba.svg",
       supportsImage: false,
       isNew: false,
+      options: MODEL_OPTIONS_CONFIG["alibaba/wan-2.6-image"],
     },
     {
       id: "bytedance/seedream-5-lite",
@@ -168,15 +262,32 @@ export function getModels() {
       provider: "ByteDance",
       icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/bytedance.svg",
       supportsImage: true,
+      referenceImageCount: 14,
+      referenceImageFormat: ReferenceImageFormat.URL,
       isNew: false,
+      options: MODEL_OPTIONS_CONFIG["bytedance/seedream-5-lite"],
     },
     {
       id: "openai/gpt-image-1.5",
       name: "GPT Image 1.5",
       provider: "OpenAI",
       icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/openai.svg",
-      supportsImage: false,
+      supportsImage: true,
+      referenceImageCount: 1,
+      referenceImageFormat: ReferenceImageFormat.BASE64,
       isNew: true,
+      options: MODEL_OPTIONS_CONFIG["openai/gpt-image-1.5"],
+    },
+    {
+      id: "openai/gpt-image-2",
+      name: "GPT Image 2",
+      provider: "OpenAI",
+      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/openai.svg",
+      supportsImage: true,
+      referenceImageCount: 16,
+      referenceImageFormat: ReferenceImageFormat.BASE64,
+      isNew: true,
+      options: MODEL_OPTIONS_CONFIG["openai/gpt-image-2"],
     },
   ]
 }

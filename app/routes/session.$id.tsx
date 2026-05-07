@@ -2,9 +2,13 @@ import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router"
 import { ArrowLeft, Search } from "lucide-react"
 import { toast } from "sonner"
-import { api, R2_IMAGE_BASE } from "~/lib/api"
+import { api, R2_IMAGE_BASE, MODEL_CREDITS } from "~/lib/api"
 import { useUserStore } from "~/stores/userStore"
+import { useModelStore } from "~/stores/modelStore"
 import ImageDetailModal from "~/components/ImageDetailModal"
+import PromptArea from "~/components/PromptArea"
+
+type ModelId = string
 
 interface Message {
   id: string
@@ -41,6 +45,10 @@ export default function SessionDetailPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState<Message | null>(null)
+  const [selectedModel, setSelectedModel] = useState<ModelId>("google/nano-banana-2")
+  const [modelOptions, setModelOptions] = useState<Record<string, string>>({})
+
+  const { models, fetchModels } = useModelStore()
 
   useEffect(() => {
     if (!id || !user || !token) {
@@ -50,18 +58,20 @@ export default function SessionDetailPage() {
 
     api.sessions
       .get(id)
-      .then((data) => {
+      .then(data => {
         setSession(data.session)
         setMessages(data.messages as Message[])
       })
-      .catch((error) => {
+      .catch(error => {
         console.error("Failed to load session:", error)
         toast.error("Failed to load session")
       })
       .finally(() => setLoading(false))
+
+    fetchModels()
   }, [id, user, token])
 
-  const images = messages.filter((m) => m.image_url)
+  const images = messages.filter(m => m.image_url)
 
   if (loading) {
     return (
@@ -88,10 +98,7 @@ export default function SessionDetailPage() {
     <div className="min-h-screen bg-base-100">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={() => navigate("/ai-toolkit")}
-            className="btn btn-ghost btn-circle"
-          >
+          <button onClick={() => navigate("/ai-toolkit")} className="btn btn-ghost btn-circle">
             <ArrowLeft className="size-5" />
           </button>
           <h1 className="text-2xl font-bold truncate">{session.title}</h1>
@@ -101,20 +108,12 @@ export default function SessionDetailPage() {
           <div className="flex items-center justify-center h-[50vh]">
             <div className="text-center text-base-content/60">
               <p className="text-lg">No images generated yet</p>
-              <button
-                onClick={() => navigate("/ai-toolkit")}
-                className="btn btn-primary mt-4"
-              >
-                Create your first image
-              </button>
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {images.map((image) => {
-              const imageUrl = image.image_url
-                ? `${R2_IMAGE_BASE}/${image.image_url}`
-                : null
+            {images.map(image => {
+              const imageUrl = image.image_url ? `${R2_IMAGE_BASE}/${image.image_url}` : null
 
               return (
                 <div
@@ -150,6 +149,17 @@ export default function SessionDetailPage() {
         sessionTitle={session.title}
         onClose={() => setSelectedImage(null)}
       />
+
+      <div className="fixed bottom-0 left-0 right-0 p-4">
+        <PromptArea
+          models={models}
+          selectedModel={selectedModel}
+          onModelChange={setSelectedModel}
+          modelOptions={modelOptions}
+          onOptionsChange={setModelOptions}
+          currentSessionId={id}
+        />
+      </div>
     </div>
   )
 }
