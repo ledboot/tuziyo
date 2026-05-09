@@ -1,4 +1,4 @@
-import { X, RotateCcw, Download } from "lucide-react"
+import { X, RotateCcw, Download, Star, Folder, Trash2, Video, Pencil, Maximize } from "lucide-react"
 import { useNavigate } from "react-router"
 import { useGenerateStore } from "~/stores/generateStore"
 import { R2_IMAGE_BASE } from "~/lib/api"
@@ -30,12 +30,10 @@ interface ImageDetailModalProps {
 }
 
 function formatTimestamp(timestamp: number): string {
-  return new Date(timestamp * 1000).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
+  return new Date(timestamp * 1000).toLocaleDateString("en-US", {
+    month: "long",
     day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+    year: "numeric",
   })
 }
 
@@ -94,90 +92,157 @@ export default function ImageDetailModal({ image, sessionTitle, onClose }: Image
     }
   }
 
-  const optionItems = [
-    image.image_size && { label: "Size", value: image.image_size },
-    image.aspect_ratio && { label: "Aspect Ratio", value: image.aspect_ratio },
-    image.resolution && { label: "Resolution", value: image.resolution },
-    image.output_format && { label: "Output Format", value: image.output_format },
-    image.num_images && { label: "Num Images", value: String(image.num_images) },
-    image.quality && { label: "Quality", value: image.quality },
-    image.style && { label: "Style", value: image.style },
-    image.google_search === 1 && { label: "Google Search", value: "On" },
-    image.image_search === 1 && { label: "Image Search", value: "On" },
-    image.negative_prompt && { label: "Negative Prompt", value: image.negative_prompt },
-  ].filter(Boolean) as { label: string; value: string }[]
-
   return (
     <div className="modal modal-open">
-      <div className="modal-box max-w-7xl w-[95vw] h-[85vh] flex flex-col p-0 overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-base-200">
-          <button
-            onClick={onClose}
-            className="btn btn-ghost btn-sm btn-circle"
-          >
-            <X className="size-5" />
-          </button>
+      <div className="modal-box max-w-[95vw] w-[1400px] h-[90vh] flex flex-col md:flex-row p-0 overflow-hidden bg-[#0c0c0c] liquid-glass border border-white/10 rounded-2xl shadow-2xl">
+        
+        {/* Left Image Area */}
+        <div className="flex-1 flex items-center justify-center bg-black/40 relative p-4 md:p-6">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={image.prompt}
+              className="w-full h-full object-contain drop-shadow-2xl"
+            />
+          ) : (
+            <div className="text-base-content/60">No image available</div>
+          )}
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
-          <div className="flex-1 flex items-center justify-center bg-base-200 p-4">
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt={image.prompt}
-                className="max-h-[70vh] max-w-full object-contain rounded-lg"
-              />
-            ) : (
-              <div className="text-base-content/60">No image available</div>
-            )}
+        {/* Right Sidebar Area */}
+        <div className="w-full md:w-[420px] flex flex-col p-6 bg-black/60 border-l border-white/10 z-10 relative">
+          
+          {/* Top Actions */}
+          <div className="flex items-center justify-between mb-8">
+            <button 
+              onClick={handleDownload} 
+              disabled={!imageUrl} 
+              className="btn btn-sm h-9 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 px-4 font-normal"
+            >
+              <Download className="size-4 mr-1.5" />
+              Download
+            </button>
+            <div className="flex items-center gap-2">
+              <button className="btn btn-sm btn-circle btn-ghost border border-white/20 text-white hover:bg-white/10">
+                <Star className="size-4" />
+              </button>
+              <button className="btn btn-sm btn-circle btn-ghost border border-white/20 text-white hover:bg-white/10">
+                <Folder className="size-4" />
+              </button>
+              <button className="btn btn-sm btn-circle btn-ghost border border-white/20 text-white hover:bg-white/10">
+                <Trash2 className="size-4" />
+              </button>
+              <div className="w-px h-5 bg-white/20 mx-1" />
+              <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost text-white hover:bg-white/10">
+                <X className="size-5" />
+              </button>
+            </div>
           </div>
 
-          <div className="w-[320px] border-l border-base-200 p-4 overflow-y-auto">
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm text-base-content/60 mb-1">Model</div>
-                <div className="font-semibold">{getModelName(image.model)}</div>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
+            
+            {/* Prompt */}
+            <div className="mb-10">
+              <h3 className="text-white font-bold mb-3 text-sm">Prompt</h3>
+              <div className="pl-3 border-l-2 border-white/20">
+                <p className="text-sm text-base-content/80 leading-relaxed break-words">
+                  {image.prompt}
+                </p>
               </div>
-
-              <div>
-                <div className="text-sm text-base-content/60 mb-1">Prompt</div>
-                <div className="text-sm break-words">{image.prompt}</div>
-              </div>
-
-              {optionItems.map((item, idx) => (
-                  <div key={idx}>
-                    <div className="text-sm text-base-content/60 mb-1">{item.label}</div>
-                    <div className="text-sm">{item.value}</div>
+              
+              {image.negative_prompt && (
+                <div className="mt-6">
+                  <h3 className="text-white font-bold mb-3 text-sm">Negative Prompt</h3>
+                  <div className="pl-3 border-l-2 border-error/40">
+                    <p className="text-sm text-base-content/60 leading-relaxed break-words">
+                      {image.negative_prompt}
+                    </p>
                   </div>
-                ))}
+                </div>
+              )}
+            </div>
 
-              <div>
-                <div className="text-sm text-base-content/60 mb-1">Created</div>
-                <div className="text-sm">{formatTimestamp(image.created_at)}</div>
-              </div>
-
-              <div className="pt-4 space-y-2">
-                <button
-                  onClick={handleRegenerate}
-                  className="btn btn-primary btn-block gap-2"
-                >
-                  <RotateCcw className="size-4" />
-                  Regenerate
-                </button>
-                <button
-                  onClick={handleDownload}
-                  disabled={!imageUrl}
-                  className="btn btn-outline btn-block gap-2"
-                >
-                  <Download className="size-4" />
-                  Download
-                </button>
+            {/* Settings */}
+            <div className="mb-6">
+              <h3 className="text-white font-bold mb-5 text-sm">Settings</h3>
+              <div className="grid grid-cols-3 gap-y-6 gap-x-4">
+                <div>
+                  <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Model</div>
+                  <div className="text-sm text-white">{getModelName(image.model)}</div>
+                </div>
+                
+                {image.aspect_ratio && (
+                  <div>
+                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Aspect ratio</div>
+                    <div className="text-sm text-white flex items-center gap-1.5">
+                      <div className="w-4 h-3 border border-white/40 rounded-[2px]"></div>
+                      {image.aspect_ratio}
+                    </div>
+                  </div>
+                )}
+                
+                {image.quality && (
+                  <div>
+                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Quality</div>
+                    <div className="text-sm text-white">{image.quality}</div>
+                  </div>
+                )}
+                
+                {image.output_format && (
+                  <div>
+                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">File type</div>
+                    <div className="text-sm text-white uppercase">{image.output_format}</div>
+                  </div>
+                )}
+                
+                <div className="col-span-2">
+                  <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Date created</div>
+                  <div className="text-sm text-white">
+                    {formatTimestamp(image.created_at)}
+                  </div>
+                </div>
+                
+                {image.image_size && (
+                  <div>
+                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Size</div>
+                    <div className="text-sm text-white">{image.image_size}</div>
+                  </div>
+                )}
+                
+                {image.style && (
+                  <div>
+                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Style</div>
+                    <div className="text-sm text-white">{image.style}</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
+
+          {/* Bottom Actions */}
+          <div className="pt-6 grid grid-cols-2 gap-3 mt-auto border-t border-white/5">
+            <button className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal">
+              <Video className="size-4 mr-1.5" />
+              Video
+            </button>
+            <button className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal">
+              <Pencil className="size-4 mr-1.5" />
+              Edit
+            </button>
+            <button onClick={handleRegenerate} className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal">
+              <RotateCcw className="size-4 mr-1.5" />
+              Recreate
+            </button>
+            <button className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal">
+              <Maximize className="size-4 mr-1.5" />
+              Upscale
+            </button>
+          </div>
+          
         </div>
       </div>
-      <div className="modal-backdrop" onClick={onClose} />
+      <div className="modal-backdrop bg-black/80 backdrop-blur-md" onClick={onClose} />
     </div>
   )
 }

@@ -1,49 +1,34 @@
-import { Link, NavLink, useLocation } from "react-router";
-import { Globe, ChevronDown, LogOut, User } from "lucide-react";
-import { useI18n, type Language } from "../lib/i18n";
-import { useState, useRef } from "react";
-import { useUserStore } from "../stores/userStore";
-
-const LANG_NAMES: Record<Language, string> = {
-  en: "English",
-  zh: "中文",
-  fr: "Français",
-  ja: "日本語",
-  ko: "한국어",
-  ru: "Русский",
-  it: "Italiano",
-};
+import { Link, NavLink, useLocation } from "react-router"
+import { ChevronDown, Globe, LogOut, Menu, User, X } from "lucide-react"
+import { languageNames, useI18n, type Language } from "~/lib/i18n"
+import { useState } from "react"
+import { useUserStore } from "../stores/userStore"
 
 interface NavItemSimple {
-  title: string;
-  to: string;
-  external?: boolean;
+  title: string
+  to: string
+  external?: boolean
 }
 
 interface NavItemWithChildren {
-  title: string;
-  children: { title: string; to: string }[];
+  title: string
+  children: { title: string; to: string }[]
 }
 
-type NavItem = NavItemSimple | NavItemWithChildren;
-
-function isNavItemWithChildren(item: NavItem): item is NavItemWithChildren {
-  return "children" in item;
-}
+type NavItem = NavItemSimple | NavItemWithChildren
 
 export default function Header() {
-  const { lang, setLang, t } = useI18n();
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [showLangMenu, setShowLangMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-  const location = useLocation();
-  const { user, logout } = useUserStore();
+  const { lang, setLang, t } = useI18n()
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showLangMenu, setShowLangMenu] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const location = useLocation()
+  const { user, logout } = useUserStore()
 
   const navItems: NavItem[] = [
     { title: t.nav.aiToolkit, to: "/ai-toolkit" },
     {
-      title: t.nav.freeTools,
+      title: t.nav.tools,
       children: [
         { title: t.nav.inpainting, to: "/inpainting" },
         { title: t.nav.resize, to: "/resize" },
@@ -52,274 +37,330 @@ export default function Header() {
       ],
     },
     { title: t.nav.pricing, to: "/pricing" },
-    { title: t.nav.blog, to: "/blog", external: true },
-  ];
+    { title: t.nav.api, to: "/api" },
+  ]
 
-  const isBlogActive = location.pathname.startsWith("/blog");
+  const closeMenus = () => {
+    setShowMobileMenu(false)
+    setShowLangMenu(false)
+    setShowUserMenu(false)
+  }
+
+  const openLogin = () => {
+    closeMenus()
+    window.dispatchEvent(new CustomEvent("openLoginModal"))
+  }
 
   return (
-    <div className="navbar h-15 max-h-15 bg-base-100 border-b border-base-200 sticky top-0 z-40 backdrop-blur-md px-6">
-      <div className="navbar-start">
-        <Link to="/" className="flex items-center">
-          <img src="/logo-with-brand.svg" alt="tuziyo" className="h-8 w-auto" />
-        </Link>
-      </div>
-
-      <div className="navbar-center hidden lg:flex">
-        <ul className="flex items-center gap-1 px-1">
-          {navItems.map((item, index) => {
-            if (isNavItemWithChildren(item)) {
-              return (
-                <li key={index}>
-                  <div className="dropdown dropdown-hover dropdown-end">
-                    <button
-                      tabIndex={0}
-                      role="button"
-                      className="btn btn-ghost text-base hover:text-primary gap-1"
-                    >
-                      {item.title}
-                      <ChevronDown className="size-3" />
-                    </button>
-                    <ul
-                      tabIndex={0}
-                      className="dropdown-content z-50 menu p-2 shadow-2xl bg-base-100 rounded-box w-52 border border-base-200"
-                    >
-                      {item.children.map((child) => (
-                        <li key={child.to}>
-                          <NavLink
-                            to={child.to}
-                            className={({ isActive }) =>
-                              `text-base w-full flex justify-center ${isActive ? "text-primary font-semibold" : "hover:text-primary"}`
-                            }
-                          >
-                            {child.title}
-                          </NavLink>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </li>
-              );
-            }
-            if (item.external) {
-              return (
-                <li key={item.to}>
-                  <a
-                    href={item.to}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-ghost text-base hover:text-primary"
-                  >
-                    {item.title}
-                  </a>
-                </li>
-              );
-            }
-            return (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  className={({ isActive }) =>
-                    `btn btn-ghost text-base ${isActive ? "text-primary font-semibold" : "hover:text-primary"}`
-                  }
-                >
-                  {item.title}
-                </NavLink>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
-      <div className="navbar-end flex items-center gap-2">
-        {user ? (
-          <div className="dropdown dropdown-end" ref={userMenuRef}>
-            <button
-              tabIndex={0}
-              role="button"
-              className="btn btn-ghost btn-circle dropdown-toggle"
-            >
-              {user.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt={user.name}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </button>
-            <ul
-              tabIndex={0}
-              className="dropdown-content z-50 menu p-2 shadow-lg bg-base-100 rounded-box w-52 border border-base-200 mt-2"
-            >
-              <li className="menu-title px-4 py-2">
-                <div className="text-sm font-semibold">{user.name}</div>
-                <div className="text-xs text-base-content/60">{user.email}</div>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    window.location.href = "/profile";
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <User className="size-4" />
-                  Profile
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    logout();
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <LogOut className="size-4" />
-                  Logout
-                </button>
-              </li>
-            </ul>
-          </div>
-        ) : (
-          <button
-            className="btn btn-primary btn-sm hidden lg:flex"
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent("openLoginModal"));
-            }}
-          >
-            Start Free Now
-          </button>
-        )}
-        <div className="dropdown dropdown-end" ref={menuRef}>
-          <button
-            tabIndex={0}
-            role="button"
-            className="btn btn-ghost btn-sm gap-2 dropdown-toggle"
-          >
-            <div className="p-1 rounded-lg bg-base-200">
-              <Globe className="size-4" />
-            </div>
-            <span className="text-xs font-bold uppercase">{lang}</span>
-          </button>
-          {showLangMenu && (
-            <ul
-              tabIndex={0}
-              className="dropdown-content z-50 menu p-2 rounded-box w-48 border border-base-200"
-            >
-              {(Object.keys(LANG_NAMES) as Language[]).map((l) => (
-                <li key={l}>
-                  <button
-                    onClick={() => {
-                      setLang(l);
-                      setShowLangMenu(false);
-                    }}
-                    className={`flex justify-center ${lang === l ? "text-primary font-semibold" : "hover:text-primary"}`}
-                  >
-                    {LANG_NAMES[l]}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <button
-          className="lg:hidden btn btn-ghost btn-sm"
-          onClick={() => setShowMobileMenu(!showMobileMenu)}
+    <header className="sticky top-0 z-40 text-white backdrop-blur-[18px]">
+      <div className="flex min-h-[4.5rem] w-full items-center justify-between gap-6 px-6 max-[719px]:min-h-[4.15rem]">
+        <Link
+          to="/"
+          className="inline-flex h-full items-center gap-[0.55rem] text-xl font-semibold tracking-normal text-white uppercase no-underline"
+          aria-label={t.nav.home}
         >
-          <svg
-            className="size-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            {showMobileMenu ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            )}
-          </svg>
-        </button>
-      </div>
+          <span className="flex items-center gap-2">
+            <img className="h-10 w-10" src="/logo.svg" alt="" />
+            <span className="text-2xl">tuziyo</span>
+          </span>
+        </Link>
 
-      {showMobileMenu && (
-        <div className="lg:hidden absolute top-full left-0 right-0 bg-base-100 border-b border-base-200 shadow-lg">
-          <ul className="menu p-4 gap-2">
-            {navItems.map((item, index) => {
-              if (isNavItemWithChildren(item)) {
+        <nav className="items-center h-full md:flex" aria-label={t.nav.mainNavigation}>
+          <ul className="menu menu-horizontal h-full gap-3 bg-transparent p-0">
+            {navItems.map(item => {
+              if ("children" in item) {
+                const hasActiveChild = item.children.some(child =>
+                  location.pathname.startsWith(child.to)
+                )
+
                 return (
-                  <li key={index}>
-                    <div className="menu-title px-2 py-1 text-xs font-bold text-base-content/50 uppercase">
-                      {item.title}
+                  <li className="h-10 w-28 text-nowrap" key={item.title}>
+                    <div className="group dropdown dropdown-hover h-full w-full bg-transparent">
+                      <button
+                        type="button"
+                        tabIndex={0}
+                        className={[
+                          "!flex h-full w-full items-center justify-center gap-1 rounded-full text-center text-nav-root font-normal",
+                          hasActiveChild
+                            ? "text-primary font-semibold"
+                            : "text-nav-menu group-hover:text-primary transition-colors",
+                        ].join(" ")}
+                      >
+                        <span className="font-normal text-nav-root">{item.title}</span>
+                        <ChevronDown className="size-4 transition-transform duration-200 group-hover:-rotate-180" />
+                      </button>
+                      <div className="dropdown-content left-0 z-50 pt-1" tabIndex={0}>
+                        <ul className="menu menu-md ms-0 w-40 gap-1 rounded-box border border-white/10 bg-base-200 p-1 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
+                          {item.children.map(child => (
+                            <li key={child.to}>
+                              <NavLink
+                                to={child.to}
+                                className={({ isActive }) =>
+                                  [
+                                    "!flex w-full items-center justify-start rounded-lg text-left px-3 py-2 bg-transparent text-nav-submenu hover:cursor-pointer",
+                                    isActive
+                                      ? "text-primary font-bold"
+                                      : "text-nav-menu hover:bg-white/10 hover:text-primary transition-colors",
+                                  ].join(" ")
+                                }
+                              >
+                                {child.title}
+                              </NavLink>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
-                    <ul className="pl-2">
-                      {item.children.map((child) => (
-                        <li key={child.to}>
-                          <NavLink
-                            to={child.to}
-                            onClick={() => setShowMobileMenu(false)}
-                            className={({ isActive }) =>
-                              `text-base ${isActive ? "text-primary font-semibold" : "hover:text-primary"}`
-                            }
-                          >
-                            {child.title}
-                          </NavLink>
-                        </li>
-                      ))}
-                    </ul>
                   </li>
-                );
+                )
               }
+
               if (item.external) {
                 return (
-                  <li key={item.to}>
-                    <a href={item.to} target="_blank" rel="noopener noreferrer">
+                  <li className="group h-10 w-28 text-nowrap" key={item.to}>
+                    <a
+                      href={item.to}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={[
+                        "flex h-full w-full items-center justify-center rounded-lg px-2 text-center text-nav-root font-normal",
+                        location.pathname.startsWith(item.to)
+                          ? "text-primary font-bold"
+                          : "text-nav-menu group-hover:text-primary transition-colors",
+                      ].join(" ")}
+                    >
                       {item.title}
                     </a>
                   </li>
-                );
+                )
               }
+
               return (
-                <li key={item.to}>
+                <li className="group h-10 w-28 text-nowrap" key={item.to}>
                   <NavLink
                     to={item.to}
-                    onClick={() => setShowMobileMenu(false)}
                     className={({ isActive }) =>
-                      `text-base ${isActive ? "text-primary font-semibold" : "hover:text-primary"}`
+                      [
+                        "!flex h-full w-full items-center justify-center bg-transparent px-4 text-center text-nav-root font-normal",
+                        isActive
+                          ? "text-primary font-bold"
+                          : "text-nav-menu group-hover:text-primary transition-colors",
+                      ].join(" ")
                     }
                   >
                     {item.title}
                   </NavLink>
                 </li>
-              );
+              )
             })}
           </ul>
-          <div className="p-4 border-t border-base-200">
+        </nav>
+
+        <div className="flex min-w-0 h-10 items-center justify-end gap-[0.55rem]">
+          <div
+            className={`group dropdown dropdown-hover h-10 w-28 ${showLangMenu ? "dropdown-open" : ""}`}
+          >
             <button
-              className="btn btn-primary btn-sm w-full"
-              onClick={() => {
-                setShowMobileMenu(false);
-                window.dispatchEvent(new CustomEvent("openLoginModal"));
-              }}
+              type="button"
+              className="!flex h-full w-full items-center justify-center gap-1 rounded-full text-center text-nav-root font-normal text-nav-menu group-hover:text-primary cursor-pointer transition-colors"
+              onClick={() => setShowLangMenu(value => !value)}
+              aria-label={t.nav.changeLanguage}
+              aria-expanded={showLangMenu}
+              tabIndex={0}
             >
-              Start Free Now
+              <Globe className="size-4" />
+              <span>{languageNames[lang]}</span>
+              <ChevronDown className="size-4 transition-transform duration-200 group-hover:-rotate-180" />
             </button>
+            <div className="dropdown-content z-50 ms-0 pt-1" tabIndex={0}>
+              <ul className="menu menu-md w-40 gap-1 rounded-box border border-white/20 bg-base-200 p-1 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
+                {(Object.keys(languageNames) as Language[]).map(nextLang => (
+                  <li key={nextLang}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLang(nextLang)
+                        closeMenus()
+                      }}
+                      className={[
+                        "justify-between font-normal text-nav-submenu",
+                        lang === nextLang
+                          ? "text-primary font-bold"
+                          : "text-nav-menu hover:bg-white/10 hover:text-primary transition-colors",
+                      ].join(" ")}
+                    >
+                      {languageNames[nextLang]}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
+
+          {user ? (
+            <div
+              className={`dropdown dropdown-end dropdown-hover ${showUserMenu ? "dropdown-open" : ""}`}
+            >
+              <button
+                type="button"
+                className="avatar btn btn-circle btn-primary btn-sm overflow-hidden"
+                onClick={() => setShowUserMenu(value => !value)}
+                aria-label={t.nav.openUserMenu}
+                aria-expanded={showUserMenu}
+                tabIndex={0}
+              >
+                {user.avatarUrl ? (
+                  <img
+                    className="size-full rounded-full object-cover"
+                    src={user.avatarUrl}
+                    alt={user.name}
+                  />
+                ) : (
+                  user.name.charAt(0).toUpperCase()
+                )}
+              </button>
+              <div className="dropdown-content z-50 pt-1" tabIndex={0}>
+                <ul className="menu menu-md w-52 gap-1 rounded-box border border-white/10 bg-base-200 p-2 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
+                  <li>
+                    <button
+                      type="button"
+                      className="justify-between rounded-lg text-nav-submenu font-normal text-nav-menu hover:bg-white/10 hover:text-primary transition-colors"
+                      onClick={() => {
+                        closeMenus()
+                        window.location.href = "/profile"
+                      }}
+                    >
+                      {t.nav.profile}
+                      <User className="size-4" />
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      className="justify-between rounded-lg text-nav-submenu font-normal text-nav-menu hover:bg-white/10 hover:text-primary transition-colors"
+                      onClick={() => {
+                        closeMenus()
+                        logout()
+                      }}
+                    >
+                      {t.nav.logout}
+                      <LogOut className="size-4" />
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                className="!flex h-full w-28 items-center justify-center gap-1 rounded-full text-center text-nav-root font-normal text-nav-menu hover:bg-transparent hover:text-primary transition-colors"
+                type="button"
+                onClick={openLogin}
+              >
+                {t.nav.login}
+              </button>
+              <button
+                className="btn btn-primary btn-sm rounded-full text-nav-root font-medium"
+                type="button"
+                onClick={openLogin}
+              >
+                {t.nav.register}
+              </button>
+            </>
+          )}
+
+          <button
+            type="button"
+            className="btn btn-circle btn-ghost btn-sm md:hidden"
+            onClick={() => setShowMobileMenu(value => !value)}
+            aria-label={t.nav.openMenu}
+            aria-expanded={showMobileMenu}
+          >
+            {showMobileMenu ? <X className="size-5" /> : <Menu className="size-5" />}
+          </button>
         </div>
-      )}
-    </div>
-  );
+
+        {showMobileMenu && (
+          <div className="absolute top-[calc(100%+0.5rem)] right-4 left-4 z-50 md:hidden">
+            <ul className="menu gap-1 rounded-box border border-white/10 bg-base-200 p-2 text-nav-submenu shadow-2xl">
+              {navItems.map(item => {
+                if ("children" in item) {
+                  return item.children.map(child => (
+                    <li key={child.to}>
+                      <NavLink
+                        to={child.to}
+                        onClick={closeMenus}
+                        className={({ isActive }) =>
+                          [
+                            "!flex w-full items-center justify-center rounded-lg text-center text-nav-submenu font-normal",
+                            isActive
+                              ? "text-primary font-bold"
+                              : "text-nav-menu hover:bg-white/10 hover:text-primary transition-colors",
+                          ].join(" ")
+                        }
+                      >
+                        {child.title}
+                      </NavLink>
+                    </li>
+                  ))
+                }
+
+                if (item.external) {
+                  return (
+                    <li key={item.to}>
+                      <a
+                        href={item.to}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={[
+                          "!flex w-full items-center justify-center rounded-lg text-center text-nav-submenu font-normal",
+                          location.pathname.startsWith(item.to)
+                            ? "text-primary font-bold"
+                            : "text-nav-menu hover:bg-white/10 hover:text-primary transition-colors",
+                        ].join(" ")}
+                        onClick={closeMenus}
+                      >
+                        {item.title}
+                      </a>
+                    </li>
+                  )
+                }
+
+                return (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      onClick={closeMenus}
+                      className={({ isActive }) =>
+                        [
+                          "!flex w-full items-center justify-center rounded-lg text-center text-nav-submenu font-normal",
+                          isActive
+                            ? "text-primary font-semibold"
+                            : "text-nav-menu hover:bg-white/10 hover:text-primary transition-colors",
+                        ].join(" ")
+                      }
+                    >
+                      {item.title}
+                    </NavLink>
+                  </li>
+                )
+              })}
+
+              {!user && (
+                <li className="mt-1">
+                  <button
+                    className="btn btn-ghost btn-sm rounded-full text-nav-submenu font-medium"
+                    type="button"
+                    onClick={openLogin}
+                  >
+                    {t.nav.register}
+                  </button>
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+      </div>
+    </header>
+  )
 }

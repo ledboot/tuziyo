@@ -106,7 +106,7 @@ export default function PromptArea({
   const modelSelectOptions: SelectOption[] = models.map(model => ({
     value: model.id,
     label: model.name,
-    icon: <img src={model.icon} alt={model.provider} className="size-5 rounded" />,
+    icon: <img src={model.icon} alt={model.provider} className="size-5 rounded invert" />,
     badge: model.isNew ? (
       <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-primary text-primary-content rounded-full flex items-center gap-0.5">
         <Sparkles className="size-2.5" />
@@ -214,14 +214,7 @@ export default function PromptArea({
     <div className={`max-w-3xl mx-auto ${className}`}>
       <div
         id="prompt-area"
-        className="relative rounded-4xl bg-base-100 border border-base-200 shadow-2xl backdrop-blur-2xl overflow-visible"
-        style={{
-          boxShadow: `
-            0 8px 32px rgba(0, 0, 0, 0.1),
-            0 0 0 1px rgba(255, 255, 255, 0.1) inset,
-            0 1px 1px rgba(255, 255, 255, 0.4) inset
-          `,
-        }}
+        className="liquid-glass bg-base-100/10 relative rounded-4xl overflow-visible"
       >
         <div className="card-body p-4 relative z-10 overflow-visible">
           {selectedModelInfo?.supportsImage && (

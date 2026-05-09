@@ -31,6 +31,12 @@
       "sourceType": "github",
       "computedHash": "194c9e7306024d5ff9f8c2327754d07675fe816870574faa93986f9bd59a830b"
     },
+    "refero-design": {
+      "source": "referodesign/refero_skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "7c17b3d2c4377e931101691d8cb4a2c714785cae66f0c60461fd99447833dbbe"
+    },
     "stitch-design": {
       "source": "google-labs-code/stitch-skills",
       "sourceType": "github",

@@ -24,7 +24,7 @@ export const links: Route.LinksFunction = () => [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="bumblebee">
+    <html lang="en" data-theme="forest">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -70,12 +70,21 @@ export default function App() {
     fetchUser();
   }, []);
 
-  const isSpecialPage = location.pathname.startsWith("/ai-toolkit");
+  const isSpecialPage = location.pathname.startsWith("/ai-toolkit") || location.pathname.startsWith("/session");
 
   return (
     <I18nProvider>
+      {/* Global SVG Filter for Liquid Glass Refraction */}
+      <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
+        <defs>
+          <filter id="liquid-refraction" x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="2" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="30" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+      </svg>
       <div
-        className={`min-h-screen bg-base-100 font-display flex flex-col transition-colors duration-300`}
+        className={`min-h-screen bg-base-100 flex flex-col transition-colors duration-300`}
       >
         <Header />
         <main className={`flex-1 ${isSpecialPage ? "" : "overflow-y-auto"}`}>

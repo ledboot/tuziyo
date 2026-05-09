@@ -518,7 +518,7 @@ export default function Inpainting() {
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold uppercase tracking-widest">
                 <Zap className="size-3" /> {t.inpainting.aiPowered}
               </div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-brand/10 border border-primary-brand/20 text-primary-brand text-xs font-bold uppercase tracking-widest">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest">
                 <ShieldCheck className="size-3" /> {t.common.freeForever}
               </div>
             </div>
@@ -542,8 +542,8 @@ export default function Inpainting() {
               <div
                 className={`flex-1 min-h-87-5 md:min-h-112-5 custom-dashed flex flex-col items-center justify-center p-6 md:p-12 transition-all relative overflow-hidden ${
                   isDragging
-                    ? "bg-primary-brand/10 scale-[1.01] border-primary-brand"
-                    : "bg-white dark:bg-slate-900 group cursor-pointer hover:bg-primary-brand/5"
+                    ? "bg-primary/10 scale-[1.01] border-primary"
+                    : "bg-white dark:bg-slate-900 group cursor-pointer hover:bg-primary/5"
                 }`}
                 onDragOver={(e) => {
                   e.preventDefault();
@@ -567,7 +567,7 @@ export default function Inpainting() {
                   />
                 )}
                 <div className="flex flex-col items-center gap-6 text-center z-10">
-                  <div className="size-24 bg-primary-brand/10 rounded-full flex items-center justify-center text-primary-brand group-hover:scale-110 transition-transform duration-300">
+                  <div className="size-24 bg-primary/10 rounded-full flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
                     <ImagePlus className="size-10" />
                   </div>
                   <div className="space-y-2">
@@ -580,7 +580,7 @@ export default function Inpainting() {
                   </div>
                   <button
                     type="button"
-                    className="mt-4 px-8 py-4 bg-primary-brand text-white font-bold rounded-xl shadow-lg shadow-primary-brand/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3"
+                    className="mt-4 px-8 py-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3"
                   >
                     <Upload className="size-5" />
                     {t.common.uploadImage}
@@ -603,14 +603,14 @@ export default function Inpainting() {
                           cx="50%"
                           cy="50%"
                           r="45%"
-                          className="stroke-primary-brand fill-none transition-all duration-300 ease-out"
+                          className="stroke-primary fill-none transition-all duration-300 ease-out"
                           strokeWidth="8"
                           strokeDasharray="283%"
                           strokeDashoffset={`${283 - (283 * downloadProgress) / 100}%`}
                         />
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <Zap className="size-8 text-primary-brand animate-pulse" />
+                        <Zap className="size-8 text-primary animate-pulse" />
                       </div>
                     </div>
                     <div className="text-center space-y-2">
@@ -689,7 +689,7 @@ export default function Inpainting() {
                     <button
                       onClick={runInpainting}
                       disabled={processing || !session}
-                      className="px-6 py-2 bg-primary-brand text-white rounded-md hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {processing
                         ? t.inpainting.processing
@@ -717,7 +717,7 @@ export default function Inpainting() {
                           onClick={() => loadHistoryImage(index)}
                           className={`w-full border-2 rounded-lg overflow-hidden transition-all ${
                             currentHistoryIndex === index
-                              ? "border-primary-brand ring-2 ring-primary-brand/20"
+                              ? "border-primary ring-2 ring-primary/20"
                               : "border-slate-200 hover:border-slate-300"
                           }`}
                         >
@@ -747,7 +747,7 @@ export default function Inpainting() {
                           onClick={() => setShowOriginal(!showOriginal)}
                           className={`px-4 py-2 rounded-md transition-colors ${
                             showOriginal
-                              ? "bg-primary-brand text-white"
+                              ? "bg-primary text-white"
                               : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                           }`}
                           disabled={currentHistoryIndex === 0}
@@ -758,7 +758,7 @@ export default function Inpainting() {
                         </button>
                         <button
                           onClick={downloadResult}
-                          className="px-4 py-2 bg-primary-brand text-white rounded-md hover:bg-primary-dark transition-colors"
+                          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary transition-colors"
                         >
                           {t.inpainting.download}
                         </button>
@@ -871,14 +871,14 @@ export default function Inpainting() {
                                 cx="50%"
                                 cy="50%"
                                 r="45%"
-                                className="stroke-primary-brand fill-none transition-all duration-300 ease-out"
+                                className="stroke-primary fill-none transition-all duration-300 ease-out"
                                 strokeWidth="8"
                                 strokeDasharray="283%"
                                 strokeDashoffset={`${283 - (283 * progress) / 100}%`}
                               />
                             </svg>
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <Zap className="size-8 text-primary-brand animate-pulse" />
+                              <Zap className="size-8 text-primary animate-pulse" />
                             </div>
                           </div>
                           <div className="text-center space-y-2">

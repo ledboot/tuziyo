@@ -328,10 +328,10 @@ export default function ConvertPage() {
             className={`group relative flex flex-col items-center justify-center p-12 md:p-16 rounded-[2.5rem] border-2 border-dashed transition-all duration-300 ${
               images.length === 0
                 ? isDragging
-                  ? "border-primary-brand bg-primary-brand/5 scale-[1.01]"
+                  ? "border-primary bg-primary/5 scale-[1.01]"
                   : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
                 : "border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50"
-            } hover:border-primary-brand/50 hover:bg-primary-brand/5`}
+            } hover:border-primary/50 hover:bg-primary/5`}
             onDragOver={(e) => {
               e.preventDefault();
               setIsDragging(true);
@@ -345,7 +345,7 @@ export default function ConvertPage() {
               }
             }}
           >
-            <div className="size-20 bg-primary-brand/10 rounded-3xl flex items-center justify-center mb-6 text-primary-brand group-hover:scale-110 transition-transform">
+            <div className="size-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
               <ImagePlus className="size-10" />
             </div>
             <div className="text-center space-y-2 mb-8">
@@ -358,7 +358,7 @@ export default function ConvertPage() {
             </div>
             <label
               htmlFor="file-upload"
-              className="flex items-center gap-3 px-10 py-4 bg-primary-brand text-white rounded-2xl font-bold shadow-xl shadow-primary-brand/25 hover:shadow-primary-brand/40 transition-all active:scale-95 cursor-pointer font-display uppercase tracking-widest text-xs"
+              className="flex items-center gap-3 px-10 py-4 bg-primary text-white rounded-2xl font-bold shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all active:scale-95 cursor-pointer font-display uppercase tracking-widest text-xs"
             >
               <Upload className="size-5" />
               {t.common.uploadImage}
@@ -382,7 +382,7 @@ export default function ConvertPage() {
                 </p>
                 <div className="flex flex-col gap-1">
                   <p className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center gap-2">
-                    <span className="size-1.5 rounded-full bg-primary-brand" />
+                    <span className="size-1.5 rounded-full bg-primary" />
                     {t.convert.inputFormats}
                   </p>
                   <p className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center gap-2">
@@ -405,7 +405,7 @@ export default function ConvertPage() {
                   </span>
                   <select
                     id="target-format"
-                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary-brand min-w-45 py-3 px-4 text-slate-700 dark:text-slate-200"
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary min-w-45 py-3 px-4 text-slate-700 dark:text-slate-200"
                     value={globalOutputFormat}
                     onChange={(e) =>
                       setGlobalOutputFormat(e.target.value as OutputFormat)
@@ -428,14 +428,14 @@ export default function ConvertPage() {
                   <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-xl">
                     <input
                       id="quality-setting"
-                      className="w-32 accent-primary-brand"
+                      className="w-32 accent-primary"
                       type="range"
                       min="10"
                       max="100"
                       value={quality}
                       onChange={(e) => setQuality(Number(e.target.value))}
                     />
-                    <span className="text-sm font-bold text-primary-brand w-8">
+                    <span className="text-sm font-bold text-primary w-8">
                       {quality}%
                     </span>
                   </div>
@@ -509,7 +509,7 @@ export default function ConvertPage() {
                             {img.isConverting && (
                               <>
                                 <div className="w-24 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                  <div className="h-full bg-primary-brand/40 w-1/2 animate-pulse" />
+                                  <div className="h-full bg-primary/40 w-1/2 animate-pulse" />
                                 </div>
                                 <span className="text-2xs font-bold text-slate-400 uppercase tracking-tighter">
                                   {t.common.processing}
@@ -537,7 +537,7 @@ export default function ConvertPage() {
                             {!img.isConverting &&
                               !img.converted &&
                               !img.error && (
-                                <span className="text-2xs font-bold text-primary-brand uppercase tracking-tighter">
+                                <span className="text-2xs font-bold text-primary uppercase tracking-tighter">
                                   {t.common.ready}
                                 </span>
                               )}
@@ -552,7 +552,7 @@ export default function ConvertPage() {
                                   /\.[^/.]+$/,
                                   "",
                                 )}.${globalOutputFormat}`}
-                                className="size-10 flex items-center justify-center rounded-xl bg-primary-brand/10 text-primary-brand hover:bg-primary-brand hover:text-white transition-all"
+                                className="size-10 flex items-center justify-center rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
                               >
                                 <Download className="size-5" />
                               </a>

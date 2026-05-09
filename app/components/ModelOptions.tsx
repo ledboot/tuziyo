@@ -61,23 +61,23 @@ export function ModelOptions({ groups, className = "" }: ModelOptionsProps) {
     <div ref={ref} className={`relative inline-block w-max shrink-0 ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex w-max items-center gap-2 whitespace-nowrap px-3 py-2 bg-base-100 rounded-lg border border-base-200 cursor-pointer hover:border-primary transition-colors"
+        className="inline-flex w-max items-center gap-2 whitespace-nowrap px-3 py-2 liquid-glass rounded-lg border-none cursor-pointer hover:ring-1 hover:ring-primary transition-all"
       >
-        <SlidersHorizontal size={16} className="shrink-0" />
+        <SlidersHorizontal size={16} className="shrink-0 text-white" />
         <span className="text-sm whitespace-nowrap">{displayText || "Select options"}</span>
         <ChevronDown
-          className={`size-4 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          className={`size-4 shrink-0 transition-transform text-white ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full mb-2 left-0 z-[100] w-max min-w-full shadow-2xl bg-base-100 rounded-box border border-base-200">
+        <div className="absolute bottom-full mb-2 left-0 z-[100] w-max min-w-full liquid-glass bg-black/90 rounded-box border-none">
           <div className="p-2">
             {selectGroups.map((group, groupIdx) => (
               <div key={group.id} className="mb-2 last:mb-0">
                 {groupIdx > 0 && <div className="border-t border-base-200 my-2" />}
                 <div className="px-3 py-2">
-                  <div className="text-xs text-base-content/50 font-medium mb-2 whitespace-nowrap">
+                  <div className="text-xs text-base-content font-medium mb-2 whitespace-nowrap">
                     {group.label}
                   </div>
                   <div className="flex w-max gap-2">
@@ -90,8 +90,8 @@ export function ModelOptions({ groups, className = "" }: ModelOptionsProps) {
                         }}
                         className={`w-max whitespace-nowrap px-2 py-1.5 text-sm rounded-lg transition-colors cursor-pointer text-center ${
                           group.value === opt.value
-                            ? "bg-primary text-primary-content font-medium"
-                            : "bg-transparent text-base-content hover:bg-base-200"
+                            ? "text-primary font-semibold underline underline-offset-4 decoration-2"
+                            : "bg-transparent text-base-content hover:bg-white/10"
                         }`}
                       >
                         {opt.label}
@@ -108,7 +108,7 @@ export function ModelOptions({ groups, className = "" }: ModelOptionsProps) {
                     {toggleGroups.map(group => (
                       <label
                         key={group.id}
-                        className="flex items-center justify-between gap-2 cursor-pointer px-2 py-2 hover:bg-base-200 rounded-lg transition-colors"
+                        className="flex items-center justify-between gap-2 cursor-pointer px-2 py-2 hover:bg-white/10 rounded-lg transition-colors"
                       >
                         <span className="text-sm whitespace-nowrap">{group.label}</span>
                         <input
