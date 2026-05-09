@@ -924,13 +924,597 @@ select {
 
 /* Liquid Glass Utility */
 .liquid-glass {
-  --glass-blur: 20px;
-  --glass-highlight: 0.1;
-  --glass-shadow: 0.25;
-  backdrop-filter: url(#liquid-refraction) blur(var(--glass-blur)) saturate(150%);
-  -webkit-backdrop-filter: url(#liquid-refraction) blur(var(--glass-blur)) saturate(150%);
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, var(--glass-shadow)),
-    inset 0 0 0 1px rgba(255, 255, 255, var(--glass-highlight)),
-    inset 0 1px 0 rgba(255, 255, 255, calc(var(--glass-highlight) * 2));
+  --glass-blur: 40px;
+  --glass-highlight: 0.22;
+  --glass-shadow: 0.55;
+  background:
+    linear-gradient(
+      165deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      rgba(255, 255, 255, 0.01) 40%,
+      rgba(255, 255, 255, 0.05) 100%
+    ),
+    rgba(8, 12, 12, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: url(#liquid-refraction) blur(var(--glass-blur)) saturate(185%) contrast(105%);
+  -webkit-backdrop-filter: url(#liquid-refraction) blur(var(--glass-blur)) saturate(185%)
+    contrast(105%);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Micro-texture overlay for realism */
+.liquid-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.04;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+.ai-toolkit-shell {
+  position: relative;
+  /* Add padding to account for the fixed header */
+  padding-top: 4.5rem;
+  /* Remove local scroll to allow global window scroll */
+  overflow-x: clip;
+  isolation: isolate;
+  background: #050707;
+}
+
+.ai-toolkit-backdrop {
+  position: absolute;
+  top: 4.5rem;
+  left: -1.25rem;
+  right: -1.25rem;
+  min-height: calc(100% + 8rem);
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.98;
+  transition:
+    opacity 400ms ease,
+    left 260ms ease;
+}
+
+.ai-toolkit-backdrop--with-sidebar {
+  left: 60px;
+}
+
+.ai-toolkit-backdrop.is-loading {
+  opacity: 0.9;
+}
+
+.ai-toolkit-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    linear-gradient(180deg, rgba(4, 6, 6, 0.16) 0%, rgba(4, 6, 6, 0) 34%, rgba(4, 6, 6, 0.32) 100%),
+    linear-gradient(0deg, rgba(6, 42, 38, 0.08), rgba(88, 66, 33, 0.06));
+}
+
+.ai-toolkit-masonry {
+  position: relative;
+  display: flex;
+  min-height: 100%;
+  gap: clamp(0.25rem, 0.45vw, 0.5rem);
+  padding: clamp(0.5rem, 1vw, 1rem);
+  transform: scale(1.035);
+}
+
+.ai-toolkit-masonry__column {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: clamp(0.25rem, 0.45vw, 0.5rem);
+}
+
+.ai-toolkit-masonry__column:nth-child(2n) {
+  transform: translateY(2.2rem);
+}
+
+.ai-toolkit-masonry__column:nth-child(3n) {
+  transform: translateY(-1.2rem);
+}
+
+.ai-toolkit-masonry__tile {
+  width: 100%;
+  height: clamp(16rem, var(--tile-height, 24rem), 35rem);
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.ai-toolkit-masonry__tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.018);
+  filter: saturate(0.96) contrast(0.98) brightness(0.94);
+}
+
+.ai-toolkit-stage {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  min-height: calc(100svh - 4.5rem);
+  align-items: center;
+  justify-content: center;
+  padding: clamp(4rem, 10vh, 7rem) clamp(1rem, 4vw, 3rem) 15rem;
+  pointer-events: none;
+}
+
+.ai-toolkit-stage--with-sidebar {
+  margin-left: 60px;
+}
+
+.ai-toolkit-hero-copy {
+  max-width: min(42rem, calc(100vw - 2rem));
+  text-align: center;
+  opacity: 0;
+  transform: translateY(0.75rem);
+  transition:
+    opacity 260ms ease,
+    transform 260ms ease;
+}
+
+.ai-toolkit-hero-copy.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.ai-toolkit-hero-copy h1 {
+  margin: 0;
+  font-size: 5.8rem;
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: 0;
+  text-wrap: balance;
+  text-shadow: 0 12px 42px rgba(0, 0, 0, 0.52);
+}
+
+.ai-toolkit-hero-copy p {
+  max-width: 32rem;
+  margin: 1rem auto 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.ai-toolkit-sidebar {
+  position: fixed;
+  top: 4.5rem;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  width: 60px;
+  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  background: rgba(10, 15, 15, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: width 260ms ease;
+}
+
+.ai-toolkit-sidebar--expanded {
+  width: 260px;
+}
+
+.ai-toolkit-sidebar .btn-ghost {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.ai-toolkit-sidebar .btn-ghost:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ai-toolkit-prompt-dock {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 35;
+  padding: 1.1rem max(1rem, env(safe-area-inset-right)) calc(1.1rem + env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(4, 6, 6, 0),
+    rgba(4, 6, 6, 0.18) 42%,
+    rgba(4, 6, 6, 0.58) 100%
+  );
+}
+
+.ai-toolkit-prompt-dock--with-sidebar {
+  left: 60px;
+}
+
+.ai-toolkit-prompt-dock__inner {
+  width: 100%;
+}
+
+.prompt-area-shell {
+  width: 100%;
+  max-width: min(780px, calc(100vw - 2rem));
+}
+
+.liquid-prompt-panel {
+  --glass-blur: 24px;
+  min-height: 12.5rem;
+  border-radius: 2.75rem;
+  /* More transparent center using radial gradient */
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(10, 15, 15, 0.12) 100%
+  );
+  /* Removed global blur to keep center clear */
+  box-shadow:
+    0 40px 100px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 2px 0 rgba(255, 255, 255, 0.25);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  isolation: isolate;
+  position: relative;
+  overflow: visible !important;
+}
+
+/* Edge Refraction Layer - The "Thick Glass" look */
+.liquid-prompt-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  /* Stronger distortion and blur for edges */
+  backdrop-filter: url(#liquid-refraction) blur(48px) saturate(220%) contrast(110%);
+  -webkit-backdrop-filter: url(#liquid-refraction) blur(48px) saturate(220%) contrast(110%);
+  pointer-events: none;
+
+  /* Mask: Smoothly transition refraction only to the outer 60px */
+  --edge-size: 60px;
+  --fade-size: 100px;
+  mask-image:
+    linear-gradient(
+      to bottom,
+      black var(--edge-size),
+      transparent var(--fade-size),
+      transparent calc(100% - var(--fade-size)),
+      black calc(100% - var(--edge-size))
+    ),
+    linear-gradient(
+      to right,
+      black var(--edge-size),
+      transparent var(--fade-size),
+      transparent calc(100% - var(--fade-size)),
+      black calc(100% - var(--edge-size))
+    );
+  mask-composite: intersect;
+  -webkit-mask-image:
+    linear-gradient(
+      to bottom,
+      black var(--edge-size),
+      transparent var(--fade-size),
+      transparent calc(100% - var(--fade-size)),
+      black calc(100% - var(--edge-size))
+    ),
+    linear-gradient(
+      to right,
+      black var(--edge-size),
+      transparent var(--fade-size),
+      transparent calc(100% - var(--fade-size)),
+      black calc(100% - var(--edge-size))
+    );
+  -webkit-mask-composite: source-in;
+}
+
+
+
+.liquid-prompt-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 80% 100%, rgba(158, 232, 208, 0.05) 0%, transparent 40%);
+  
+  /* Apply edge-only blur */
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  
+  --edge-size: 40px;
+  --fade-size: 90px;
+  mask-image:
+    linear-gradient(to bottom, black var(--edge-size), transparent var(--fade-size), transparent calc(100% - var(--fade-size)), black calc(100% - var(--edge-size))),
+    linear-gradient(to right, black var(--edge-size), transparent var(--fade-size), transparent calc(100% - var(--fade-size)), black calc(100% - var(--edge-size)));
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+
+  opacity: 0.6;
+}
+
+.liquid-prompt-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.26),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.05),
+    inset 0 -26px 46px rgba(0, 0, 0, 0.1);
+}
+
+.liquid-prompt-panel__content {
+  display: grid;
+  min-height: inherit;
+  grid-template-rows: 1fr auto;
+  padding: 1.05rem;
+}
+
+.liquid-prompt-editor {
+  min-height: 7.6rem;
+  transition: all 0.2s ease;
+}
+
+.liquid-prompt-editor:focus-within {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.liquid-prompt-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.35rem 0;
+}
+
+.liquid-icon-button {
+  width: 3rem;
+  height: 3rem;
+  min-height: 3rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 0.95rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06)),
+    rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+.liquid-icon-button:hover {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.liquid-upload-preview {
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 0.95rem;
+}
+
+.liquid-upload-remove {
+  width: 1.15rem;
+  height: 1.15rem;
+  min-height: 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+}
+
+.liquid-prompt-input {
+  padding: 0.2rem 0.3rem 0.35rem;
+}
+
+.liquid-prompt-textarea {
+  min-height: 4.7rem;
+  color: rgba(255, 255, 255, 0.94);
+  caret-color: #fff;
+  background: transparent;
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+.liquid-prompt-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.liquid-prompt-controls {
+  margin-top: 0.85rem;
+  min-height: 3rem;
+  flex-wrap: wrap;
+}
+
+.liquid-prompt-panel .liquid-glass,
+.liquid-prompt-panel .btn,
+.liquid-prompt-panel .textarea {
+  color: #fff;
+}
+
+.liquid-prompt-panel .liquid-glass {
+  --glass-blur: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.055)),
+    rgba(18, 23, 22, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.liquid-prompt-panel .liquid-model-select > button,
+.liquid-prompt-panel .liquid-prompt-controls > .relative > button,
+.liquid-prompt-panel .liquid-prompt-controls > .inline-block > button {
+  height: 2.15rem;
+  min-height: 2.15rem;
+  padding: 0 0.65rem;
+  border-radius: 0.65rem;
+  font-size: 0.85rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 4px 10px rgba(0, 0, 0, 0.1);
+  /* No animation */
+  transition: none !important;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.liquid-prompt-panel .liquid-model-select > button:hover,
+.liquid-prompt-panel .liquid-prompt-controls > .relative > button:hover,
+.liquid-prompt-panel .liquid-prompt-controls > .inline-block > button:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateZ(0);
+}
+
+.liquid-secondary-button {
+  height: 2.15rem;
+  min-height: 2.15rem;
+  padding: 0 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.85rem;
+  transition: none !important;
+}
+
+.liquid-secondary-button:hover {
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.13);
+  color: #fff;
+}
+
+.liquid-generate-button {
+  min-width: 8rem;
+  height: 2.15rem;
+  min-height: 2.15rem;
+  padding: 0 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 0.65rem;
+  color: #181916;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(226, 226, 218, 0.78)),
+    #fff;
+  transition: none !important;
+  box-shadow:
+    0 13px 26px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.liquid-generate-button:hover:not(:disabled) {
+  filter: brightness(1.04);
+}
+
+.liquid-prompt-panel .liquid-generate-button {
+  color: #061110;
+}
+
+.liquid-generate-button.btn-disabled,
+.liquid-generate-button:disabled {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.36);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035)),
+    rgba(50, 48, 44, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.liquid-prompt-panel .liquid-generate-button.btn-disabled,
+.liquid-prompt-panel .liquid-generate-button:disabled {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+@media (max-width: 719px) {
+  .ai-toolkit-shell {
+    padding-top: 4.15rem;
+  }
+
+  .ai-toolkit-backdrop {
+    top: 4.15rem;
+  }
+
+  .ai-toolkit-masonry {
+    gap: 0.35rem;
+    padding: 0.35rem;
+    transform: translateY(-2.5rem) scale(1.04);
+  }
+
+  .ai-toolkit-masonry__tile {
+    height: clamp(10.5rem, calc(var(--tile-height, 20rem) * 0.7), 22rem);
+    border-radius: 0.45rem;
+  }
+
+  .ai-toolkit-masonry__column {
+    gap: 0.35rem;
+  }
+
+  .ai-toolkit-stage {
+    min-height: calc(100svh - 4.15rem);
+    padding-bottom: 17rem;
+  }
+
+  .ai-toolkit-hero-copy h1 {
+    font-size: 2.8rem;
+  }
+
+  .ai-toolkit-stage--with-sidebar {
+    margin-left: 0;
+  }
+
+  .ai-toolkit-sidebar {
+    display: none;
+  }
+
+  .ai-toolkit-prompt-dock,
+  .ai-toolkit-prompt-dock--with-sidebar {
+    left: 0;
+    padding: 0.75rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom));
+  }
+
+  .prompt-area-shell {
+    max-width: 100%;
+  }
+
+  .liquid-prompt-panel {
+    border-radius: 1.45rem;
+  }
+
+  .liquid-prompt-panel__content {
+    padding: 0.8rem;
+  }
+
+  .liquid-prompt-controls {
+    gap: 0.45rem;
+  }
+
+  .liquid-generate-button {
+    min-width: 100%;
+  }
 }

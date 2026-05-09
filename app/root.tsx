@@ -78,8 +78,15 @@ export default function App() {
       <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
         <defs>
           <filter id="liquid-refraction" x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="2" result="noise" />
-            <feDisplacementMap in="SourceGraphic" in2="noise" scale="30" xChannelSelector="R" yChannelSelector="G" />
+            <feTurbulence type="fractalNoise" baseFrequency="0.012 0.012" numOctaves="2" result="noise">
+              <animate
+                attributeName="baseFrequency"
+                dur="40s"
+                values="0.012 0.012;0.018 0.018;0.012 0.012"
+                repeatCount="indefinite"
+              />
+            </feTurbulence>
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="35" xChannelSelector="R" yChannelSelector="G" />
           </filter>
         </defs>
       </svg>

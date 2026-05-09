@@ -28,6 +28,17 @@ export interface ApiModel {
   options?: Record<string, ApiModelOption>
 }
 
+export interface ApiToolkitShowcaseItem {
+  id: string
+  src: string
+  alt: string
+  prompt: string
+  model: string
+  aspectRatio: string
+  width: number
+  height: number
+}
+
 interface ApiErrorResponse {
   error?: string
   message?: string
@@ -101,6 +112,10 @@ export const api = {
 
   models: {
     list: () => request<{ models: ApiModel[] }>("/api/models"),
+  },
+
+  aiToolkit: {
+    showcase: () => request<{ items: ApiToolkitShowcaseItem[] }>("/api/ai-toolkit/showcase"),
   },
 
   credits: {

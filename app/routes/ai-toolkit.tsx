@@ -1,148 +1,117 @@
 import { useState, useRef, useEffect, useMemo } from "react"
-import {
-  Sparkles,
-  Square,
-  Maximize,
-  Smartphone,
-  RectangleHorizontal,
-  Trash2,
-  Pin,
-  Pencil,
-  Plus,
-  Crown,
-  CheckCircle2,
-  MoreHorizontal,
-} from "lucide-react"
-import { toast, Toaster } from "sonner"
+import { Trash2, Pin, Pencil, Plus, MoreHorizontal } from "lucide-react"
+import { Toaster } from "sonner"
 import { useNavigate } from "react-router"
-import { useI18n } from "~/lib/i18n"
-import type { SelectOption } from "~/components/CustomSelect"
 import PromptArea from "~/components/PromptArea"
 import { useUserStore } from "~/stores/userStore"
 import { useModelStore } from "~/stores/modelStore"
 import { useGenerateStore } from "~/stores/generateStore"
-import { api, getApiErrorMessage, R2_IMAGE_BASE, MODEL_CREDITS } from "~/lib/api"
+import { api, type ApiToolkitShowcaseItem } from "~/lib/api"
 
 type ModelId = string
 
-interface ModelInfo {
-  id: string
-  name: string
-  provider: string
-  icon: string
-  supportsImage?: boolean
+const BASE_FALLBACK_SHOWCASE_ITEMS: ApiToolkitShowcaseItem[] = [
+  {
+    id: "fallback-lake",
+    src: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=720&q=82",
+    alt: "Still lake beneath mountain ridges",
+    prompt: "Quiet alpine lake at blue hour",
+    model: "Seedream 5",
+    aspectRatio: "4 / 5",
+    width: 720,
+    height: 900,
+  },
+  {
+    id: "fallback-fashion",
+    src: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=720&q=82",
+    alt: "Editorial fashion portrait in a studio",
+    prompt: "High fashion studio portrait",
+    model: "GPT Image 1.5",
+    aspectRatio: "2 / 3",
+    width: 720,
+    height: 1080,
+  },
+  {
+    id: "fallback-forest",
+    src: "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=720&q=82",
+    alt: "Mist in a green forest",
+    prompt: "Misty forest path with soft moss",
+    model: "Seedream 5",
+    aspectRatio: "3 / 4",
+    width: 720,
+    height: 960,
+  },
+  {
+    id: "fallback-architecture",
+    src: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=720&q=82",
+    alt: "Modern office tower facade",
+    prompt: "Modern office facade with strong geometry",
+    model: "Nano Banana 2",
+    aspectRatio: "4 / 5",
+    width: 720,
+    height: 900,
+  },
+  {
+    id: "fallback-product",
+    src: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=720&q=82",
+    alt: "Minimal watch product photo",
+    prompt: "Minimal product photo on warm stone",
+    model: "Nano Banana 2",
+    aspectRatio: "1 / 1",
+    width: 720,
+    height: 720,
+  },
+  {
+    id: "fallback-coast",
+    src: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=720&q=82",
+    alt: "Coastal waves and cliffs",
+    prompt: "Coastal cliff with white surf",
+    model: "WAN 2.6",
+    aspectRatio: "4 / 5",
+    width: 720,
+    height: 900,
+  },
+]
+
+const FALLBACK_ASPECT_RATIOS = ["4 / 5", "3 / 4", "2 / 3", "3 / 5", "1 / 1", "4 / 5"]
+
+const MASONRY_TILE_HEIGHTS = ["18rem", "26rem", "20rem", "32rem", "22rem", "28rem", "19rem", "24rem", "30rem", "21rem"]
+
+const FALLBACK_SHOWCASE_ITEMS: ApiToolkitShowcaseItem[] = Array.from({ length: 15 }).flatMap(
+  (_, repeatIndex) =>
+    BASE_FALLBACK_SHOWCASE_ITEMS.map((item, itemIndex) => ({
+      ...item,
+      id: repeatIndex === 0 ? item.id : `${item.id}-${repeatIndex + 1}`,
+      aspectRatio:
+        FALLBACK_ASPECT_RATIOS[(itemIndex + repeatIndex) % FALLBACK_ASPECT_RATIOS.length],
+    }))
+)
+
+function getMasonryColumnCount(width: number) {
+  if (width >= 1024) return 5
+  if (width >= 768) return 4
+  return 2
 }
 
-const QUALITY_OPTIONS = [
-  { value: "auto", label: "Auto" },
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-]
+function getMasonryTileHeight(columnIndex: number, itemIndex: number) {
+  return MASONRY_TILE_HEIGHTS[(columnIndex * 3 + itemIndex * 2) % MASONRY_TILE_HEIGHTS.length]
+}
 
-const SIZE_OPTIONS_GPT = [
-  { value: "1024x1024", label: "1024 × 1024" },
-  { value: "1792x1024", label: "1792 × 1024" },
-  { value: "1024x1792", label: "1024 × 1792" },
-  { value: "512x512", label: "512 × 512" },
-  { value: "256x256", label: "256 × 256" },
-]
-
-const STYLE_OPTIONS = [
-  { value: "vivid", label: "Vivid" },
-  { value: "natural", label: "Natural" },
-]
-
-const SIZE_OPTIONS_WAN = [
-  { value: "1024x1024", label: "1024 × 1024" },
-  { value: "1792x1024", label: "1792 × 1024" },
-  { value: "1024x1792", label: "1024 × 1792" },
-  { value: "512x512", label: "512 × 512" },
-  { value: "256x256", label: "256 × 256" },
-]
-
-const SIZE_OPTIONS_SEEDREAM = [
-  { value: "512x512", label: "512 × 512" },
-  { value: "768x768", label: "768 × 768" },
-  { value: "1024x1024", label: "1024 × 1024" },
-]
-
-const ASPECT_RATIO_OPTIONS: SelectOption[] = [
-  { value: "1:1", label: "1:1", icon: <Square className="size-4" /> },
-  { value: "4:3", label: "4:3", icon: <RectangleHorizontal className="size-4" /> },
-  { value: "3:4", label: "3:4", icon: <Smartphone className="size-4" /> },
-  { value: "16:9", label: "16:9", icon: <Maximize className="size-4" /> },
-  { value: "9:16", label: "9:16", icon: <Maximize className="size-4" /> },
-]
-
-const RESOLUTION_OPTIONS = [
-  { value: "1K", label: "1K" },
-  { value: "2K", label: "2K" },
-  { value: "4K", label: "4K" },
-]
-
-const OUTPUT_FORMAT_OPTIONS = [
-  { value: "png", label: "PNG" },
-  { value: "jpeg", label: "JPEG" },
-]
-
-const MAX_IMAGES_OPTIONS = [
-  { value: "1", label: "1" },
-  { value: "2", label: "2" },
-  { value: "4", label: "4" },
-]
-
-const SEQUENTIAL_OPTIONS = [
-  { value: "disabled", label: "Off" },
-  { value: "auto", label: "Auto" },
-]
-
-const SAMPLE_IMAGES = [
-  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1511884642898-4c92249e20b6?w=400&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&h=350&fit=crop",
-  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=400&h=450&fit=crop",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=550&fit=crop",
-  "https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1465056836041-7f43ac27dcb5?w=400&h=350&fit=crop",
-  "https://images.unsplash.com/photo-1500964757637-c85e8a162699?w=400&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1511884642898-4c92249e20b6?w=400&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&h=350&fit=crop",
-  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=400&h=450&fit=crop",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=550&fit=crop",
-  "https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1465056836041-7f43ac27dcb5?w=400&h=350&fit=crop",
-  "https://images.unsplash.com/photo-1500964757637-c85e8a162699?w=400&h=600&fit=crop",
-]
+function distributeMasonryItems(items: ApiToolkitShowcaseItem[], columnCount: number) {
+  const columns = Array.from({ length: columnCount }, () => [] as ApiToolkitShowcaseItem[])
+  items.forEach((item, index) => {
+    columns[index % columnCount].push(item)
+  })
+  return columns
+}
 
 export default function AIToolkitPage() {
-  const { t } = useI18n()
   const [selectedModel, setSelectedModel] = useState<ModelId>("google/nano-banana-2")
-  const [aspectRatio, setAspectRatio] = useState("1:1")
-  const [quality, setQuality] = useState("auto")
-  const [sizeGpt, setSizeGpt] = useState("1024x1024")
-  const [style, setStyle] = useState("vivid")
-  const [sizeWan, setSizeWan] = useState("1024x1024")
-  const [sizeSeedream, setSizeSeedream] = useState("1024x1024")
-  const [resolution, setResolution] = useState("2K")
-  const [outputFormat, setOutputFormat] = useState("png")
-  const [maxImages, setMaxImages] = useState("1")
   const [modelOptions, setModelOptions] = useState<Record<string, string>>({})
-  const [prompt, setPrompt] = useState("")
-  const [negativePrompt, setNegativePrompt] = useState("")
-  const [showNegativePrompt, setShowNegativePrompt] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [images] = useState<string[]>(SAMPLE_IMAGES)
-  const [uploadedImages, setUploadedImages] = useState<{ id: string; url: string }[]>([])
+  const [showcaseItems, setShowcaseItems] =
+    useState<ApiToolkitShowcaseItem[]>(FALLBACK_SHOWCASE_ITEMS)
+  const [isShowcaseLoading, setIsShowcaseLoading] = useState(true)
+  const [masonryColumnCount, setMasonryColumnCount] = useState(5)
   const [currentSession, setCurrentSession] = useState<{ id: string; title: string } | null>(null)
   const [sessionHistory, setSessionHistory] = useState<
     {
@@ -156,18 +125,6 @@ export default function AIToolkitPage() {
   >([])
   const [showSidebar, setShowSidebar] = useState(false)
   const [isNewSession, setIsNewSession] = useState(false)
-  const [messages, setMessages] = useState<
-    {
-      id: string
-      role: string
-      prompt: string
-      imageUrl?: string
-      model: string
-      timestamp: number
-    }[]
-  >([])
-  const inputRef = useRef<HTMLTextAreaElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null)
@@ -179,23 +136,57 @@ export default function AIToolkitPage() {
   const { models, fetchModels } = useModelStore()
 
   useEffect(() => {
-    if (regenerateData) {
-      setPrompt(regenerateData.prompt)
-      setSelectedModel(regenerateData.model as ModelId)
-      if (regenerateData.size) setSizeGpt(regenerateData.size)
-      if (regenerateData.quality) setQuality(regenerateData.quality)
-      if (regenerateData.style) setStyle(regenerateData.style)
-      if (regenerateData.aspect_ratio) setAspectRatio(regenerateData.aspect_ratio)
-      if (regenerateData.resolution) setResolution(regenerateData.resolution)
-      if (regenerateData.output_format) setOutputFormat(regenerateData.output_format)
-      if (regenerateData.num_images) setMaxImages(String(regenerateData.num_images))
-      if (regenerateData.negative_prompt) setNegativePrompt(regenerateData.negative_prompt)
-      clearRegenerateData()
-    }
-  }, [regenerateData])
+    if (!regenerateData) return
+
+    const nextOptions: Record<string, string> = {}
+    setSelectedModel(regenerateData.model as ModelId)
+
+    if (regenerateData.size) nextOptions.size = regenerateData.size
+    if (regenerateData.quality) nextOptions.quality = regenerateData.quality
+    if (regenerateData.style) nextOptions.style = regenerateData.style
+    if (regenerateData.aspect_ratio) nextOptions.aspect_ratio = regenerateData.aspect_ratio
+    if (regenerateData.resolution) nextOptions.resolution = regenerateData.resolution
+    if (regenerateData.output_format) nextOptions.output_format = regenerateData.output_format
+    if (regenerateData.num_images) nextOptions.num_images = String(regenerateData.num_images)
+
+    setModelOptions(prev => ({ ...prev, ...nextOptions }))
+    clearRegenerateData()
+  }, [clearRegenerateData, regenerateData])
 
   useEffect(() => {
     fetchModels()
+  }, [fetchModels])
+
+  useEffect(() => {
+    let ignore = false
+
+    api.aiToolkit
+      .showcase()
+      .then(data => {
+        if (!ignore && data.items?.length) {
+          setShowcaseItems(data.items)
+        }
+      })
+      .catch(error => {
+        console.error("Failed to load AI toolkit showcase:", error)
+      })
+      .finally(() => {
+        if (!ignore) setIsShowcaseLoading(false)
+      })
+
+    return () => {
+      ignore = true
+    }
+  }, [])
+
+  useEffect(() => {
+    const updateColumnCount = () => {
+      setMasonryColumnCount(getMasonryColumnCount(window.innerWidth))
+    }
+
+    updateColumnCount()
+    window.addEventListener("resize", updateColumnCount)
+    return () => window.removeEventListener("resize", updateColumnCount)
   }, [])
 
   useEffect(() => {
@@ -217,9 +208,6 @@ export default function AIToolkitPage() {
     setCurrentSession(null)
   }
 
-  const requiredCredits = MODEL_CREDITS[selectedModel] || 0
-  const hasInsufficientCredits = user && (user.credits || 0) < requiredCredits
-
   const handleSelectSession = async (sessionId: string) => {
     navigate(`/session/${sessionId}`)
   }
@@ -238,7 +226,10 @@ export default function AIToolkitPage() {
     }
   }
 
-  const selectedModelInfo = models.find(m => m.id === selectedModel)
+  const masonryColumns = useMemo(
+    () => distributeMasonryItems(showcaseItems, masonryColumnCount),
+    [masonryColumnCount, showcaseItems]
+  )
 
   const groupedSessions = useMemo(() => {
     const today = new Date()
@@ -275,155 +266,18 @@ export default function AIToolkitPage() {
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
   }
 
-  const MODEL_OPTIONS: SelectOption[] = models.map(m => ({
-    value: m.id,
-    label: m.name,
-    icon: <img src={m.icon} alt={m.provider} className="size-5 rounded" />,
-    badge: m.isNew ? (
-      <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-primary text-primary-content rounded-full flex items-center gap-0.5">
-        <Sparkles className="size-2.5" />
-        NEW
-      </span>
-    ) : undefined,
-  }))
-
-  const handleGenerate = async () => {
-    if (!prompt.trim() || isGenerating) return
-    if (!user) {
-      window.dispatchEvent(new CustomEvent("openLoginModal"))
-      return
-    }
-
-    if (uploadedImages.length > 0 && !selectedModelInfo?.supportsImage) {
-      toast.error(
-        `[Image 1] ERROR: Model ${selectedModel} does not support image input. Remove uploaded images or select a different model.`
-      )
-      return
-    }
-
-    setIsGenerating(true)
-    try {
-      let sessionId = currentSession?.id
-
-      if (isNewSession && token) {
-        const title = prompt.slice(0, 20).trim() || "New Chat"
-        const sessionData = await api.sessions.create(title)
-        if (sessionData.session) {
-          setSessionHistory(prev => [{ ...sessionData.session, preview_image: null }, ...prev])
-          setCurrentSession(sessionData.session)
-          setIsNewSession(false)
-          sessionId = sessionData.session.id
-        }
-      }
-
-      const requestBody: Record<string, unknown> = {
-        prompt,
-        model: selectedModel,
-        provider: selectedModelInfo?.provider,
-        sessionId,
-      }
-
-      if (selectedModel === "openai/gpt-image-1.5") {
-        requestBody.size = sizeGpt
-        requestBody.quality = quality
-        requestBody.style = style
-      } else if (selectedModel === "alibaba/wan-2.6-image") {
-        requestBody.size = sizeWan
-        requestBody.num_images = parseInt(maxImages)
-        if (negativePrompt) requestBody.negative_prompt = negativePrompt
-      } else if (selectedModel === "bytedance/seedream-5-lite") {
-        requestBody.size = sizeSeedream
-        requestBody.num_images = parseInt(maxImages)
-        if (negativePrompt) requestBody.negative_prompt = negativePrompt
-      } else if (selectedModel === "google/nano-banana-2") {
-        requestBody.aspect_ratio = aspectRatio
-        requestBody.resolution = resolution
-        requestBody.output_format = outputFormat
-        requestBody.num_images = parseInt(maxImages)
-      }
-
-      const data = await api.generate.create(
-        requestBody as Parameters<typeof api.generate.create>[0]
-      )
-      if (data.error) {
-        toast.error(`[Image 1] ERROR: ${data.error}`)
-        return
-      }
-
-      setMessages(prev => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: "user",
-          prompt,
-          model: selectedModel,
-          timestamp: Date.now(),
-        },
-      ])
-
-      setPrompt("")
-    } catch (error) {
-      console.error("Generate error:", error)
-      toast.error(
-        `[Image 1] ERROR: ${getApiErrorMessage(error, "Failed to generate image. Please try again.")}`
-      )
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleGenerate()
-    }
-  }
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files) return
-    Array.from(files).forEach(file => {
-      const url = URL.createObjectURL(file)
-      setUploadedImages(prev => [...prev, { id: crypto.randomUUID(), url }])
-    })
-  }
-
-  const removeImage = (id: string) => {
-    setUploadedImages(prev => prev.filter(img => img.id !== id))
-  }
-
   return (
-    <div className="bg-base-100 pb-48">
-      <style>{`
-        .masonry-grid {
-          column-count: 2;
-          column-gap: 1rem;
-        }
-        @media (min-width: 768px) {
-          .masonry-grid {
-            column-count: 3;
-          }
-        }
-        @media (min-width: 1024px) {
-          .masonry-grid {
-            column-count: 4;
-          }
-        }
-        @media (min-width: 1280px) {
-          .masonry-grid {
-            column-count: 5;
-          }
-        }
-        .masonry-item {
-          break-inside: avoid;
-          margin-bottom: 1rem;
-        }
-      `}</style>
+    <div className="ai-toolkit-shell">
+      <AIToolkitMasonryBackdrop
+        columns={masonryColumns}
+        isLoading={isShowcaseLoading}
+        hasSidebar={!!user}
+      />
 
       {user && (
         <div
-          className={`fixed left-0 top-16 bottom-0 z-30 transition-all duration-300 border-r border-base-200 bg-base-100 ${
-            showSidebar ? "w-[260px]" : "w-[60px]"
+          className={`ai-toolkit-sidebar ${
+            showSidebar ? "ai-toolkit-sidebar--expanded" : ""
           }`}
           onMouseEnter={() => setShowSidebar(true)}
           onMouseLeave={() => setShowSidebar(false)}
@@ -431,7 +285,11 @@ export default function AIToolkitPage() {
           <div className="flex flex-col h-full overflow-hidden">
             {!showSidebar ? (
               <div className="p-4 flex justify-center">
-                <button onClick={handleCreateSession} className="btn btn-ghost btn-circle btn-sm">
+                <button
+                  onClick={handleCreateSession}
+                  className="btn btn-ghost btn-circle btn-sm"
+                  aria-label="New session"
+                >
                   <Plus className="size-5" />
                 </button>
               </div>
@@ -440,7 +298,7 @@ export default function AIToolkitPage() {
                 <div className="p-4 pb-2">
                   <button
                     onClick={handleCreateSession}
-                    className="btn btn-outline w-full rounded-lg border-base-300 hover:bg-base-200 hover:border-base-300 text-base-content font-normal justify-start gap-2 h-10 min-h-0"
+                    className="btn btn-outline w-full rounded-lg border-white/15 hover:bg-white/10 hover:border-white/25 text-white font-normal justify-start gap-2 h-10 min-h-0"
                   >
                     <Plus className="size-4" />
                     新建会话
@@ -449,16 +307,14 @@ export default function AIToolkitPage() {
 
                 <div className="flex-1 overflow-y-auto px-2 pb-4 scrollbar-hide">
                   {sessionHistory.length === 0 ? (
-                    <div className="p-4 text-center text-base-content/60 text-sm">
+                    <div className="p-4 text-center text-white/55 text-sm">
                       No conversations yet
                     </div>
                   ) : (
                     <div className="space-y-6">
                       {groupedSessions.today.length > 0 && (
                         <div>
-                          <div className="px-3 py-2 text-xs font-medium text-base-content/50">
-                            今天
-                          </div>
+                          <div className="px-3 py-2 text-xs font-medium text-white/45">今天</div>
                           <div className="space-y-0.5">
                             {groupedSessions.today.map(s => (
                               <SessionItem
@@ -481,9 +337,7 @@ export default function AIToolkitPage() {
 
                       {groupedSessions.yesterday.length > 0 && (
                         <div>
-                          <div className="px-3 py-2 text-xs font-medium text-base-content/50">
-                            昨天
-                          </div>
+                          <div className="px-3 py-2 text-xs font-medium text-white/45">昨天</div>
                           <div className="space-y-0.5">
                             {groupedSessions.yesterday.map(s => (
                               <SessionItem
@@ -506,9 +360,7 @@ export default function AIToolkitPage() {
 
                       {groupedSessions.earlier.length > 0 && (
                         <div>
-                          <div className="px-3 py-2 text-xs font-medium text-base-content/50">
-                            更早
-                          </div>
+                          <div className="px-3 py-2 text-xs font-medium text-white/45">更早</div>
                           <div className="space-y-0.5">
                             {groupedSessions.earlier.map(s => (
                               <SessionItem
@@ -537,43 +389,25 @@ export default function AIToolkitPage() {
         </div>
       )}
 
-      <main className={`p-4 ${user ? "ml-[60px]" : ""}`}>
-        {isNewSession ? (
-          <div className="flex items-center justify-center h-[calc(100vh-200px)]">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold mb-4">What will you create today?</h2>
-              <p className="text-base-content/60">Describe your image in the prompt below</p>
-            </div>
-          </div>
-        ) : (
-          <div className="masonry-grid">
-            {images.map((src, i) => (
-              <div
-                key={i}
-                className="masonry-item break-inside-avoid group relative overflow-hidden rounded-2xl"
-              >
-                <img
-                  src={src}
-                  alt={`Generated ${i + 1}`}
-                  className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-            ))}
-          </div>
-        )}
+      <main className={`ai-toolkit-stage ${user ? "ai-toolkit-stage--with-sidebar" : ""}`}>
+        <div className={`ai-toolkit-hero-copy ${isNewSession ? "is-visible" : ""}`}>
+          <h1>What will you create today?</h1>
+          <p>Describe the image you want, then tune the model details below.</p>
+        </div>
       </main>
 
       <div
-        className={`fixed bottom-0 right-0 p-4 z-20 pointer-events-none ${user ? "left-[60px]" : "left-0"}`}
+        className={`ai-toolkit-prompt-dock ${user ? "ai-toolkit-prompt-dock--with-sidebar" : ""}`}
       >
-        <div className="pointer-events-auto">
+        <div className="ai-toolkit-prompt-dock__inner pointer-events-auto">
           <PromptArea
             models={models}
             selectedModel={selectedModel}
             onModelChange={setSelectedModel}
             modelOptions={modelOptions}
             onOptionsChange={setModelOptions}
+            className="ai-toolkit-prompt-area"
+            onGenerateSuccess={() => setIsNewSession(false)}
           />
         </div>
       </div>
@@ -608,6 +442,44 @@ export default function AIToolkitPage() {
   )
 }
 
+function AIToolkitMasonryBackdrop({
+  columns,
+  isLoading,
+  hasSidebar,
+}: {
+  columns: ApiToolkitShowcaseItem[][]
+  isLoading: boolean
+  hasSidebar: boolean
+}) {
+  return (
+    <div
+      className={`ai-toolkit-backdrop ${isLoading ? "is-loading" : ""} ${
+        hasSidebar ? "ai-toolkit-backdrop--with-sidebar" : ""
+      }`}
+      aria-hidden="true"
+    >
+      <div className="ai-toolkit-masonry">
+        {columns.map((column, columnIndex) => (
+          <div className="ai-toolkit-masonry__column" key={columnIndex}>
+            {column.map((item, itemIndex) => (
+              <figure
+                className="ai-toolkit-masonry__tile"
+                key={item.id}
+                style={{
+                  "--tile-height": getMasonryTileHeight(columnIndex, itemIndex),
+                  flexShrink: 0,
+                } as React.CSSProperties}
+              >
+                <img src={item.src} alt="" width={item.width} height={item.height} loading="lazy" />
+              </figure>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function SessionItem({
   s,
   group,
@@ -622,8 +494,8 @@ function SessionItem({
 }: any) {
   return (
     <div
-      className={`group relative flex items-center justify-between py-1.5 px-3 rounded-lg cursor-pointer hover:bg-base-200/50 transition-colors ${
-        currentSession?.id === s.id ? "bg-base-200/50" : ""
+      className={`group relative flex items-center justify-between py-1.5 px-3 rounded-lg cursor-pointer hover:bg-white/10 transition-colors ${
+        currentSession?.id === s.id ? "bg-white/10" : ""
       }`}
       onClick={() => handleSelectSession(s.id)}
     >
@@ -633,7 +505,7 @@ function SessionItem({
             ref={editInputRef}
             type="text"
             defaultValue={s.title}
-            className="input input-xs input-bordered w-full h-6"
+            className="input input-xs input-bordered w-full h-6 border-white/15 bg-white/10 text-white"
             autoFocus
             onBlur={e => {
               const newTitle = e.target.value.trim()
@@ -662,15 +534,13 @@ function SessionItem({
           />
         ) : (
           <div className="flex items-center gap-1.5">
-            {s.is_pinned === 1 && (
-              <Pin className="size-3 fill-base-content/40 text-base-content/40 shrink-0" />
-            )}
-            <span className="truncate text-sm text-base-content/80">{s.title}</span>
+            {s.is_pinned === 1 && <Pin className="size-3 fill-white/40 text-white/40 shrink-0" />}
+            <span className="truncate text-sm text-white/80">{s.title}</span>
           </div>
         )}
       </div>
       <div className="flex items-center shrink-0">
-        <span className="text-xs text-base-content/40 group-hover:hidden">
+        <span className="text-xs text-white/40 group-hover:hidden">
           {formatSessionTime(s.created_at, group)}
         </span>
 
@@ -682,7 +552,7 @@ function SessionItem({
                 setEditingSessionId(s.id)
                 setTimeout(() => editInputRef.current?.select(), 0)
               }}
-              className="p-1 text-base-content/40 hover:text-base-content transition-colors"
+              className="p-1 text-white/40 hover:text-white transition-colors"
             >
               <Pencil className="size-3.5" />
             </button>
@@ -691,13 +561,13 @@ function SessionItem({
             <div
               tabIndex={0}
               role="button"
-              className="p-1 text-base-content/40 hover:text-base-content transition-colors"
+              className="p-1 text-white/40 hover:text-white transition-colors"
             >
               <MoreHorizontal className="size-3.5" />
             </div>
             <ul
               tabIndex={0}
-              className="dropdown-content z-[1] menu p-1.5 shadow bg-base-100 rounded-box w-32 border border-base-200"
+              className="dropdown-content z-[1] menu p-1.5 shadow bg-black/90 rounded-box w-32 border border-white/10 text-white"
             >
               <li>
                 <button

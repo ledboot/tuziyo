@@ -211,60 +211,57 @@ export default function PromptArea({
   }
 
   return (
-    <div className={`max-w-3xl mx-auto ${className}`}>
-      <div
-        id="prompt-area"
-        className="liquid-glass bg-base-100/10 relative rounded-4xl overflow-visible"
-      >
-        <div className="card-body p-4 relative z-10 overflow-visible">
-          {selectedModelInfo?.supportsImage && (
-            <div className="mt-4">
-              <div className="flex gap-2">
-                <div>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="btn btn-ghost btn-square w-10 h-10"
-                  >
-                    <ImagePlus />
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleImageUpload}
-                  />
-                </div>
+    <div className={`prompt-area-shell mx-auto ${className}`}>
+      <div id="prompt-area" className="liquid-glass liquid-prompt-panel relative overflow-visible">
+        <div className="liquid-prompt-panel__content relative z-10 overflow-visible">
+          <div className="liquid-prompt-editor">
+            {selectedModelInfo?.supportsImage && (
+              <div className="liquid-prompt-upload-row">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="btn btn-ghost btn-square liquid-icon-button"
+                  aria-label="Add reference image"
+                >
+                  <ImagePlus className="size-5" />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
                 {uploadedImages.map(img => (
                   <div key={img.id} className="relative group">
                     <img
                       src={img.url}
                       alt="Preview"
-                      className="w-10 h-10 rounded-lg object-cover"
+                      className="liquid-upload-preview object-cover"
                     />
                     <button
                       onClick={() => removeImage(img.id)}
-                      className="btn btn-circle h-4 w-4 absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 bg-black text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="btn btn-circle liquid-upload-remove absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Remove reference image"
                     >
-                      <X />
+                      <X className="size-3" />
                     </button>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="mt-4">
-            <textarea
-              ref={inputRef}
-              value={prompt}
-              onChange={e => setPrompt(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={t.aiToolkit?.promptPlaceholder || "Describe your image..."}
-              className="textarea textarea-ghost w-full text-base resize-none focus:outline-none"
-              rows={2}
-            />
+            <div className="liquid-prompt-input">
+              <textarea
+                ref={inputRef}
+                value={prompt}
+                onChange={e => setPrompt(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={t.aiToolkit?.promptPlaceholder || "Describe your image..."}
+                className="textarea textarea-ghost liquid-prompt-textarea w-full text-base resize-none focus:outline-none"
+                rows={2}
+              />
+            </div>
           </div>
 
           {showNegativePrompt && (
@@ -273,19 +270,19 @@ export default function PromptArea({
                 value={negativePrompt}
                 onChange={e => setNegativePrompt(e.target.value)}
                 placeholder="What to avoid..."
-                className="textarea textarea-ghost textarea-sm w-full resize-none focus:outline-none"
+                className="textarea textarea-ghost textarea-sm liquid-prompt-textarea w-full resize-none focus:outline-none"
                 rows={2}
               />
             </div>
           )}
 
-          <div className="flex items-center gap-2 mt-4">
+          <div className="liquid-prompt-controls flex items-center gap-2">
             <CustomSelect
               label="Models"
               options={modelSelectOptions}
               value={selectedModel}
               onChange={onModelChange}
-              className="min-w-10"
+              className="liquid-model-select min-w-10"
             />
 
             {optionGroups.length > 0 && <ModelOptions groups={optionGroups} />}
@@ -294,7 +291,7 @@ export default function PromptArea({
               <button
                 type="button"
                 onClick={() => setShowNegativePrompt(!showNegativePrompt)}
-                className="btn btn-ghost items-center whitespace-nowrap border border-base-200 hover:border-primary hover:bg-base-100"
+                className="btn btn-ghost liquid-secondary-button items-center whitespace-nowrap"
               >
                 {negativePromptConfig?.name ?? "Negative Prompt"}
               </button>
@@ -305,7 +302,9 @@ export default function PromptArea({
             <button
               onClick={handleGenerate}
               disabled={!prompt.trim() || isGenerating || hasInsufficientCredits}
-              className={`btn ${hasInsufficientCredits ? "btn-disabled" : "btn-primary"}`}
+              className={`btn liquid-generate-button ${
+                hasInsufficientCredits ? "btn-disabled" : "btn-primary"
+              }`}
             >
               {isGenerating ? (
                 <>

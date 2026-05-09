@@ -52,7 +52,7 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-40 text-white backdrop-blur-[18px]">
+    <header className="fixed top-0 left-0 w-full z-[100] text-white backdrop-blur-[18px] border-b border-white/5">
       <div className="flex min-h-[4.5rem] w-full items-center justify-between gap-6 px-6 max-[719px]:min-h-[4.15rem]">
         <Link
           to="/"
@@ -65,8 +65,11 @@ export default function Header() {
           </span>
         </Link>
 
-        <nav className="items-center h-full md:flex" aria-label={t.nav.mainNavigation}>
-          <ul className="menu menu-horizontal h-full gap-3 bg-transparent p-0">
+        <nav
+          className="items-center h-full hidden md:flex absolute inset-y-0 left-1/2 -translate-x-1/2"
+          aria-label={t.nav.mainNavigation}
+        >
+          <ul className="menu menu-horizontal h-full gap-3 bg-transparent p-0 items-center">
             {navItems.map(item => {
               if ("children" in item) {
                 const hasActiveChild = item.children.some(child =>
@@ -89,7 +92,10 @@ export default function Header() {
                         <span className="font-normal text-nav-root">{item.title}</span>
                         <ChevronDown className="size-4 transition-transform duration-200 group-hover:-rotate-180" />
                       </button>
-                      <div className="dropdown-content left-0 z-50 pt-1" tabIndex={0}>
+                      <div
+                        className="dropdown-content left-1/2 -translate-x-1/2 z-50 pt-1"
+                        tabIndex={0}
+                      >
                         <ul className="menu menu-md ms-0 w-40 gap-1 rounded-box border border-white/10 bg-base-200 p-1 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
                           {item.children.map(child => (
                             <li key={child.to}>
@@ -172,7 +178,7 @@ export default function Header() {
               <span>{languageNames[lang]}</span>
               <ChevronDown className="size-4 transition-transform duration-200 group-hover:-rotate-180" />
             </button>
-            <div className="dropdown-content z-50 ms-0 pt-1" tabIndex={0}>
+            <div className="dropdown-content left-1/2 -translate-x-1/2 z-50 ms-0 pt-1" tabIndex={0}>
               <ul className="menu menu-md w-40 gap-1 rounded-box border border-white/20 bg-base-200 p-1 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
                 {(Object.keys(languageNames) as Language[]).map(nextLang => (
                   <li key={nextLang}>

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { authMiddleware, getUser } from "./middleware/auth";
 import { handleGenerate, getModels } from "./routes/image";
+import { getAiToolkitShowcase } from "./routes/showcase";
 import { handleGoogleCallback, handleLogout } from "./routes/auth";
 import {
   handleGetProducts,
@@ -40,6 +41,10 @@ app.post("/api/auth/google/callback", handleGoogleCallback);
 
 app.get("/api/models", (c) => {
   return c.json({ models: getModels() });
+});
+
+app.get("/api/ai-toolkit/showcase", (c) => {
+  return c.json({ items: getAiToolkitShowcase() });
 });
 
 app.post("/api/stripe/webhook", handleStripeWebhook);
