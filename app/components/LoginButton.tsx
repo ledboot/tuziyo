@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { cn } from "~/lib/utils";
 
 function base64UrlEncode(str: ArrayBuffer) {
   return btoa(String.fromCharCode(...new Uint8Array(str)))
@@ -25,7 +26,7 @@ function generateRandomString(length: number) {
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const REDIRECT_URI = import.meta.env.VITE_REDIRECT_URI;
 
-export function LoginButton() {
+export function LoginButton({ className }: { className?: string }) {
   const [loading, setLoading] = useState(false);
 
   const handleGoogleLogin = async () => {
@@ -53,17 +54,24 @@ export function LoginButton() {
     <button
       disabled={loading}
       onClick={handleGoogleLogin}
-      className="btn btn-outline gap-2 w-full"
+      className={cn(
+        "group relative flex h-14 w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-white text-black transition-all hover:bg-white/90 active:scale-[0.98] disabled:opacity-50",
+        className
+      )}
     >
       {loading ? (
         <span className="loading loading-spinner loading-sm"></span>
       ) : (
-        <img
-          src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg"
-          alt="Google"
-        />
+        <>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+          <img
+            src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg"
+            alt="Google"
+            className="h-5 w-5"
+          />
+          <span className="text-sm font-bold tracking-tight">Continue with Google</span>
+        </>
       )}
-      Continue with Google
     </button>
   );
 }

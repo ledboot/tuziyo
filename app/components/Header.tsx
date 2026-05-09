@@ -220,14 +220,15 @@ export default function Header() {
                 )}
               </button>
               <div className="dropdown-content z-50 pt-1" tabIndex={0}>
-                <ul className="menu menu-md w-52 gap-1 rounded-box border border-white/10 bg-base-200 p-2 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
+                <ul className="menu menu-md w-40 gap-1 rounded-box border border-white/10 bg-base-200 p-2 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
                   <li>
                     <button
                       type="button"
                       className="justify-between rounded-lg text-nav-submenu font-normal text-nav-menu hover:bg-white/10 hover:text-primary transition-colors"
                       onClick={() => {
+                        if (location.pathname === "/profile") return
                         closeMenus()
-                        window.location.href = "/profile"
+                        window.open("/profile", "_blank")
                       }}
                     >
                       {t.nav.profile}
@@ -260,7 +261,7 @@ export default function Header() {
                 {t.nav.login}
               </button>
               <button
-                className="btn btn-primary btn-sm rounded-full text-nav-root font-medium"
+                className="btn btn-primary btn-sm rounded-xl text-nav-root font-medium"
                 type="button"
                 onClick={openLogin}
               >
