@@ -51,8 +51,22 @@ export default function Header() {
     window.dispatchEvent(new CustomEvent("openLoginModal"))
   }
 
+  const isAiToolkit = location.pathname.startsWith("/ai-toolkit")
+  const headerClasses = isAiToolkit
+    ? "fixed top-0 left-0 w-full z-[100] text-white group/header"
+    : "fixed top-0 left-0 w-full z-[100] text-white backdrop-blur-[18px] border-b border-white/5 bg-base-100/50"
+
+  const navClasses = isAiToolkit
+    ? "items-center hidden md:flex absolute left-1/2 -translate-x-1/2 h-11 px-2 rounded-full border border-white/10 bg-black/25 backdrop-blur-md shadow-lg"
+    : "items-center h-full hidden md:flex absolute inset-y-0 left-1/2 -translate-x-1/2"
+
   return (
-    <header className="fixed top-0 left-0 w-full z-[100] text-white backdrop-blur-[18px] border-b border-white/5">
+    <header className={headerClasses}>
+      {/* Top blur gradient layer - only for AI Toolkit */}
+      {isAiToolkit && (
+        <div className="absolute inset-0 z-[-1] [mask-image:linear-gradient(to_bottom,black,transparent)] backdrop-blur-xl pointer-events-none" />
+      )}
+      
       <div className="flex min-h-[4.5rem] w-full items-center justify-between gap-6 px-6 max-[719px]:min-h-[4.15rem]">
         <Link
           to="/"
@@ -66,7 +80,7 @@ export default function Header() {
         </Link>
 
         <nav
-          className="items-center h-full hidden md:flex absolute inset-y-0 left-1/2 -translate-x-1/2"
+          className={navClasses}
           aria-label={t.nav.mainNavigation}
         >
           <ul className="menu menu-horizontal h-full gap-3 bg-transparent p-0 items-center">

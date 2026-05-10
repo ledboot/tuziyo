@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Trash2, Pin, Pencil, Plus, MoreHorizontal } from "lucide-react"
 import { Toaster } from "sonner"
 import { useNavigate } from "react-router"
 import PromptArea from "~/components/PromptArea"
@@ -7,6 +6,7 @@ import { useUserStore } from "~/stores/userStore"
 import { useModelStore } from "~/stores/modelStore"
 import { useGenerateStore } from "~/stores/generateStore"
 import { api, type ApiToolkitShowcaseItem } from "~/lib/api"
+import { AIToolkitSidebar } from "~/components/AIToolkitSidebar"
 
 type ModelId = string
 
@@ -231,40 +231,9 @@ export default function AIToolkitPage() {
     [masonryColumnCount, showcaseItems]
   )
 
-  const groupedSessions = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
 
-    const groups = {
-      today: [] as typeof sessionHistory,
-      yesterday: [] as typeof sessionHistory,
-      earlier: [] as typeof sessionHistory,
-    }
 
-    sessionHistory.forEach(s => {
-      // Assuming created_at is seconds
-      const date = new Date(s.created_at * 1000)
-      if (date >= today) {
-        groups.today.push(s)
-      } else if (date >= yesterday) {
-        groups.yesterday.push(s)
-      } else {
-        groups.earlier.push(s)
-      }
-    })
 
-    return groups
-  }, [sessionHistory])
-
-  const formatSessionTime = (timestamp: number, group: "today" | "yesterday" | "earlier") => {
-    const d = new Date(timestamp * 1000)
-    if (group === "earlier") {
-      return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`
-    }
-    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
-  }
 
   return (
     <div className="ai-toolkit-shell">
@@ -275,118 +244,19 @@ export default function AIToolkitPage() {
       />
 
       {user && (
-        <div
-          className={`ai-toolkit-sidebar ${
-            showSidebar ? "ai-toolkit-sidebar--expanded" : ""
-          }`}
-          onMouseEnter={() => setShowSidebar(true)}
-          onMouseLeave={() => setShowSidebar(false)}
-        >
-          <div className="flex flex-col h-full overflow-hidden">
-            {!showSidebar ? (
-              <div className="p-4 flex justify-center">
-                <button
-                  onClick={handleCreateSession}
-                  className="btn btn-ghost btn-circle btn-sm"
-                  aria-label="New session"
-                >
-                  <Plus className="size-5" />
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="p-4 pb-2">
-                  <button
-                    onClick={handleCreateSession}
-                    className="btn btn-outline w-full rounded-lg border-white/15 hover:bg-white/10 hover:border-white/25 text-white font-normal justify-start gap-2 h-10 min-h-0"
-                  >
-                    <Plus className="size-4" />
-                    新建会话
-                  </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-2 pb-4 scrollbar-hide">
-                  {sessionHistory.length === 0 ? (
-                    <div className="p-4 text-center text-white/55 text-sm">
-                      No conversations yet
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {groupedSessions.today.length > 0 && (
-                        <div>
-                          <div className="px-3 py-2 text-xs font-medium text-white/45">今天</div>
-                          <div className="space-y-0.5">
-                            {groupedSessions.today.map(s => (
-                              <SessionItem
-                                key={s.id}
-                                s={s}
-                                group="today"
-                                currentSession={currentSession}
-                                editingSessionId={editingSessionId}
-                                editInputRef={editInputRef}
-                                setEditingSessionId={setEditingSessionId}
-                                setSessionHistory={setSessionHistory}
-                                handleSelectSession={handleSelectSession}
-                                setDeleteSessionId={setDeleteSessionId}
-                                formatSessionTime={formatSessionTime}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {groupedSessions.yesterday.length > 0 && (
-                        <div>
-                          <div className="px-3 py-2 text-xs font-medium text-white/45">昨天</div>
-                          <div className="space-y-0.5">
-                            {groupedSessions.yesterday.map(s => (
-                              <SessionItem
-                                key={s.id}
-                                s={s}
-                                group="yesterday"
-                                currentSession={currentSession}
-                                editingSessionId={editingSessionId}
-                                editInputRef={editInputRef}
-                                setEditingSessionId={setEditingSessionId}
-                                setSessionHistory={setSessionHistory}
-                                handleSelectSession={handleSelectSession}
-                                setDeleteSessionId={setDeleteSessionId}
-                                formatSessionTime={formatSessionTime}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {groupedSessions.earlier.length > 0 && (
-                        <div>
-                          <div className="px-3 py-2 text-xs font-medium text-white/45">更早</div>
-                          <div className="space-y-0.5">
-                            {groupedSessions.earlier.map(s => (
-                              <SessionItem
-                                key={s.id}
-                                s={s}
-                                group="earlier"
-                                currentSession={currentSession}
-                                editingSessionId={editingSessionId}
-                                editInputRef={editInputRef}
-                                setEditingSessionId={setEditingSessionId}
-                                setSessionHistory={setSessionHistory}
-                                handleSelectSession={handleSelectSession}
-                                setDeleteSessionId={setDeleteSessionId}
-                                formatSessionTime={formatSessionTime}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <AIToolkitSidebar
+          showSidebar={showSidebar}
+          setShowSidebar={setShowSidebar}
+          sessionHistory={sessionHistory}
+          currentSession={currentSession}
+          editingSessionId={editingSessionId}
+          setEditingSessionId={setEditingSessionId}
+          setSessionHistory={setSessionHistory}
+          setDeleteSessionId={setDeleteSessionId}
+          handleCreateSession={handleCreateSession}
+          handleSelectSession={handleSelectSession}
+          editInputRef={editInputRef}
+        />
       )}
 
       <main className={`ai-toolkit-stage ${user ? "ai-toolkit-stage--with-sidebar" : ""}`}>
@@ -475,139 +345,6 @@ function AIToolkitMasonryBackdrop({
             ))}
           </div>
         ))}
-      </div>
-    </div>
-  )
-}
-
-function SessionItem({
-  s,
-  group,
-  currentSession,
-  editingSessionId,
-  editInputRef,
-  setEditingSessionId,
-  setSessionHistory,
-  handleSelectSession,
-  setDeleteSessionId,
-  formatSessionTime,
-}: any) {
-  return (
-    <div
-      className={`group relative flex items-center justify-between py-1.5 px-3 rounded-lg cursor-pointer hover:bg-white/10 transition-colors ${
-        currentSession?.id === s.id ? "bg-white/10" : ""
-      }`}
-      onClick={() => handleSelectSession(s.id)}
-    >
-      <div className="flex-1 min-w-0 truncate pr-4">
-        {editingSessionId === s.id ? (
-          <input
-            ref={editInputRef}
-            type="text"
-            defaultValue={s.title}
-            className="input input-xs input-bordered w-full h-6 border-white/15 bg-white/10 text-white"
-            autoFocus
-            onBlur={e => {
-              const newTitle = e.target.value.trim()
-              if (!newTitle) {
-                setEditingSessionId(null)
-                return
-              }
-              if (newTitle !== s.title) {
-                api.sessions.update(s.id, { title: newTitle }).then(() => {
-                  setSessionHistory((prev: any) =>
-                    prev.map((session: any) =>
-                      session.id === s.id ? { ...session, title: newTitle } : session
-                    )
-                  )
-                })
-              }
-              setEditingSessionId(null)
-            }}
-            onKeyDown={e => {
-              if (e.key === "Enter") {
-                e.currentTarget.blur()
-              } else if (e.key === "Escape") {
-                setEditingSessionId(null)
-              }
-            }}
-          />
-        ) : (
-          <div className="flex items-center gap-1.5">
-            {s.is_pinned === 1 && <Pin className="size-3 fill-white/40 text-white/40 shrink-0" />}
-            <span className="truncate text-sm text-white/80">{s.title}</span>
-          </div>
-        )}
-      </div>
-      <div className="flex items-center shrink-0">
-        <span className="text-xs text-white/40 group-hover:hidden">
-          {formatSessionTime(s.created_at, group)}
-        </span>
-
-        <div className="hidden group-hover:flex items-center gap-1">
-          {editingSessionId !== s.id && (
-            <button
-              onClick={e => {
-                e.stopPropagation()
-                setEditingSessionId(s.id)
-                setTimeout(() => editInputRef.current?.select(), 0)
-              }}
-              className="p-1 text-white/40 hover:text-white transition-colors"
-            >
-              <Pencil className="size-3.5" />
-            </button>
-          )}
-          <div className="dropdown dropdown-bottom dropdown-end" onClick={e => e.stopPropagation()}>
-            <div
-              tabIndex={0}
-              role="button"
-              className="p-1 text-white/40 hover:text-white transition-colors"
-            >
-              <MoreHorizontal className="size-3.5" />
-            </div>
-            <ul
-              tabIndex={0}
-              className="dropdown-content z-[1] menu p-1.5 shadow bg-black/90 rounded-box w-32 border border-white/10 text-white"
-            >
-              <li>
-                <button
-                  className="text-xs py-1.5 px-3"
-                  onClick={e => {
-                    const elem = document.activeElement as HTMLElement
-                    if (elem) {
-                      elem.blur()
-                    }
-                    api.sessions.update(s.id, { is_pinned: s.is_pinned === 1 ? 0 : 1 }).then(() => {
-                      setSessionHistory((prev: any) =>
-                        prev.map((session: any) =>
-                          session.id === s.id
-                            ? { ...session, is_pinned: s.is_pinned === 1 ? 0 : 1 }
-                            : session
-                        )
-                      )
-                    })
-                  }}
-                >
-                  <Pin className="size-3" /> {s.is_pinned === 1 ? "取消固定" : "固定会话"}
-                </button>
-              </li>
-              <li>
-                <button
-                  className="text-xs py-1.5 px-3 text-error hover:bg-error/10 hover:text-error"
-                  onClick={() => {
-                    const elem = document.activeElement as HTMLElement
-                    if (elem) {
-                      elem.blur()
-                    }
-                    setDeleteSessionId(s.id)
-                  }}
-                >
-                  <Trash2 className="size-3" /> 删除会话
-                </button>
-              </li>
-            </ul>
-          </div>
-        </div>
       </div>
     </div>
   )
