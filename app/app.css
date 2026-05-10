@@ -37,7 +37,7 @@
 }
 
 @theme {
-  --color-nav-menu: #8e8d91;
+  --color-nav-menu: oklch(98% 0 0);
   --text-nav-root: 16px;
   --text-nav-submenu: 14px;
 }
@@ -1157,75 +1157,82 @@ select {
   max-width: min(780px, calc(100vw - 2rem));
 }
 
-.liquid-prompt-panel {
-  --glass-blur: 24px;
-  min-height: 12.5rem;
-  border-radius: 2.75rem;
-  /* More transparent center using radial gradient */
-  background: radial-gradient(
-    circle at 50% 50%,
-    rgba(10, 15, 15, 0.2) 0%,
-    rgba(10, 15, 15, 0.35) 100%
-  );
-  /* Removed global blur to keep center clear */
-  box-shadow:
-    0 40px 100px rgba(0, 0, 0, 0.6),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    inset 0 2px 0 rgba(255, 255, 255, 0.25);
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  isolation: isolate;
+/* Liquid Glass — exact reference implementation */
+.liquid-glass-pill {
   position: relative;
-  overflow: visible !important;
-}
+  isolation: isolate;
 
-/* Edge Refraction Layer - The "Thick Glass" look */
-.liquid-prompt-panel::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  /* Water-drop like sharp refraction */
-  backdrop-filter: url(#liquid-refraction) blur(4px) saturate(250%) contrast(120%);
-  -webkit-backdrop-filter: url(#liquid-refraction) blur(4px) saturate(250%) contrast(120%);
-  pointer-events: none;
+  /* The core liquid effect: blur then displace via SVG map */
+  backdrop-filter: blur(2px) url(#liquid_glass_filter);
+  -webkit-backdrop-filter: blur(2px) url(#liquid_glass_filter);
 
-  /* Sharp Radial Mask for water-drop edge */
-  mask-image: radial-gradient(circle, transparent 65%, black 92%);
-  -webkit-mask-image: radial-gradient(circle, transparent 65%, black 92%);
-}
-
-.liquid-prompt-panel::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background:
-    radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 80% 100%, rgba(158, 232, 208, 0.05) 0%, transparent 40%);
-
-  /* Apply edge-only blur using the same stable radial mask */
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  mask-image: radial-gradient(circle, transparent 50%, black 80%);
-  -webkit-mask-image: radial-gradient(circle, transparent 50%, black 80%);
-
-  opacity: 0.4;
-}
-
-.liquid-prompt-panel::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  border-radius: inherit;
+  /* box-shadow instead of border, for depth and glow */
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.26),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.05),
-    inset 0 -26px 46px rgba(0, 0, 0, 0.1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.18),
+    inset 6px 6px 16px rgba(255, 255, 255, 0.12),
+    0 10px 28px rgba(0, 0, 0, 0.35);
+
+  background: rgba(255, 255, 255, 0.1);
 }
+
+/* Fallback: when backdrop-filter is not supported */
+@supports not (backdrop-filter: blur(2px)) {
+  .liquid-glass-pill {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04));
+  }
+}
+
+/* Reusable Liquid Glass Dropdown Style */
+.liquid-glass-dropdown {
+  position: relative;
+  isolation: isolate;
+  background: rgba(23, 23, 23, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 10px 40px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.liquid-glass-dropdown::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  backdrop-filter: blur(12px) url(#liquid_glass_filter) !important;
+  -webkit-backdrop-filter: blur(12px) url(#liquid_glass_filter) !important;
+}
+
+.liquid-prompt-panel {
+  min-height: 12.5rem;
+  border-radius: 26px;
+  position: relative;
+  isolation: isolate;
+  overflow: visible !important;
+
+  /* Exact reference implementation */
+  backdrop-filter: blur(2px) url(#liquid_glass_filter);
+  -webkit-backdrop-filter: blur(2px) url(#liquid_glass_filter);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.18),
+    inset 6px 6px 16px rgba(255, 255, 255, 0.12),
+    0 10px 28px rgba(0, 0, 0, 0.35);
+
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Fallback */
+@supports not (backdrop-filter: blur(2px)) {
+  .liquid-prompt-panel {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04));
+  }
+}
+
+/* All previous pseudo-elements (::before, ::after) have been removed to strictly match the requested snippet */
 
 .liquid-prompt-panel__content {
   display: grid;

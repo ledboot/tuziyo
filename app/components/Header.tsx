@@ -57,8 +57,8 @@ export default function Header() {
     : "fixed top-0 left-0 w-full z-[100] text-white backdrop-blur-[18px] border-b border-white/5 bg-base-100/50"
 
   const navClasses = isAiToolkit
-    ? "items-center hidden md:flex absolute left-1/2 -translate-x-1/2 h-11 px-2 rounded-full border border-white/10 bg-black/25 backdrop-blur-md shadow-lg"
-    : "items-center h-full hidden md:flex absolute inset-y-0 left-1/2 -translate-x-1/2"
+    ? "flex items-center h-11 px-4 rounded-xl liquid-glass-pill"
+    : "flex items-center h-11 px-4"
 
   return (
     <header className={headerClasses}>
@@ -67,7 +67,8 @@ export default function Header() {
         <div className="absolute inset-0 z-[-1] [mask-image:linear-gradient(to_bottom,black,transparent)] backdrop-blur-xl pointer-events-none" />
       )}
       
-      <div className="flex min-h-[4.5rem] w-full items-center justify-between gap-6 px-6 max-[719px]:min-h-[4.15rem]">
+      <div className="grid grid-cols-3 min-h-[4.5rem] w-full items-center gap-6 px-6 max-[719px]:min-h-[4.15rem]">
+        <div className="flex justify-start">
         <Link
           to="/"
           className="inline-flex h-full items-center gap-[0.55rem] text-xl font-semibold tracking-normal text-white uppercase no-underline"
@@ -78,12 +79,15 @@ export default function Header() {
             <span className="text-2xl">tuziyo</span>
           </span>
         </Link>
+        </div>
+
+        <div className="flex justify-center">
 
         <nav
           className={navClasses}
           aria-label={t.nav.mainNavigation}
         >
-          <ul className="menu menu-horizontal h-full gap-3 bg-transparent p-0 items-center">
+          <ul className="menu menu-horizontal h-full gap-3 bg-transparent p-0 items-center list-none">
             {navItems.map(item => {
               if ("children" in item) {
                 const hasActiveChild = item.children.some(child =>
@@ -110,7 +114,7 @@ export default function Header() {
                         className="dropdown-content left-1/2 -translate-x-1/2 z-50 pt-1"
                         tabIndex={0}
                       >
-                        <ul className="menu menu-md ms-0 w-40 gap-1 rounded-box border border-white/10 bg-base-200 p-1 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
+                        <ul className="menu menu-md ms-0 w-40 gap-1 rounded-box liquid-glass-dropdown p-1 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
                           {item.children.map(child => (
                             <li key={child.to}>
                               <NavLink
@@ -175,8 +179,11 @@ export default function Header() {
             })}
           </ul>
         </nav>
+        </div>
 
-        <div className="flex min-w-0 h-10 items-center justify-end gap-[0.55rem]">
+        {/* Right Column: Actions */}
+        <div className="flex justify-end items-center gap-[0.55rem]">
+          <div className="hidden md:flex items-center gap-[0.55rem]">
           <div
             className={`group dropdown dropdown-hover h-10 w-28 ${showLangMenu ? "dropdown-open" : ""}`}
           >
@@ -193,7 +200,7 @@ export default function Header() {
               <ChevronDown className="size-4 transition-transform duration-200 group-hover:-rotate-180" />
             </button>
             <div className="dropdown-content left-1/2 -translate-x-1/2 z-50 ms-0 pt-1" tabIndex={0}>
-              <ul className="menu menu-md w-40 gap-1 rounded-box border border-white/20 bg-base-200 p-1 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
+              <ul className="menu menu-md w-40 gap-1 rounded-box liquid-glass-dropdown p-1 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
                 {(Object.keys(languageNames) as Language[]).map(nextLang => (
                   <li key={nextLang}>
                     <button
@@ -240,7 +247,7 @@ export default function Header() {
                 )}
               </button>
               <div className="dropdown-content z-50 pt-1" tabIndex={0}>
-                <ul className="menu menu-md w-40 gap-1 rounded-box border border-white/10 bg-base-200 p-2 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
+                <ul className="menu menu-md w-40 gap-1 rounded-box liquid-glass-dropdown p-2 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
                   <li>
                     <button
                       type="button"
@@ -303,7 +310,7 @@ export default function Header() {
 
         {showMobileMenu && (
           <div className="absolute top-[calc(100%+0.5rem)] right-4 left-4 z-50 md:hidden">
-            <ul className="menu gap-1 rounded-box border border-white/10 bg-base-200 p-2 text-nav-submenu shadow-2xl">
+            <ul className="menu gap-1 rounded-box liquid-glass-dropdown p-2 text-nav-submenu shadow-2xl">
               {navItems.map(item => {
                 if ("children" in item) {
                   return item.children.map(child => (
@@ -381,6 +388,7 @@ export default function Header() {
             </ul>
           </div>
         )}
+        </div>
       </div>
     </header>
   )

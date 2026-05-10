@@ -212,7 +212,7 @@ export default function PromptArea({
 
   return (
     <div className={`prompt-area-shell mx-auto ${className}`}>
-      <div id="prompt-area" className="liquid-glass liquid-prompt-panel relative overflow-visible">
+      <div id="prompt-area" className="liquid-prompt-panel relative overflow-visible">
         <div className="liquid-prompt-panel__content relative z-10 overflow-visible">
           <div className="liquid-prompt-editor">
             {selectedModelInfo?.supportsImage && (

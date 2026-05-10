@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useNavigate } from "react-router"
-import { ArrowLeft, Search, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { Search } from "lucide-react"
 import { toast } from "sonner"
-import { api, R2_IMAGE_BASE, MODEL_CREDITS } from "~/lib/api"
+import { api, R2_IMAGE_BASE } from "~/lib/api"
 import { useUserStore } from "~/stores/userStore"
 import { useModelStore } from "~/stores/modelStore"
 import ImageDetailModal from "~/components/ImageDetailModal"
 import PromptArea from "~/components/PromptArea"
+import { AIToolkitSidebar } from "~/components/AIToolkitSidebar"
 
 type ModelId = string
 
@@ -47,12 +48,15 @@ export default function SessionDetailPage() {
   const [selectedImage, setSelectedImage] = useState<Message | null>(null)
   const [selectedModel, setSelectedModel] = useState<ModelId>("google/nano-banana-2")
   const [modelOptions, setModelOptions] = useState<Record<string, string>>({})
-  
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+
+  // Sidebar state — required by AIToolkitSidebar
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [allSessions, setAllSessions] = useState<Session[]>([])
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
+  const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null)
+  const editInputRef = useRef<HTMLInputElement>(null)
 
   const { models, fetchModels } = useModelStore()
-
-  const [allSessions, setAllSessions] = useState<Session[]>([])
 
   useEffect(() => {
     if (!id || !user || !token) {
@@ -62,12 +66,11 @@ export default function SessionDetailPage() {
 
     Promise.all([
       api.sessions.get(id),
-      api.sessions.list()
+      api.sessions.list(),
     ])
       .then(([sessionData, listData]) => {
         setSession(sessionData.session)
         setMessages(sessionData.messages as Message[])
-        // Type assertion for the list data
         setAllSessions(listData.sessions as unknown as Session[])
       })
       .catch(error => {
@@ -78,6 +81,21 @@ export default function SessionDetailPage() {
 
     fetchModels()
   }, [id, user, token])
+
+  // Adapt allSessions → the shape AIToolkitSidebar expects
+  const sidebarSessions = allSessions.map(s => ({
+    id: s.id,
+    title: s.title,
+    lastModified: s.updated_at,
+    pinned: Boolean(s.is_pinned),
+  }))
+
+  const currentSidebarSession = session
+    ? { id: session.id, title: session.title, lastModified: session.updated_at }
+    : null
+
+  const handleCreateSession = () => navigate("/ai-toolkit")
+  const handleSelectSession = (sid: string) => navigate(`/session/${sid}`)
 
   const images = messages.filter(m => m.image_url)
 
@@ -103,62 +121,25 @@ export default function SessionDetailPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4.5rem)] bg-base-100 overflow-hidden">
-      {/* Sidebar */}
-      <div 
-        className={`${
-          isSidebarOpen ? "w-64 lg:w-72 border-r" : "w-0 border-r-0"
-        } border-white/5 flex flex-col bg-black/20 overflow-hidden shrink-0 transition-all duration-300 ease-in-out`}
-      >
-        <div className="p-4 border-b border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/ai-toolkit")} className="btn btn-sm btn-ghost btn-circle border border-white/10 hover:bg-white/10">
-              <ArrowLeft className="size-4" />
-            </button>
-            <h2 className="font-semibold text-lg text-white">History</h2>
-          </div>
-          <button 
-            onClick={() => setIsSidebarOpen(false)} 
-            className="btn btn-sm btn-ghost btn-circle text-base-content/60 hover:text-white hover:bg-white/10"
-            aria-label="Close sidebar"
-          >
-            <PanelLeftClose className="size-4" />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
-          {allSessions.map(s => (
-            <div
-              key={s.id}
-              onClick={() => navigate(`/session/${s.id}`)}
-              className={`flex items-center gap-3 p-3 rounded-xl transition-colors cursor-pointer ${
-                s.id === id ? "bg-white/10 border border-white/10" : "hover:bg-white/5 border border-transparent"
-              }`}
-            >
-              <div className="flex-1 min-w-0">
-                <div className={`text-sm truncate ${s.id === id ? "font-medium text-white" : "text-base-content/80"}`}>
-                  {s.title}
-                </div>
-                <div className="text-xs text-base-content/40 mt-1">
-                  {new Date(s.created_at * 1000).toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="flex h-screen bg-base-100 overflow-hidden">
+      {/* Sidebar — reuse AIToolkitSidebar component */}
+      <AIToolkitSidebar
+        showSidebar={showSidebar}
+        setShowSidebar={setShowSidebar}
+        sessionHistory={sidebarSessions}
+        currentSession={currentSidebarSession}
+        editingSessionId={editingSessionId}
+        setEditingSessionId={setEditingSessionId}
+        setSessionHistory={() => {}}
+        setDeleteSessionId={setDeleteSessionId}
+        handleCreateSession={handleCreateSession}
+        handleSelectSession={handleSelectSession}
+        editInputRef={editInputRef}
+      />
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col relative overflow-hidden bg-base-100">
+      {/* Main Content — offset for fixed header (4.5rem) and fixed sidebar (6rem) */}
+      <div className="flex-1 flex flex-col relative overflow-hidden bg-base-100 pl-24 pt-[4.5rem]">
         <div className="flex items-center gap-4 px-6 pt-6 pb-4">
-          {!isSidebarOpen && (
-            <button 
-              onClick={() => setIsSidebarOpen(true)} 
-              className="btn btn-sm btn-ghost btn-circle border border-white/10 hover:bg-white/10"
-              aria-label="Open sidebar"
-            >
-              <PanelLeftOpen className="size-4 text-white" />
-            </button>
-          )}
           <h1 className="text-2xl font-bold truncate text-white">{session.title}</h1>
         </div>
 
@@ -177,7 +158,7 @@ export default function SessionDetailPage() {
                 return (
                   <div
                     key={image.id}
-                    className="group relative aspect-square cursor-pointer overflow-hidden rounded-xl bg-black/40 border border-white/5"
+                    className="group relative aspect-square cursor-pointer overflow-hidden rounded-xl bg-black/40 border border-white/20 hover:border-white/40 transition-colors duration-300 ring-1 ring-white/5"
                     onClick={() => setSelectedImage(image)}
                   >
                     {imageUrl ? (
