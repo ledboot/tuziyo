@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { X, ImagePlus, Loader2, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { useI18n } from "~/lib/i18n"
@@ -87,6 +88,7 @@ export default function PromptArea({
   const [showNegativePrompt, setShowNegativePrompt] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [uploadedImages, setUploadedImages] = useState<{ id: string; url: string }[]>([])
+  const [hoveredImage, setHoveredImage] = useState<{ url: string; rect: DOMRect } | null>(null)
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -233,7 +235,15 @@ export default function PromptArea({
                   onChange={handleImageUpload}
                 />
                 {uploadedImages.map(img => (
-                  <div key={img.id} className="relative group">
+                  <div
+                    key={img.id}
+                    className="relative group"
+                    onMouseEnter={e => {
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                      setHoveredImage({ url: img.url, rect })
+                    }}
+                    onMouseLeave={() => setHoveredImage(null)}
+                  >
                     <img
                       src={img.url}
                       alt="Preview"
@@ -250,6 +260,39 @@ export default function PromptArea({
                 ))}
               </div>
             )}
+
+            {/* Hover preview portal */}
+            {hoveredImage &&
+              typeof document !== "undefined" &&
+              createPortal(
+                <div
+                  className="pointer-events-none"
+                  style={{
+                    position: "fixed",
+                    left: hoveredImage.rect.left + hoveredImage.rect.width / 2,
+                    bottom: window.innerHeight - hoveredImage.rect.top + 10,
+                    transform: "translateX(-50%)",
+                    zIndex: 9999,
+                  }}
+                >
+                  <div
+                    className="rounded-lg p-1 shadow-xl"
+                    style={{
+                      background: "rgba(10, 12, 20, 0.92)",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      backdropFilter: "blur(8px)",
+                    }}
+                  >
+                    <img
+                      src={hoveredImage.url}
+                      alt="Preview"
+                      className="rounded-lg object-cover block"
+                      style={{ width: 180, height: 180 }}
+                    />
+                  </div>
+                </div>,
+                document.body
+              )}
 
             <div className="liquid-prompt-input">
               <textarea
@@ -276,7 +319,7 @@ export default function PromptArea({
             </div>
           )}
 
-          <div className="liquid-prompt-controls flex items-center gap-2">
+          <div className="liquid-prompt-controls flex items-center gap-2 overflow-visible">
             <CustomSelect
               label="Models"
               options={modelSelectOptions}
