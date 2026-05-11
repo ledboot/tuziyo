@@ -90,6 +90,10 @@ export default function PromptArea({
   const [uploadedImages, setUploadedImages] = useState<{ id: string; url: string }[]>([])
   const [hoveredImage, setHoveredImage] = useState<{ url: string; rect: DOMRect } | null>(null)
 
+  // Resize: use CSS variables — no React state, no re-renders during drag
+  const shellRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -134,6 +138,32 @@ export default function PromptArea({
     setShowNegativePrompt(false)
     setNegativePrompt("")
   }, [supportsNegativePrompt])
+
+  // Auto-resize textarea: set min-height to grow the panel; overflow-y:auto handles the rest
+  const resizeTextarea = () => {
+    requestAnimationFrame(() => {
+      const el = inputRef.current
+      if (!el) return
+      // Reset to measure true scrollHeight
+      el.style.minHeight = "auto"
+      el.style.minHeight = `${el.scrollHeight}px`
+    })
+  }
+
+  useEffect(() => {
+    resizeTextarea()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prompt])
+
+  // Re-run textarea resize when panel width changes (drag resize reflows text)
+  useEffect(() => {
+    const panel = panelRef.current
+    if (!panel) return
+    const ro = new ResizeObserver(() => resizeTextarea())
+    ro.observe(panel)
+    return () => ro.disconnect()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -212,9 +242,100 @@ export default function PromptArea({
     }
   }
 
+  type ResizeDir = "left" | "right" | "top" | "top-left" | "top-right"
+
+  const startResize = (e: React.MouseEvent, dir: ResizeDir) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startX = e.clientX
+    const startY = e.clientY
+    const el = panelRef.current
+    if (!el) return
+    const startW = shellRef.current?.offsetWidth ?? el.offsetWidth
+    const startH = el.offsetHeight
+
+    const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX
+      const dy = ev.clientY - startY
+      const shell = shellRef.current
+      const panel = panelRef.current
+
+      // Width: panel is centered so expand symmetrically
+      if (dir === "left" || dir === "top-left") {
+        const newW = startW - dx * 2
+        shell?.style.setProperty("--prompt-w", `${newW}px`)
+      }
+      if (dir === "right" || dir === "top-right") {
+        const newW = startW + dx * 2
+        shell?.style.setProperty("--prompt-w", `${newW}px`)
+      }
+
+      // Height: panel anchored at bottom, drag up to grow
+      if (dir === "top" || dir === "top-left" || dir === "top-right") {
+        const newH = startH - dy
+        panel?.style.setProperty("--prompt-h", `${newH}px`)
+      }
+    }
+
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove)
+      window.removeEventListener("mouseup", onUp)
+      document.body.style.userSelect = ""
+      document.body.style.cursor = ""
+    }
+
+    document.body.style.userSelect = "none"
+    document.body.style.cursor =
+      dir === "left" || dir === "right" ? "ew-resize"
+      : dir === "top" ? "ns-resize"
+      : dir === "top-left" ? "nwse-resize"
+      : "nesw-resize"
+
+    window.addEventListener("mousemove", onMove)
+    window.addEventListener("mouseup", onUp)
+  }
+
   return (
-    <div className={`prompt-area-shell mx-auto ${className}`}>
-      <div id="prompt-area" className="liquid-prompt-panel relative overflow-visible">
+    <div
+      ref={shellRef}
+      className={`prompt-area-shell mx-auto ${className}`}
+    >
+      <div
+        id="prompt-area"
+        ref={panelRef}
+        className="liquid-prompt-panel relative overflow-visible"
+      >
+        {/* ── Resize handles ── */}
+        {/* Top edge */}
+        <div
+          onMouseDown={e => startResize(e, "top")}
+          className="prompt-resize-handle prompt-resize-top"
+          title="Drag to resize"
+        />
+        {/* Left edge */}
+        <div
+          onMouseDown={e => startResize(e, "left")}
+          className="prompt-resize-handle prompt-resize-left"
+          title="Drag to resize"
+        />
+        {/* Right edge */}
+        <div
+          onMouseDown={e => startResize(e, "right")}
+          className="prompt-resize-handle prompt-resize-right"
+          title="Drag to resize"
+        />
+        {/* Top-left corner */}
+        <div
+          onMouseDown={e => startResize(e, "top-left")}
+          className="prompt-resize-handle prompt-resize-corner-tl"
+          title="Drag to resize"
+        />
+        {/* Top-right corner */}
+        <div
+          onMouseDown={e => startResize(e, "top-right")}
+          className="prompt-resize-handle prompt-resize-corner-tr"
+          title="Drag to resize"
+        />
         <div className="liquid-prompt-panel__content relative z-10 overflow-visible">
           <div className="liquid-prompt-editor">
             {selectedModelInfo?.supportsImage && (
@@ -301,8 +422,7 @@ export default function PromptArea({
                 onChange={e => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={t.aiToolkit?.promptPlaceholder || "Describe your image..."}
-                className="textarea textarea-ghost liquid-prompt-textarea w-full text-base resize-none focus:outline-none"
-                rows={2}
+                className="textarea textarea-ghost py-3 px-2 liquid-prompt-textarea w-full text-base focus:outline-none"
               />
             </div>
           </div>

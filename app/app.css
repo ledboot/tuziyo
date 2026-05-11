@@ -1153,8 +1153,8 @@ select {
 }
 
 .prompt-area-shell {
-  width: 100%;
-  max-width: min(780px, calc(100vw - 2rem));
+  /* JS only sets --prompt-w; CSS enforces min/max via clamp() */
+  width: clamp(800px, var(--prompt-w, 800px), min(90vw, 1500px));
 }
 
 /* Liquid Glass — exact reference implementation */
@@ -1205,12 +1205,99 @@ select {
   -webkit-backdrop-filter: blur(12px) url(#liquid_glass_filter) !important;
 }
 
+/* ── Resize handles for PromptArea ── */
+.prompt-resize-handle {
+  position: absolute;
+  z-index: 20;
+}
+.prompt-resize-top {
+  top: -5px; left: 20px; right: 20px; height: 10px;
+  cursor: ns-resize;
+}
+.prompt-resize-top::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px; height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.18);
+  transition: background 0.2s;
+}
+.prompt-resize-top:hover::after { background: rgba(255,255,255,0.55); }
+
+.prompt-resize-left {
+  left: -5px; top: 20px; bottom: 20px; width: 10px;
+  cursor: ew-resize;
+}
+.prompt-resize-left::after {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px; height: 32px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.18);
+  transition: background 0.2s;
+}
+.prompt-resize-left:hover::after { background: rgba(255,255,255,0.55); }
+
+.prompt-resize-right {
+  right: -5px; top: 20px; bottom: 20px; width: 10px;
+  cursor: ew-resize;
+}
+.prompt-resize-right::after {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px; height: 32px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.18);
+  transition: background 0.2s;
+}
+.prompt-resize-right:hover::after { background: rgba(255,255,255,0.55); }
+
+.prompt-resize-corner-tl {
+  top: 0; left: 0;
+  width: 26px; height: 26px;
+  cursor: nwse-resize;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-right: none;
+  border-bottom: none;
+  border-radius: 26px 0 0 0;
+  background: transparent;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.prompt-resize-corner-tl:hover {
+  border-color: rgba(255,255,255,0.75);
+  box-shadow: -1px -1px 6px rgba(255,255,255,0.15);
+}
+
+.prompt-resize-corner-tr {
+  top: 0; right: 0;
+  width: 26px; height: 26px;
+  cursor: nesw-resize;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-left: none;
+  border-bottom: none;
+  border-radius: 0 26px 0 0;
+  background: transparent;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.prompt-resize-corner-tr:hover {
+  border-color: rgba(255,255,255,0.75);
+  box-shadow: 1px -1px 6px rgba(255,255,255,0.15);
+}
+
 .liquid-prompt-panel {
-  min-height: 12.5rem;
   border-radius: 26px;
   position: relative;
   isolation: isolate;
   overflow: visible !important;
+  /* JS sets --prompt-h; clamp enforces 0 ~ header-bottom */
+  min-height: clamp(0px, var(--prompt-h, 0px), calc(100vh - 4.5rem - 2rem));
+  max-height: calc(100vh - 4.5rem - 2rem);
 
   /* Exact reference implementation */
   backdrop-filter: blur(2px) url(#liquid_glass_filter);
@@ -1236,13 +1323,22 @@ select {
 
 .liquid-prompt-panel__content {
   display: grid;
-  min-height: inherit;
+  /* editor row grows, controls row is locked at bottom */
   grid-template-rows: 1fr auto;
   padding: 1.05rem;
+  /* Must fill the full panel height so controls stick to bottom */
+  height: 100%;
+  min-height: inherit;
+  max-height: inherit;
+  overflow: hidden;
 }
 
 .liquid-prompt-editor {
-  min-height: 7.6rem;
+  /* flex column: upload row fixed, textarea zone scrolls */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   transition: all 0.2s ease;
 }
 
@@ -1256,7 +1352,7 @@ select {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  padding: 0.35rem 0.35rem 0;
+  flex-shrink: 0;
 }
 
 .liquid-icon-button {
@@ -1298,16 +1394,27 @@ select {
 
 .liquid-prompt-input {
   padding: 0.2rem 0.3rem 0.35rem;
+  /* Textarea handles its own scroll */
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .liquid-prompt-textarea {
-  min-height: 4.7rem;
   color: rgba(255, 255, 255, 0.94);
   caret-color: #fff;
   background: transparent;
   font-size: 1.05rem;
   font-weight: 500;
   line-height: 1.55;
+  /* Textarea is its own scroll container — no clipping from parent */
+  overflow-y: auto;
+  resize: none;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 0.5rem;
 }
 
 .liquid-prompt-textarea::placeholder {
