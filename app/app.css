@@ -1168,6 +1168,17 @@ select {
     rgba(4, 6, 6, 0.18) 42%,
     rgba(4, 6, 6, 0.58) 100%
   );
+  /* Hidden until images start appearing */
+  opacity: 0;
+  transform: translateY(1.2rem);
+  transition:
+    opacity 500ms ease,
+    transform 500ms ease;
+}
+
+.ai-toolkit-prompt-dock.is-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .ai-toolkit-prompt-dock--with-sidebar {

@@ -111,6 +111,7 @@ export default function AIToolkitPage() {
   const [showcaseItems, setShowcaseItems] =
     useState<ApiToolkitShowcaseItem[]>(FALLBACK_SHOWCASE_ITEMS)
   const [isShowcaseLoading, setIsShowcaseLoading] = useState(true)
+  const [isPromptVisible, setIsPromptVisible] = useState(false)
   const [masonryColumnCount, setMasonryColumnCount] = useState(5)
   const [currentSession, setCurrentSession] = useState<{ id: string; title: string } | null>(null)
   const [sessionHistory, setSessionHistory] = useState<
@@ -171,7 +172,13 @@ export default function AIToolkitPage() {
         console.error("Failed to load AI toolkit showcase:", error)
       })
       .finally(() => {
-        if (!ignore) setIsShowcaseLoading(false)
+        if (!ignore) {
+          setIsShowcaseLoading(false)
+          // Delay PromptArea entrance until images start fading in
+          setTimeout(() => {
+            if (!ignore) setIsPromptVisible(true)
+          }, 500)
+        }
       })
 
     return () => {
@@ -267,7 +274,7 @@ export default function AIToolkitPage() {
       </main>
 
       <div
-        className={`ai-toolkit-prompt-dock ${user ? "ai-toolkit-prompt-dock--with-sidebar" : ""}`}
+        className={`ai-toolkit-prompt-dock ${user ? "ai-toolkit-prompt-dock--with-sidebar" : ""} ${isPromptVisible ? "is-visible" : ""}`}
       >
         <div className="ai-toolkit-prompt-dock__inner pointer-events-auto">
           <PromptArea
