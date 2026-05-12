@@ -170,10 +170,22 @@ export default function PromptArea({
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
-    Array.from(files).forEach(file => {
+    const maxCount = selectedModelInfo?.referenceImageCount ?? Infinity
+    const remaining = maxCount - uploadedImages.length
+    if (remaining <= 0) {
+      toast.error(`This model supports at most ${maxCount} reference image${maxCount === 1 ? "" : "s"}.`)
+      e.target.value = ""
+      return
+    }
+    const toAdd = Array.from(files).slice(0, remaining)
+    if (toAdd.length < files.length) {
+      toast.warning(`Only ${remaining} more image${remaining === 1 ? "" : "s"} can be added (limit: ${maxCount}).`)
+    }
+    toAdd.forEach(file => {
       const url = URL.createObjectURL(file)
       setUploadedImages(prev => [...prev, { id: crypto.randomUUID(), url }])
     })
+    e.target.value = ""
   }
 
   const removeImage = (id: string) => {
@@ -372,13 +384,26 @@ export default function PromptArea({
           <div className="liquid-prompt-editor">
             {selectedModelInfo?.supportsImage && (
               <div className="liquid-prompt-upload-row">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="btn btn-ghost btn-square liquid-icon-button"
-                  aria-label="Add reference image"
-                >
-                  <ImagePlus className="size-5" />
-                </button>
+                {/* Upload button — always visible, does not scroll */}
+                {(() => {
+                  const maxCount = selectedModelInfo?.referenceImageCount ?? Infinity
+                  const atLimit = uploadedImages.length >= maxCount
+                  return (
+                    <button
+                      onClick={() => !atLimit && fileInputRef.current?.click()}
+                      disabled={atLimit}
+                      className="btn btn-ghost btn-square liquid-icon-button flex-shrink-0"
+                      aria-label="Add reference image"
+                      title={
+                        maxCount === Infinity
+                          ? "Add reference image"
+                          : `${uploadedImages.length} / ${maxCount} images`
+                      }
+                    >
+                      <ImagePlus className="size-5" />
+                    </button>
+                  )
+                })()}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -387,30 +412,37 @@ export default function PromptArea({
                   className="hidden"
                   onChange={handleImageUpload}
                 />
-                {uploadedImages.map(img => (
-                  <div
-                    key={img.id}
-                    className="relative group"
-                    onMouseEnter={e => {
-                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                      setHoveredImage({ url: img.url, rect })
-                    }}
-                    onMouseLeave={() => setHoveredImage(null)}
-                  >
-                    <img
-                      src={img.url}
-                      alt="Preview"
-                      className="liquid-upload-preview object-cover"
-                    />
-                    <button
-                      onClick={() => removeImage(img.id)}
-                      className="btn btn-circle liquid-upload-remove absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                      aria-label="Remove reference image"
-                    >
-                      <X className="size-3" />
-                    </button>
+
+                {/* Scrollable image strip */}
+                {uploadedImages.length > 0 && (
+                  <div className="liquid-upload-images-scroll">
+                    {uploadedImages.map(img => (
+                      <div
+                        key={img.id}
+                        className="relative group overflow-hidden flex-shrink-0"
+                        style={{ borderRadius: "0.55rem" }}
+                        onMouseEnter={e => {
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                          setHoveredImage({ url: img.url, rect })
+                        }}
+                        onMouseLeave={() => setHoveredImage(null)}
+                      >
+                        <img
+                          src={img.url}
+                          alt="Preview"
+                          className="liquid-upload-preview"
+                        />
+                        <button
+                          onClick={() => removeImage(img.id)}
+                          className="btn btn-circle liquid-upload-remove absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remove reference image"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             )}
 
@@ -429,7 +461,7 @@ export default function PromptArea({
                   }}
                 >
                   <div
-                    className="rounded-lg p-1 shadow-xl"
+                    className="rounded-lg shadow-xl overflow-hidden"
                     style={{
                       background: "rgba(10, 12, 20, 0.92)",
                       border: "1px solid rgba(255,255,255,0.15)",
@@ -439,8 +471,8 @@ export default function PromptArea({
                     <img
                       src={hoveredImage.url}
                       alt="Preview"
-                      className="rounded-lg object-cover block"
-                      style={{ width: 180, height: 180 }}
+                      className="block"
+                      style={{ maxWidth: 260, maxHeight: 260 }}
                     />
                   </div>
                 </div>,

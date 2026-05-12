@@ -966,7 +966,6 @@ select {
   /* Remove local scroll to allow global window scroll */
   overflow-x: clip;
   isolation: isolate;
-  background: #050707;
 }
 
 .ai-toolkit-backdrop {
@@ -992,23 +991,16 @@ select {
   opacity: 0.9;
 }
 
-.ai-toolkit-backdrop::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background:
-    linear-gradient(180deg, rgba(4, 6, 6, 0.16) 0%, rgba(4, 6, 6, 0) 34%, rgba(4, 6, 6, 0.32) 100%),
-    linear-gradient(0deg, rgba(6, 42, 38, 0.08), rgba(88, 66, 33, 0.06));
-}
-
 .ai-toolkit-masonry {
   position: relative;
   display: flex;
   min-height: 100%;
   gap: clamp(0.25rem, 0.45vw, 0.5rem);
-  padding: clamp(0.5rem, 1vw, 1rem);
+  padding: 0 clamp(0.5rem, 1vw, 1rem) clamp(0.5rem, 1vw, 1rem);
   transform: scale(1.035);
+  /* Scale from top so expansion only goes downward/sideways,
+     keeping the top edge flush with the header bottom. */
+  transform-origin: top center;
 }
 
 .ai-toolkit-masonry__column {
@@ -1016,20 +1008,14 @@ select {
   min-width: 0;
   flex: 1 1 0;
   flex-direction: column;
+  align-self: flex-start;
   gap: clamp(0.25rem, 0.45vw, 0.5rem);
 }
 
-.ai-toolkit-masonry__column:nth-child(2n) {
-  transform: translateY(2.2rem);
-}
-
-.ai-toolkit-masonry__column:nth-child(3n) {
-  transform: translateY(-1.2rem);
-}
-
 .ai-toolkit-masonry__tile {
+  position: relative;
   width: 100%;
-  height: clamp(16rem, var(--tile-height, 24rem), 35rem);
+  height: clamp(13rem, var(--tile-height, 24rem), 46rem);
   margin: 0;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.09);
@@ -1040,13 +1026,53 @@ select {
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
+.ai-toolkit-masonry__skeleton {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  /* Fades out once tile gets .is-loaded */
+  opacity: 1;
+  transition: opacity 400ms ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ai-toolkit-masonry__tile.is-loaded .ai-toolkit-masonry__skeleton {
+  opacity: 0;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 .ai-toolkit-masonry__tile img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   transform: scale(1.018);
-  filter: saturate(0.96) contrast(0.98) brightness(0.94);
+  /* Hidden until loaded, then fades in */
+  opacity: 0;
+  transition: opacity 380ms ease;
+  position: relative;
+  z-index: 2;
+}
+
+.ai-toolkit-masonry__tile.is-loaded img {
+  opacity: 1;
 }
 
 .ai-toolkit-stage {
@@ -1179,7 +1205,7 @@ select {
 /* Fallback: when backdrop-filter is not supported */
 @supports not (backdrop-filter: blur(2px)) {
   .liquid-glass-pill {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04));
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
   }
 }
 
@@ -1211,83 +1237,112 @@ select {
   z-index: 20;
 }
 .prompt-resize-top {
-  top: -5px; left: 20px; right: 20px; height: 10px;
+  top: -5px;
+  left: 20px;
+  right: 20px;
+  height: 10px;
   cursor: ns-resize;
 }
 .prompt-resize-top::after {
   content: "";
   position: absolute;
-  left: 50%; top: 50%;
+  left: 50%;
+  top: 50%;
   transform: translate(-50%, -50%);
-  width: 32px; height: 3px;
+  width: 32px;
+  height: 3px;
   border-radius: 2px;
-  background: rgba(255,255,255,0.18);
+  background: rgba(255, 255, 255, 0.18);
   transition: background 0.2s;
 }
-.prompt-resize-top:hover::after { background: rgba(255,255,255,0.55); }
+.prompt-resize-top:hover::after {
+  background: rgba(255, 255, 255, 0.55);
+}
 
 .prompt-resize-left {
-  left: -5px; top: 20px; bottom: 20px; width: 10px;
+  left: -5px;
+  top: 20px;
+  bottom: 20px;
+  width: 10px;
   cursor: ew-resize;
 }
 .prompt-resize-left::after {
   content: "";
   position: absolute;
-  top: 50%; left: 50%;
+  top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
-  width: 3px; height: 32px;
+  width: 3px;
+  height: 32px;
   border-radius: 2px;
-  background: rgba(255,255,255,0.18);
+  background: rgba(255, 255, 255, 0.18);
   transition: background 0.2s;
 }
-.prompt-resize-left:hover::after { background: rgba(255,255,255,0.55); }
+.prompt-resize-left:hover::after {
+  background: rgba(255, 255, 255, 0.55);
+}
 
 .prompt-resize-right {
-  right: -5px; top: 20px; bottom: 20px; width: 10px;
+  right: -5px;
+  top: 20px;
+  bottom: 20px;
+  width: 10px;
   cursor: ew-resize;
 }
 .prompt-resize-right::after {
   content: "";
   position: absolute;
-  top: 50%; left: 50%;
+  top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
-  width: 3px; height: 32px;
+  width: 3px;
+  height: 32px;
   border-radius: 2px;
-  background: rgba(255,255,255,0.18);
+  background: rgba(255, 255, 255, 0.18);
   transition: background 0.2s;
 }
-.prompt-resize-right:hover::after { background: rgba(255,255,255,0.55); }
+.prompt-resize-right:hover::after {
+  background: rgba(255, 255, 255, 0.55);
+}
 
 .prompt-resize-corner-tl {
-  top: 0; left: 0;
-  width: 26px; height: 26px;
+  top: 0;
+  left: 0;
+  width: 26px;
+  height: 26px;
   cursor: nwse-resize;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-right: none;
   border-bottom: none;
   border-radius: 26px 0 0 0;
   background: transparent;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 .prompt-resize-corner-tl:hover {
-  border-color: rgba(255,255,255,0.75);
-  box-shadow: -1px -1px 6px rgba(255,255,255,0.15);
+  border-color: rgba(255, 255, 255, 0.75);
+  box-shadow: -1px -1px 6px rgba(255, 255, 255, 0.15);
 }
 
 .prompt-resize-corner-tr {
-  top: 0; right: 0;
-  width: 26px; height: 26px;
+  top: 0;
+  right: 0;
+  width: 26px;
+  height: 26px;
   cursor: nesw-resize;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-left: none;
   border-bottom: none;
   border-radius: 0 26px 0 0;
   background: transparent;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 .prompt-resize-corner-tr:hover {
-  border-color: rgba(255,255,255,0.75);
-  box-shadow: 1px -1px 6px rgba(255,255,255,0.15);
+  border-color: rgba(255, 255, 255, 0.75);
+  box-shadow: 1px -1px 6px rgba(255, 255, 255, 0.15);
 }
 
 .liquid-prompt-panel {
@@ -1315,7 +1370,7 @@ select {
 /* Fallback */
 @supports not (backdrop-filter: blur(2px)) {
   .liquid-prompt-panel {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04));
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
   }
 }
 
@@ -1355,6 +1410,33 @@ select {
   flex-shrink: 0;
 }
 
+/* Scrollable strip that holds the image thumbnails only */
+.liquid-upload-images-scroll {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding-bottom: 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.liquid-upload-images-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+
+.liquid-upload-images-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.liquid-upload-images-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+}
+
 .liquid-icon-button {
   width: 3rem;
   height: 3rem;
@@ -1379,8 +1461,9 @@ select {
 .liquid-upload-preview {
   width: 3rem;
   height: 3rem;
+  object-fit: cover;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 0.95rem;
+  border-radius: 0.55rem;
 }
 
 .liquid-upload-remove {

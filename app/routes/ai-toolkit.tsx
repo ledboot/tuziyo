@@ -75,7 +75,7 @@ const BASE_FALLBACK_SHOWCASE_ITEMS: ApiToolkitShowcaseItem[] = [
 
 const FALLBACK_ASPECT_RATIOS = ["4 / 5", "3 / 4", "2 / 3", "3 / 5", "1 / 1", "4 / 5"]
 
-const MASONRY_TILE_HEIGHTS = ["18rem", "26rem", "20rem", "32rem", "22rem", "28rem", "19rem", "24rem", "30rem", "21rem"]
+const MASONRY_TILE_HEIGHTS = ["14rem", "28rem", "20rem", "40rem", "16rem", "34rem", "22rem", "44rem", "18rem", "30rem", "24rem", "38rem"]
 
 const FALLBACK_SHOWCASE_ITEMS: ApiToolkitShowcaseItem[] = Array.from({ length: 15 }).flatMap(
   (_, repeatIndex) =>
@@ -340,7 +340,21 @@ function AIToolkitMasonryBackdrop({
                   flexShrink: 0,
                 } as React.CSSProperties}
               >
-                <img src={item.src} alt="" width={item.width} height={item.height} loading="lazy" />
+                {/* Skeleton placeholder — always rendered, fades out once image loads */}
+                <div className="ai-toolkit-masonry__skeleton" aria-hidden="true" />
+                <img
+                  src={item.src}
+                  alt=""
+                  width={item.width}
+                  height={item.height}
+                  loading="lazy"
+                  onLoad={e => {
+                    const tile = (e.currentTarget as HTMLImageElement).closest(
+                      ".ai-toolkit-masonry__tile"
+                    )
+                    tile?.classList.add("is-loaded")
+                  }}
+                />
               </figure>
             ))}
           </div>
