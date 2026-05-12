@@ -18,8 +18,8 @@ interface Message {
   negative_prompt: string | null
   output_format: string | null
   num_images: number | null
-  google_search: number | null
-  image_search: number | null
+  google_search?: number | null
+  image_search?: number | null
   created_at: number
 }
 
@@ -47,13 +47,19 @@ function getModelName(modelId: string): string {
   return modelNames[modelId] || modelId
 }
 
+function resolveImageUrl(imageUrl: string | null): string | null {
+  if (!imageUrl) return null
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl
+  return `${R2_IMAGE_BASE}/${imageUrl.replace(/^\/+/, "")}`
+}
+
 export default function ImageDetailModal({ image, sessionTitle, onClose }: ImageDetailModalProps) {
   const navigate = useNavigate()
   const setRegenerateData = useGenerateStore((state) => state.setRegenerateData)
 
   if (!image) return null
 
-  const imageUrl = image.image_url ? `${R2_IMAGE_BASE}/${image.image_url}` : null
+  const imageUrl = resolveImageUrl(image.image_url)
 
   const handleRegenerate = () => {
     setRegenerateData({

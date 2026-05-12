@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, type ComponentProps } from "react"
 import { Link } from "react-router"
 import { Coins, Loader2, Calendar, CreditCard, LogOut, Heart, Play, Image as ImageIcon } from "lucide-react"
+import ImageDetailModal from "~/components/ImageDetailModal"
 import { useUserStore } from "~/stores/userStore"
 import { api } from "~/lib/api"
 
@@ -43,6 +44,8 @@ interface FavoriteItem {
   createdAt: number
 }
 
+type FavoriteDetailImage = NonNullable<ComponentProps<typeof ImageDetailModal>["image"]>
+
 const MOCK_FAVORITES: FavoriteItem[] = [
   { id: "1", type: "image", url: "https://picsum.photos/seed/tuziyo1/800/600", title: "Neon Dreams", createdAt: 1715241600 },
   { id: "2", type: "video", url: "https://picsum.photos/seed/tuziyo2/800/1000", title: "Future City", createdAt: 1715231600 },
@@ -52,12 +55,38 @@ const MOCK_FAVORITES: FavoriteItem[] = [
   { id: "6", type: "image", url: "https://picsum.photos/seed/tuziyo6/800/1200", title: "Ethereal Landscape", createdAt: 1715191600 },
 ]
 
+const PROFILE_PAGE_SHELL =
+  "mt-[4.5rem] min-h-[calc(100vh-4.5rem)] max-[719px]:mt-[4.15rem] max-[719px]:min-h-[calc(100vh-4.15rem)] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-base-200 via-base-100 to-base-100"
+
+function toFavoriteDetailImage(item: FavoriteItem): FavoriteDetailImage {
+  return {
+    id: item.id,
+    role: "assistant",
+    provider: null,
+    model: item.type === "video" ? "video" : "openai/gpt-image-1.5",
+    prompt: item.title,
+    image_url: item.url,
+    aspect_ratio: null,
+    resolution: null,
+    image_size: null,
+    quality: null,
+    style: null,
+    negative_prompt: null,
+    output_format: null,
+    num_images: 1,
+    google_search: null,
+    image_search: null,
+    created_at: item.createdAt,
+  }
+}
+
 export default function ProfilePage() {
   const { user, logout } = useUserStore()
   const [credits, setCredits] = useState<CreditInfo | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingTransactions, setLoadingTransactions] = useState(false)
+  const [selectedFavorite, setSelectedFavorite] = useState<FavoriteDetailImage | null>(null)
 
   // Example state for sidebar selection
   const [activeTab, setActiveTab] = useState("credits")
@@ -96,7 +125,7 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <div className="min-h-[calc(100vh-4.5rem)] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-base-200 via-base-100 to-base-100 flex items-center justify-center">
+      <div className={`${PROFILE_PAGE_SHELL} flex items-center justify-center`}>
         <div className="text-center bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-3xl p-12">
           <h1 className="text-2xl font-bold mb-2 text-white">Authentication Required</h1>
           <p className="text-base-content/60">
@@ -108,7 +137,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4.5rem)] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-base-200 via-base-100 to-base-100 pt-10 pb-20 px-6">
+    <div className={`${PROFILE_PAGE_SHELL} pt-10 pb-20 px-6`}>
       <div className="w-full">
         <div className="flex flex-col md:flex-row gap-8 md:gap-16">
           {/* Left Sidebar */}
@@ -341,11 +370,14 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Favorites Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                   {MOCK_FAVORITES.map(item => (
-                    <div
+                    <button
+                      type="button"
                       key={item.id}
-                      className="group relative aspect-[3/4] overflow-hidden rounded-2xl bg-white/5 border border-white/10 transition-all hover:border-primary/50 hover:shadow-[0_0_20px_rgba(var(--color-primary),0.2)]"
+                      onClick={() => setSelectedFavorite(toFavoriteDetailImage(item))}
+                      className="group relative aspect-[3/4] overflow-hidden rounded-2xl bg-white/5 border border-white/10 text-left transition-all hover:border-primary/50 hover:shadow-[0_0_20px_rgba(var(--color-primary),0.2)] focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+                      aria-label={`Open ${item.title} detail`}
                     >
                       <img
                         src={item.url}
@@ -373,7 +405,7 @@ export default function ProfilePage() {
                       <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-[10px] font-bold text-white uppercase tracking-wider">
                         {item.type}
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </>
@@ -381,6 +413,12 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <ImageDetailModal
+        image={selectedFavorite}
+        sessionTitle="Favorites"
+        onClose={() => setSelectedFavorite(null)}
+      />
     </div>
   )
 }

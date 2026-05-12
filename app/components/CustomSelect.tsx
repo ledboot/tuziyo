@@ -70,7 +70,8 @@ export function CustomSelect({
       if (
         buttonRef.current?.contains(e.target as Node) ||
         dropdownRef.current?.contains(e.target as Node)
-      ) return
+      )
+        return
       setIsOpen(false)
     }
     document.addEventListener("mousedown", handleClickOutside)
@@ -107,7 +108,9 @@ export function CustomSelect({
             type="button"
             onClick={() => handleOptionClick(opt.value)}
             className={`flex items-center gap-2 rounded-lg px-2 py-2 whitespace-nowrap w-full text-left cursor-pointer transition-colors ${
-              value === opt.value ? "text-primary font-semibold underline underline-offset-4 decoration-2" : "hover:bg-white/20"
+              value === opt.value
+                ? "text-primary font-semibold underline underline-offset-4 decoration-2"
+                : "hover:bg-white/20"
             }`}
           >
             {opt.icon}
@@ -128,17 +131,23 @@ export function CustomSelect({
         ref={buttonRef}
         type="button"
         onClick={handleButtonClick}
-        className="flex items-center gap-2 px-3 py-2 liquid-glass rounded-lg border-none cursor-pointer hover:ring-1 hover:ring-primary transition-all"
+        className="inline-flex items-center gap-2 px-3 py-2 liquid-glass rounded-lg border-none cursor-pointer hover:ring-1 hover:ring-primary transition-all"
       >
         {selectedOption ? (
-          <span className="flex items-center gap-2 min-w-0 flex-1 text-white">
-            {selectedOption.icon || suffixIcon}
-            <span className="whitespace-nowrap">{selectedOption.label}</span>
+          <span className="inline-flex items-center gap-2 min-w-0 flex-1 text-white">
+            {(selectedOption.icon || suffixIcon) && (
+              <span className="inline-flex size-5 shrink-0 items-center justify-center leading-none [&>img]:block [&>svg]:block">
+                {selectedOption.icon || suffixIcon}
+              </span>
+            )}
+            <span className="whitespace-nowrap leading-none">{selectedOption.label}</span>
           </span>
         ) : (
-          <span className="text-base-content/50">{placeholder}</span>
+          <span className="text-base-content/50 leading-none">{placeholder}</span>
         )}
-        <ChevronDown className={`size-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown
+          className={`size-4 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
       {typeof document !== "undefined" && createPortal(dropdown, document.body)}

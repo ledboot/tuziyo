@@ -100,7 +100,9 @@ export default function PromptArea({
   const modelOptionConfig = useModelStore(
     state => state.modelOptionsConfig[selectedModel] ?? EMPTY_MODEL_OPTIONS_CONFIG
   )
+  const isModelsLoading = useModelStore(state => state.isLoading)
   const normalizeModelOptions = useModelStore(state => state.normalizeModelOptions)
+  const isModelDataPending = isModelsLoading || models.length === 0
 
   const selectedModelInfo = models.find(m => m.id === selectedModel)
   const requiredCredits = MODEL_CREDITS[selectedModel] || 0
@@ -152,7 +154,7 @@ export default function PromptArea({
 
   useEffect(() => {
     resizeTextarea()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompt])
 
   // Re-run textarea resize when panel width changes (drag resize reflows text)
@@ -162,7 +164,7 @@ export default function PromptArea({
     const ro = new ResizeObserver(() => resizeTextarea())
     ro.observe(panel)
     return () => ro.disconnect()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -286,20 +288,50 @@ export default function PromptArea({
 
     document.body.style.userSelect = "none"
     document.body.style.cursor =
-      dir === "left" || dir === "right" ? "ew-resize"
-      : dir === "top" ? "ns-resize"
-      : dir === "top-left" ? "nwse-resize"
-      : "nesw-resize"
+      dir === "left" || dir === "right"
+        ? "ew-resize"
+        : dir === "top"
+          ? "ns-resize"
+          : dir === "top-left"
+            ? "nwse-resize"
+            : "nesw-resize"
 
     window.addEventListener("mousemove", onMove)
     window.addEventListener("mouseup", onUp)
   }
 
+  // ── Skeleton placeholder while data loads ──
+  if (isModelDataPending) {
+    return (
+      <div className={`prompt-area-shell mx-auto ${className}`}>
+        <div className="liquid-prompt-panel">
+          <div className="liquid-prompt-panel__content">
+            <div className="liquid-prompt-editor">
+              <div className="liquid-prompt-upload-row">
+                <div className="skeleton liquid-icon-button opacity-30" aria-hidden="true" />
+              </div>
+
+              {/* Textarea skeleton */}
+              <div className="liquid-prompt-input flex-1 pt-2 mt-2 px-1">
+                <div className="skeleton h-20 w-full rounded-xl opacity-25" />
+              </div>
+            </div>
+
+            {/* Controls row skeleton */}
+            <div className="liquid-prompt-controls flex items-center gap-2 overflow-visible pt-2">
+              <div className="skeleton h-9 w-32 rounded-lg opacity-30 flex-shrink-0" />
+              <div className="skeleton h-9 w-28 rounded-lg opacity-25 flex-shrink-0" />
+              <div className="flex-1" />
+              <div className="skeleton h-9 w-24 rounded-lg opacity-30 flex-shrink-0" />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div
-      ref={shellRef}
-      className={`prompt-area-shell mx-auto ${className}`}
-    >
+    <div ref={shellRef} className={`prompt-area-shell mx-auto ${className}`}>
       <div
         id="prompt-area"
         ref={panelRef}
