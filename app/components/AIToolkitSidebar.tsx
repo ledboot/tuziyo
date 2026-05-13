@@ -68,7 +68,9 @@ export function AIToolkitSidebar({
 
         <div className="flex-1 overflow-y-auto px-2 pb-4 scrollbar-hide transition-all duration-300">
           {sessionHistory.length === 0 ? (
-            <div className="p-4 text-center text-white/55 text-sm">No conversations yet</div>
+            showSidebar && (
+              <div className="p-4 text-center text-white/55 text-sm">No conversations yet</div>
+            )
           ) : (
             <div className="space-y-0.5">
               {sessionHistory.map(s => (

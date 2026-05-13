@@ -34,6 +34,23 @@ const OPTION_LABELS: Record<string, string> = {
   webp: "WEBP",
 }
 
+const REFERENCE_IMAGE_ACCEPT = "image/png,image/jpeg,image/webp"
+const REFERENCE_IMAGE_MAX_BYTES = 10 * 1024 * 1024
+const PROMPT_MAX_LENGTH = 80000
+
+type UploadedImageStatus = "uploading" | "uploaded" | "error"
+
+interface UploadedImage {
+  id: string
+  previewUrl: string
+  key?: string
+  url?: string
+  contentType?: string
+  size?: number
+  status: UploadedImageStatus
+  error?: string
+}
+
 function formatOptionLabel(value: string) {
   return OPTION_LABELS[value] ?? value.replace(/x/g, "×")
 }
@@ -87,7 +104,7 @@ export default function PromptArea({
   const [negativePrompt, setNegativePrompt] = useState("")
   const [showNegativePrompt, setShowNegativePrompt] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [uploadedImages, setUploadedImages] = useState<{ id: string; url: string }[]>([])
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
   const [hoveredImage, setHoveredImage] = useState<{ url: string; rect: DOMRect } | null>(null)
 
   // Resize: use CSS variables — no React state, no re-renders during drag
@@ -96,6 +113,7 @@ export default function PromptArea({
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const uploadedImagesRef = useRef<UploadedImage[]>([])
 
   const modelOptionConfig = useModelStore(
     state => state.modelOptionsConfig[selectedModel] ?? EMPTY_MODEL_OPTIONS_CONFIG
@@ -111,6 +129,11 @@ export default function PromptArea({
   const optionGroups = buildOptionGroups(modelOptionConfig, normalizedModelOptions, onOptionsChange)
   const negativePromptConfig = modelOptionConfig.negative_prompt
   const supportsNegativePrompt = negativePromptConfig?.type === "textarea"
+  const promptCharacterCount = prompt.length
+  const promptCharacterLimitText = PROMPT_MAX_LENGTH.toLocaleString("en-US")
+  const isPromptAtCharacterLimit = promptCharacterCount >= PROMPT_MAX_LENGTH
+  const isUploadingImages = uploadedImages.some(image => image.status === "uploading")
+  const hasFailedUploads = uploadedImages.some(image => image.status === "error")
   const modelSelectOptions: SelectOption[] = models.map(model => ({
     value: model.id,
     label: model.name,
@@ -141,55 +164,117 @@ export default function PromptArea({
     setNegativePrompt("")
   }, [supportsNegativePrompt])
 
-  // Auto-resize textarea: set min-height to grow the panel; overflow-y:auto handles the rest
-  const resizeTextarea = () => {
-    requestAnimationFrame(() => {
-      const el = inputRef.current
-      if (!el) return
-      // Reset to measure true scrollHeight
-      el.style.minHeight = "auto"
-      el.style.minHeight = `${el.scrollHeight}px`
-    })
-  }
+  useEffect(() => {
+    uploadedImagesRef.current = uploadedImages
+  }, [uploadedImages])
 
   useEffect(() => {
-    resizeTextarea()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prompt])
-
-  // Re-run textarea resize when panel width changes (drag resize reflows text)
-  useEffect(() => {
-    const panel = panelRef.current
-    if (!panel) return
-    const ro = new ResizeObserver(() => resizeTextarea())
-    ro.observe(panel)
-    return () => ro.disconnect()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      uploadedImagesRef.current.forEach(image => URL.revokeObjectURL(image.previewUrl))
+    }
   }, [])
+
+  const uploadReferenceImage = async (file: File) => {
+    const id = crypto.randomUUID()
+    const previewUrl = URL.createObjectURL(file)
+    setUploadedImages(prev => [
+      ...prev,
+      {
+        id,
+        previewUrl,
+        contentType: file.type,
+        size: file.size,
+        status: "uploading",
+      },
+    ])
+
+    try {
+      const uploadedImage = await api.uploads.referenceImage(file, selectedModel)
+      setUploadedImages(prev =>
+        prev.map(image =>
+          image.id === id
+            ? {
+                ...image,
+                key: uploadedImage.key,
+                url: uploadedImage.url,
+                contentType: uploadedImage.contentType,
+                size: uploadedImage.size,
+                status: "uploaded",
+              }
+            : image
+        )
+      )
+    } catch (error) {
+      console.error("Reference image upload error:", error)
+      setUploadedImages(prev =>
+        prev.map(image =>
+          image.id === id
+            ? {
+                ...image,
+                status: "error",
+                error: getApiErrorMessage(error, "Failed to upload reference image"),
+              }
+            : image
+        )
+      )
+      toast.error(getApiErrorMessage(error, "Failed to upload reference image"))
+    }
+  }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
+
+    if (!user) {
+      window.dispatchEvent(new CustomEvent("openLoginModal"))
+      e.target.value = ""
+      return
+    }
+
     const maxCount = selectedModelInfo?.referenceImageCount ?? Infinity
     const remaining = maxCount - uploadedImages.length
     if (remaining <= 0) {
-      toast.error(`This model supports at most ${maxCount} reference image${maxCount === 1 ? "" : "s"}.`)
+      toast.error(
+        `This model supports at most ${maxCount} reference image${maxCount === 1 ? "" : "s"}.`
+      )
       e.target.value = ""
       return
     }
     const toAdd = Array.from(files).slice(0, remaining)
     if (toAdd.length < files.length) {
-      toast.warning(`Only ${remaining} more image${remaining === 1 ? "" : "s"} can be added (limit: ${maxCount}).`)
+      toast.warning(
+        `Only ${remaining} more image${remaining === 1 ? "" : "s"} can be added (limit: ${maxCount}).`
+      )
     }
+
     toAdd.forEach(file => {
-      const url = URL.createObjectURL(file)
-      setUploadedImages(prev => [...prev, { id: crypto.randomUUID(), url }])
+      if (!REFERENCE_IMAGE_ACCEPT.split(",").includes(file.type)) {
+        toast.error("Reference image must be PNG, JPEG, or WEBP.")
+        return
+      }
+
+      if (file.size > REFERENCE_IMAGE_MAX_BYTES) {
+        toast.error("Reference image must be smaller than 10MB.")
+        return
+      }
+
+      void uploadReferenceImage(file)
     })
     e.target.value = ""
   }
 
   const removeImage = (id: string) => {
+    const image = uploadedImages.find(img => img.id === id)
+    if (image) URL.revokeObjectURL(image.previewUrl)
+    setHoveredImage(null)
     setUploadedImages(prev => prev.filter(img => img.id !== id))
+  }
+
+  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const nextPrompt = e.target.value
+    setPrompt(
+      nextPrompt.length > PROMPT_MAX_LENGTH ? nextPrompt.slice(0, PROMPT_MAX_LENGTH) : nextPrompt
+    )
   }
 
   const handleGenerate = async () => {
@@ -203,6 +288,23 @@ export default function PromptArea({
       toast.error(
         `This model does not support image input. Remove uploaded images or select a different model.`
       )
+      return
+    }
+
+    if (uploadedImages.length > (selectedModelInfo?.referenceImageCount ?? Infinity)) {
+      toast.error(
+        `This model supports at most ${selectedModelInfo?.referenceImageCount} reference images.`
+      )
+      return
+    }
+
+    if (isUploadingImages) {
+      toast.error("Please wait for reference images to finish uploading.")
+      return
+    }
+
+    if (hasFailedUploads) {
+      toast.error("Remove failed reference images before generating.")
       return
     }
 
@@ -228,6 +330,14 @@ export default function PromptArea({
 
       if (supportsNegativePrompt && negativePrompt) requestBody.negative_prompt = negativePrompt
 
+      const referenceImages = uploadedImages
+        .filter(image => image.status === "uploaded" && image.key)
+        .map(image => image.key as string)
+
+      if (referenceImages.length > 0) {
+        requestBody.reference_images = referenceImages
+      }
+
       const data = await api.generate.create(
         requestBody as Parameters<typeof api.generate.create>[0]
       )
@@ -238,6 +348,9 @@ export default function PromptArea({
 
       setPrompt("")
       setShowNegativePrompt(false)
+      uploadedImages.forEach(image => URL.revokeObjectURL(image.previewUrl))
+      setUploadedImages([])
+      setHoveredImage(null)
       onGenerateSuccess?.()
     } catch (error) {
       console.error("Generate error:", error)
@@ -263,41 +376,72 @@ export default function PromptArea({
     e.stopPropagation()
     const startX = e.clientX
     const startY = e.clientY
-    const el = panelRef.current
-    if (!el) return
-    const startW = shellRef.current?.offsetWidth ?? el.offsetWidth
-    const startH = el.offsetHeight
+    const panel = panelRef.current
+    const shell = shellRef.current
+    if (!panel) return
+    const startW = shell?.offsetWidth ?? panel.offsetWidth
+    const startH = panel.offsetHeight
+    const clampPromptWidth = (width: number) => {
+      const maxWidth = Math.min(window.innerWidth * 0.9, 1500)
+      const minWidth = Math.min(800, maxWidth)
+      return Math.min(maxWidth, Math.max(minWidth, width))
+    }
+    let frameId: number | null = null
+    let pendingWidth: number | null = null
+    let pendingHeight: number | null = null
+
+    const applyResize = () => {
+      if (pendingWidth !== null) {
+        shellRef.current?.style.setProperty("--prompt-w", `${clampPromptWidth(pendingWidth)}px`)
+      }
+      if (pendingHeight !== null) {
+        panelRef.current?.style.setProperty("--prompt-h", `${pendingHeight}px`)
+      }
+      pendingWidth = null
+      pendingHeight = null
+      frameId = null
+    }
+
+    const scheduleResize = () => {
+      if (frameId !== null) return
+      frameId = window.requestAnimationFrame(applyResize)
+    }
 
     const onMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX
       const dy = ev.clientY - startY
-      const shell = shellRef.current
-      const panel = panelRef.current
 
       // Width: panel is centered so expand symmetrically
       if (dir === "left" || dir === "top-left") {
-        const newW = startW - dx * 2
-        shell?.style.setProperty("--prompt-w", `${newW}px`)
+        pendingWidth = startW - dx * 2
       }
       if (dir === "right" || dir === "top-right") {
-        const newW = startW + dx * 2
-        shell?.style.setProperty("--prompt-w", `${newW}px`)
+        pendingWidth = startW + dx * 2
       }
 
       // Height: panel anchored at bottom, drag up to grow
       if (dir === "top" || dir === "top-left" || dir === "top-right") {
-        const newH = startH - dy
-        panel?.style.setProperty("--prompt-h", `${newH}px`)
+        pendingHeight = startH - dy
       }
+
+      scheduleResize()
     }
 
     const onUp = () => {
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId)
+        applyResize()
+      }
       window.removeEventListener("mousemove", onMove)
       window.removeEventListener("mouseup", onUp)
+      shellRef.current?.classList.remove("is-resizing")
+      panelRef.current?.classList.remove("is-resizing")
       document.body.style.userSelect = ""
       document.body.style.cursor = ""
     }
 
+    shell?.classList.add("is-resizing")
+    panel.classList.add("is-resizing")
     document.body.style.userSelect = "none"
     document.body.style.cursor =
       dir === "left" || dir === "right"
@@ -407,7 +551,7 @@ export default function PromptArea({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept={REFERENCE_IMAGE_ACCEPT}
                   multiple
                   className="hidden"
                   onChange={handleImageUpload}
@@ -419,22 +563,24 @@ export default function PromptArea({
                     {uploadedImages.map(img => (
                       <div
                         key={img.id}
-                        className="relative group overflow-hidden flex-shrink-0"
-                        style={{ borderRadius: "0.55rem" }}
+                        className="relative rounded-xl group"
                         onMouseEnter={e => {
                           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                          setHoveredImage({ url: img.url, rect })
+                          setHoveredImage({ url: img.previewUrl, rect })
                         }}
                         onMouseLeave={() => setHoveredImage(null)}
                       >
-                        <img
-                          src={img.url}
-                          alt="Preview"
-                          className="liquid-upload-preview"
-                        />
+                        <img src={img.previewUrl} alt="Preview" className="liquid-upload-preview" />
+                        {img.status !== "uploaded" && (
+                          <div className="absolute inset-0 grid place-items-center bg-base-300/70 text-base-content rounded-xl">
+                            {img.status === "uploading" && (
+                              <Loader2 className="size-4 animate-spin" />
+                            )}
+                          </div>
+                        )}
                         <button
                           onClick={() => removeImage(img.id)}
-                          className="btn btn-circle liquid-upload-remove absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="btn btn-circle liquid-upload-remove absolute -top-1.5 -right-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                           aria-label="Remove reference image"
                         >
                           <X className="size-3" />
@@ -483,10 +629,12 @@ export default function PromptArea({
               <textarea
                 ref={inputRef}
                 value={prompt}
-                onChange={e => setPrompt(e.target.value)}
+                onChange={handlePromptChange}
                 onKeyDown={handleKeyDown}
+                maxLength={PROMPT_MAX_LENGTH}
+                aria-describedby="prompt-character-limit"
                 placeholder={t.aiToolkit?.promptPlaceholder || "Describe your image..."}
-                className="textarea textarea-ghost py-3 px-2 liquid-prompt-textarea w-full text-base focus:outline-none"
+                className="textarea textarea-ghost pt-3 pl-2 liquid-prompt-textarea w-full text-base focus:outline-none"
               />
             </div>
           </div>
@@ -502,6 +650,19 @@ export default function PromptArea({
               />
             </div>
           )}
+
+          <div
+            id="prompt-character-limit"
+            className={`liquid-prompt-hint ${
+              isPromptAtCharacterLimit ? "liquid-prompt-hint--limit" : ""
+            }`}
+            role={isPromptAtCharacterLimit ? "status" : undefined}
+          >
+            <span>{isPromptAtCharacterLimit && `已达到 ${promptCharacterLimitText} 字符上限`}</span>
+            <span className="liquid-prompt-hint__count">
+              {promptCharacterCount.toLocaleString("en-US")} / {promptCharacterLimitText}
+            </span>
+          </div>
 
           <div className="liquid-prompt-controls flex items-center gap-2 overflow-visible">
             <CustomSelect
@@ -528,7 +689,13 @@ export default function PromptArea({
 
             <button
               onClick={handleGenerate}
-              disabled={!prompt.trim() || isGenerating || hasInsufficientCredits}
+              disabled={
+                !prompt.trim() ||
+                isGenerating ||
+                hasInsufficientCredits ||
+                isUploadingImages ||
+                hasFailedUploads
+              }
               className={`btn liquid-generate-button ${
                 hasInsufficientCredits ? "btn-disabled" : "btn-primary"
               }`}
@@ -538,6 +705,13 @@ export default function PromptArea({
                   <Loader2 className="size-5 animate-spin" />
                   {t.aiToolkit?.generating || "Generating..."}
                 </>
+              ) : isUploadingImages ? (
+                <>
+                  <Loader2 className="size-5 animate-spin" />
+                  Uploading...
+                </>
+              ) : hasFailedUploads ? (
+                <>Upload failed</>
               ) : hasInsufficientCredits ? (
                 <>Credit insufficient</>
               ) : (

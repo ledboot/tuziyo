@@ -12,7 +12,7 @@ export async function handleGetSessions(c: Context<{ Bindings: Env }>) {
     .prepare(
       `
       SELECT s.id, s.title, s.is_pinned, s.created_at, s.updated_at,
-        (SELECT m.image_url FROM messages m WHERE m.session_id = s.id AND m.image_url IS NOT NULL ORDER BY m.created_at ASC LIMIT 1) as preview_image
+        (SELECT m.image_url FROM messages m WHERE m.session_id = s.id AND m.status = 1 AND m.image_url IS NOT NULL ORDER BY m.created_at ASC LIMIT 1) as preview_image
       FROM sessions s
       WHERE s.user_id = ?
       ORDER BY s.is_pinned DESC, s.updated_at DESC
@@ -70,7 +70,7 @@ export async function handleGetSession(c: Context<{ Bindings: Env }>) {
       `
       SELECT id, role, provider, model, prompt, image_url, aspect_ratio, resolution, created_at
       FROM messages
-      WHERE session_id = ?
+      WHERE session_id = ? AND status = 1
       ORDER BY created_at ASC
     `
     )

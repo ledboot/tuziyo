@@ -39,6 +39,21 @@ export interface ApiToolkitShowcaseItem {
   height: number
 }
 
+export interface ReferenceImageUpload {
+  key: string
+  uploadUrl: string
+  publicUrl: string
+  expiresIn: number
+  headers: Record<string, string>
+}
+
+export interface UploadedReferenceImage {
+  key: string
+  url: string
+  contentType: string
+  size: number
+}
+
 interface ApiErrorResponse {
   error?: string
   message?: string
@@ -116,6 +131,46 @@ export const api = {
 
   aiToolkit: {
     showcase: () => request<{ items: ApiToolkitShowcaseItem[] }>("/api/ai-toolkit/showcase"),
+  },
+
+  uploads: {
+    createReferenceImageUpload: (params: {
+      fileName: string
+      contentType: string
+      size: number
+      model: string
+    }) =>
+      request<ReferenceImageUpload>("/api/uploads/reference-image/presign", {
+        method: "POST",
+        body: JSON.stringify(params),
+      }),
+    referenceImage: async (file: File, model: string): Promise<UploadedReferenceImage> => {
+      const upload = await api.uploads.createReferenceImageUpload({
+        fileName: file.name,
+        contentType: file.type,
+        size: file.size,
+        model,
+      })
+      console.log("aaaaa",upload.headers)
+
+      const response = await fetch(upload.uploadUrl, {
+        method: "PUT",
+        headers: upload.headers,
+        body: file,
+      })
+
+      if (!response.ok) {
+        const message = await response.text().catch(() => "")
+        throw new Error(message || "Failed to upload reference image")
+      }
+
+      return {
+        key: upload.key,
+        url: upload.publicUrl,
+        contentType: upload.headers["Content-Type"] || file.type,
+        size: file.size,
+      }
+    },
   },
 
   credits: {
@@ -217,6 +272,7 @@ export const api = {
       negative_prompt?: string
       google_search?: string | boolean
       image_search?: string | boolean
+      reference_images?: string[]
       [key: string]: unknown
     }) =>
       request<{ success: boolean; key?: string; imageUrl?: string; error?: string }>(

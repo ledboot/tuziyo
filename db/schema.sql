@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL,
     role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+    status INTEGER NOT NULL DEFAULT 1 CHECK(status IN (1, 2)),
     provider TEXT NOT NULL,
     model TEXT NOT NULL,
     prompt TEXT,
@@ -81,6 +82,7 @@ CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
 CREATE INDEX IF NOT EXISTS idx_accounts_provider ON accounts(provider, provider_account_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_session_id ON messages(session_id);
+CREATE INDEX IF NOT EXISTS idx_messages_status ON messages(status);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer_id ON subscriptions(stripe_customer_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_subscription_id ON subscriptions(stripe_subscription_id);
 
@@ -111,3 +113,20 @@ CREATE TABLE IF NOT EXISTS credit_transactions (
 CREATE INDEX IF NOT EXISTS idx_user_credits_user_id ON user_credits(user_id);
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_user_id ON credit_transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_created_at ON credit_transactions(created_at);
+
+-- 8. 用户内容收藏表
+CREATE TABLE IF NOT EXISTS content_favorites (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    content_type TEXT NOT NULL DEFAULT 'image' CHECK(content_type IN ('image', 'video', 'audio')),
+    message_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE,
+    UNIQUE(user_id, content_type, message_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_content_favorites_user_id ON content_favorites(user_id);
+CREATE INDEX IF NOT EXISTS idx_content_favorites_content_type ON content_favorites(content_type);
+CREATE INDEX IF NOT EXISTS idx_content_favorites_message_id ON content_favorites(message_id);
+CREATE INDEX IF NOT EXISTS idx_content_favorites_created_at ON content_favorites(created_at);

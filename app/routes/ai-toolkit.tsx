@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Toaster } from "sonner"
 import { useNavigate } from "react-router"
 import PromptArea from "~/components/PromptArea"
 import { useUserStore } from "~/stores/userStore"
@@ -288,7 +287,7 @@ export default function AIToolkitPage() {
           />
         </div>
       </div>
-      <Toaster position="top-center" />
+
 
       {deleteSessionId && (
         <div className="modal modal-open">

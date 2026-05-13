@@ -1,8 +1,13 @@
 export interface Env {
   AI: Ai
-  IMAGES: R2Bucket
+  R2: R2Bucket
   DB: D1Database
   JWT_SECRET: string
+  R2_ACCOUNT_ID: string
+  R2_BUCKET_NAME: string
+  R2_ACCESS_KEY_ID: string
+  R2_SECRET_ACCESS_KEY: string
+  R2_PUBLIC_BASE_URL?: string
   GOOGLE_CLIENT_ID: string
   GOOGLE_CLIENT_SECRET: string
   STRIPE_SECRET_KEY: string
@@ -72,4 +77,12 @@ export interface ModelConfig {
   referenceImageFormat?: ReferenceImageFormat
   isNew: boolean
   options?: Record<string, ModelOption>
+}
+
+export interface PreparedReferenceImage {
+  key: string
+  url?: string
+  contentType: string
+  size: number
+  dataUrl?: string
 }

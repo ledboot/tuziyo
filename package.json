@@ -19,6 +19,7 @@
     "@react-router/cloudflare": "^7.13.0",
     "@react-router/node": "^7.13.0",
     "@react-router/serve": "^7.13.0",
+    "aws4fetch": "^1.0.20",
     "clsx": "^2.1.1",
     "daisyui": "^5.5.19",
     "heic2any": "^0.0.4",

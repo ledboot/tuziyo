@@ -1,4 +1,5 @@
 import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router"
+import { Toaster } from "sonner"
 
 import type { Route } from "./+types/root"
 import Header from "./components/Header"
@@ -107,6 +108,7 @@ export default function App() {
         </main>
         {!isSpecialPage && <Footer />}
         <LoginModal />
+        <Toaster position="bottom-right" />
       </div>
     </I18nProvider>
   )
