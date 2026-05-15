@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { useParams, useNavigate } from "react-router"
+import { useParams, useNavigate, useLocation } from "react-router"
 import { Search } from "lucide-react"
 import { toast } from "sonner"
 import { api, R2_IMAGE_BASE } from "~/lib/api"
@@ -40,14 +40,14 @@ interface Session {
 export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const generationState = location.state as any
   const { user, token } = useUserStore()
 
   const [session, setSession] = useState<Session | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState<Message | null>(null)
-  const [selectedModel, setSelectedModel] = useState<ModelId>("google/nano-banana-2")
-  const [modelOptions, setModelOptions] = useState<Record<string, string>>({})
 
   // Sidebar state — required by AIToolkitSidebar
   const [showSidebar, setShowSidebar] = useState(false)
@@ -56,29 +56,52 @@ export default function SessionDetailPage() {
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
 
-  const { models, fetchModels } = useModelStore()
+  const {
+    models,
+    fetchModels,
+    userSelectedModel,
+    userModelOptions,
+    setUserSelectedModel,
+    setUserModelOptions,
+  } = useModelStore()
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
+
+  const selectedModel = userSelectedModel || (models.length > 0 ? models[0].id : "google/nano-banana-2")
+  const modelOptions = userModelOptions || {}
+
+  const handleSetModelOptions = (
+    options: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)
+  ) => {
+    if (typeof options === "function") {
+      setUserModelOptions(options(modelOptions))
+    } else {
+      setUserModelOptions(options)
+    }
+  }
+
+  const fetchSessionData = async () => {
+    if (!id || !user || !token) return
+    try {
+      const [sessionData, listData] = await Promise.all([
+        api.sessions.get(id),
+        api.sessions.list(),
+      ])
+      setSession(sessionData.session)
+      setMessages(sessionData.messages as Message[])
+      setAllSessions(listData.sessions as unknown as Session[])
+    } catch (error) {
+      console.error("Failed to load session:", error)
+      toast.error("Failed to load session")
+    }
+  }
 
   useEffect(() => {
     if (!id || !user || !token) {
       setLoading(false)
       return
     }
-
-    Promise.all([
-      api.sessions.get(id),
-      api.sessions.list(),
-    ])
-      .then(([sessionData, listData]) => {
-        setSession(sessionData.session)
-        setMessages(sessionData.messages as Message[])
-        setAllSessions(listData.sessions as unknown as Session[])
-      })
-      .catch(error => {
-        console.error("Failed to load session:", error)
-        toast.error("Failed to load session")
-      })
-      .finally(() => setLoading(false))
-
+    fetchSessionData().finally(() => setLoading(false))
     fetchModels()
   }, [id, user, token])
 
@@ -180,6 +203,21 @@ export default function SessionDetailPage() {
                   </div>
                 )
               })}
+
+              {/* Skeleton for pending generation */}
+              {isGenerating && (
+                <div className="relative aspect-square rounded-xl bg-black/40 border border-white/20 overflow-hidden">
+                  <div className="skeleton size-full opacity-20" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 text-center">
+                    <div className="loading loading-spinner loading-md text-white/40" />
+                    {pendingPrompt && (
+                      <p className="text-xs text-white/40 line-clamp-2 px-2 italic">
+                        "{pendingPrompt}"
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -195,10 +233,26 @@ export default function SessionDetailPage() {
             <PromptArea
               models={models}
               selectedModel={selectedModel}
-              onModelChange={setSelectedModel}
+              onModelChange={setUserSelectedModel}
               modelOptions={modelOptions}
-              onOptionsChange={setModelOptions}
+              onOptionsChange={handleSetModelOptions}
               currentSessionId={id}
+              initialPrompt={generationState?.prompt}
+              initialImages={generationState?.images}
+              autoGenerate={generationState?.autoGenerate}
+              onGenerateStart={(sid, prompt) => {
+                if (sid === id) {
+                  setIsGenerating(true)
+                  setPendingPrompt(prompt)
+                }
+              } }
+              onGenerateSuccess={async (sid, data) => {
+                if (sid === id) {
+                  setIsGenerating(false)
+                  setPendingPrompt(null)
+                  await fetchSessionData()
+                }
+              } }
             />
           </div>
         </div>

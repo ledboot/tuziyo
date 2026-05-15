@@ -507,13 +507,14 @@ export async function handleGenerate(c: AuthenticatedContext) {
     const imageSearchVal = input.image_search === "true" || input.image_search === true ? 1 : 0
     await c.env.DB.prepare(
       `
-        INSERT INTO messages (id, session_id, role, provider, model, prompt, aspect_ratio, resolution, google_search, image_search, image_size, quality, style, negative_prompt, output_format, num_images, image_url, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO messages (id, session_id, user_id, role, provider, model, prompt, aspect_ratio, resolution, google_search, image_search, image_size, quality, style, negative_prompt, output_format, num_images, image_url, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `
     )
       .bind(
         messageId,
         sessionId,
+        user.userId,
         "user",
         input.provider || null,
         input.model,

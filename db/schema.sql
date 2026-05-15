@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
     role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
     status INTEGER NOT NULL DEFAULT 1 CHECK(status IN (1, 2)),
     provider TEXT NOT NULL,

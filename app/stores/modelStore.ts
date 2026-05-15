@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
 import { z } from "zod"
 import { api } from "~/lib/api"
 
@@ -40,6 +41,12 @@ interface ModelState {
     modelId: string,
     options: Record<string, string>
   ) => Record<string, string>
+  userSelectedModel: string | null
+  userModelOptions: Record<string, string> | null
+  userPrompt: string | null
+  setUserSelectedModel: (modelId: string) => void
+  setUserModelOptions: (options: Record<string, string>) => void
+  setUserPrompt: (prompt: string) => void
 }
 
 function getConfigurableDefault(option: ModelOption): string | null {
@@ -47,7 +54,7 @@ function getConfigurableDefault(option: ModelOption): string | null {
   return option.defaultValue ?? option.values[0] ?? (option.type === "checkbox" ? "false" : null)
 }
 
-export const useModelStore = create<ModelState>((set, get) => ({
+export const useModelStore = create<ModelState>()(persist((set, get) => ({
   models: [],
   modelOptionsConfig: {},
   isLoading: false,
@@ -120,4 +127,18 @@ export const useModelStore = create<ModelState>((set, get) => ({
       })
     )
   },
+
+  userSelectedModel: null,
+  userModelOptions: null,
+  userPrompt: null,
+  setUserSelectedModel: modelId => set({ userSelectedModel: modelId }),
+  setUserModelOptions: options => set({ userModelOptions: options }),
+  setUserPrompt: prompt => set({ userPrompt: prompt }),
+}), {
+  name: "tuziyo-model-storage",
+  partialize: (state) => ({
+    userSelectedModel: state.userSelectedModel,
+    userModelOptions: state.userModelOptions,
+    userPrompt: state.userPrompt,
+  }),
 }))

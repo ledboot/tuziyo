@@ -169,11 +169,11 @@ export async function handleCreateMessage(c: Context<{ Bindings: Env }>) {
   await c.env.DB
     .prepare(
       `
-      INSERT INTO messages (id, session_id, role, provider, model, prompt, image_url, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO messages (id, session_id, user_id, role, provider, model, prompt, image_url, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
     )
-    .bind(messageId, sessionId, role, role === "user" ? "user" : "assistant", model, prompt, image_url || null, now)
+    .bind(messageId, sessionId, user.userId, role, role === "user" ? "user" : "assistant", model, prompt, image_url || null, now)
     .run();
 
   await c.env.DB

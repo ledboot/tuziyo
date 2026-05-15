@@ -9,81 +9,17 @@ import { AIToolkitSidebar } from "~/components/AIToolkitSidebar"
 
 type ModelId = string
 
-const BASE_FALLBACK_SHOWCASE_ITEMS: ApiToolkitShowcaseItem[] = [
-  {
-    id: "fallback-lake",
-    src: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=720&q=82",
-    alt: "Still lake beneath mountain ridges",
-    prompt: "Quiet alpine lake at blue hour",
-    model: "Seedream 5",
-    aspectRatio: "4 / 5",
-    width: 720,
-    height: 900,
-  },
-  {
-    id: "fallback-fashion",
-    src: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=720&q=82",
-    alt: "Editorial fashion portrait in a studio",
-    prompt: "High fashion studio portrait",
-    model: "GPT Image 1.5",
-    aspectRatio: "2 / 3",
-    width: 720,
-    height: 1080,
-  },
-  {
-    id: "fallback-forest",
-    src: "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=720&q=82",
-    alt: "Mist in a green forest",
-    prompt: "Misty forest path with soft moss",
-    model: "Seedream 5",
-    aspectRatio: "3 / 4",
-    width: 720,
-    height: 960,
-  },
-  {
-    id: "fallback-architecture",
-    src: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=720&q=82",
-    alt: "Modern office tower facade",
-    prompt: "Modern office facade with strong geometry",
-    model: "Nano Banana 2",
-    aspectRatio: "4 / 5",
-    width: 720,
-    height: 900,
-  },
-  {
-    id: "fallback-product",
-    src: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=720&q=82",
-    alt: "Minimal watch product photo",
-    prompt: "Minimal product photo on warm stone",
-    model: "Nano Banana 2",
-    aspectRatio: "1 / 1",
-    width: 720,
-    height: 720,
-  },
-  {
-    id: "fallback-coast",
-    src: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=720&q=82",
-    alt: "Coastal waves and cliffs",
-    prompt: "Coastal cliff with white surf",
-    model: "WAN 2.6",
-    aspectRatio: "4 / 5",
-    width: 720,
-    height: 900,
-  },
-]
-
-const FALLBACK_ASPECT_RATIOS = ["4 / 5", "3 / 4", "2 / 3", "3 / 5", "1 / 1", "4 / 5"]
-
-const MASONRY_TILE_HEIGHTS = ["14rem", "28rem", "20rem", "40rem", "16rem", "34rem", "22rem", "44rem", "18rem", "30rem", "24rem", "38rem"]
-
-const FALLBACK_SHOWCASE_ITEMS: ApiToolkitShowcaseItem[] = Array.from({ length: 15 }).flatMap(
-  (_, repeatIndex) =>
-    BASE_FALLBACK_SHOWCASE_ITEMS.map((item, itemIndex) => ({
-      ...item,
-      id: repeatIndex === 0 ? item.id : `${item.id}-${repeatIndex + 1}`,
-      aspectRatio:
-        FALLBACK_ASPECT_RATIOS[(itemIndex + repeatIndex) % FALLBACK_ASPECT_RATIOS.length],
-    }))
+const SKELETON_SHOWCASE_ITEMS: ApiToolkitShowcaseItem[] = Array.from({ length: 15 }).map(
+  (_, i) => ({
+    id: `skeleton-${i}`,
+    src: "",
+    alt: "",
+    prompt: "",
+    model: "",
+    aspectRatio: "",
+    width: 0,
+    height: 0,
+  })
 )
 
 function getMasonryColumnCount(width: number) {
@@ -91,6 +27,21 @@ function getMasonryColumnCount(width: number) {
   if (width >= 768) return 4
   return 2
 }
+
+const MASONRY_TILE_HEIGHTS = [
+  "14rem",
+  "28rem",
+  "20rem",
+  "40rem",
+  "16rem",
+  "34rem",
+  "22rem",
+  "44rem",
+  "18rem",
+  "30rem",
+  "24rem",
+  "38rem",
+]
 
 function getMasonryTileHeight(columnIndex: number, itemIndex: number) {
   return MASONRY_TILE_HEIGHTS[(columnIndex * 3 + itemIndex * 2) % MASONRY_TILE_HEIGHTS.length]
@@ -105,10 +56,7 @@ function distributeMasonryItems(items: ApiToolkitShowcaseItem[], columnCount: nu
 }
 
 export default function AIToolkitPage() {
-  const [selectedModel, setSelectedModel] = useState<ModelId>("google/nano-banana-2")
-  const [modelOptions, setModelOptions] = useState<Record<string, string>>({})
-  const [showcaseItems, setShowcaseItems] =
-    useState<ApiToolkitShowcaseItem[]>(FALLBACK_SHOWCASE_ITEMS)
+  const [showcaseItems, setShowcaseItems] = useState<ApiToolkitShowcaseItem[]>([])
   const [isShowcaseLoading, setIsShowcaseLoading] = useState(true)
   const [isPromptVisible, setIsPromptVisible] = useState(false)
   const [masonryColumnCount, setMasonryColumnCount] = useState(5)
@@ -133,13 +81,33 @@ export default function AIToolkitPage() {
 
   const { user, token } = useUserStore()
   const { regenerateData, clearRegenerateData } = useGenerateStore()
-  const { models, fetchModels } = useModelStore()
+  const {
+    models,
+    fetchModels,
+    userSelectedModel,
+    userModelOptions,
+    setUserSelectedModel,
+    setUserModelOptions,
+  } = useModelStore()
+
+  const selectedModel = userSelectedModel || (models.length > 0 ? models[0].id : "google/nano-banana-2")
+  const modelOptions = userModelOptions || {}
+
+  const handleSetModelOptions = (
+    options: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)
+  ) => {
+    if (typeof options === "function") {
+      setUserModelOptions(options(modelOptions))
+    } else {
+      setUserModelOptions(options)
+    }
+  }
 
   useEffect(() => {
     if (!regenerateData) return
 
     const nextOptions: Record<string, string> = {}
-    setSelectedModel(regenerateData.model as ModelId)
+    setUserSelectedModel(regenerateData.model as ModelId)
 
     if (regenerateData.size) nextOptions.size = regenerateData.size
     if (regenerateData.quality) nextOptions.quality = regenerateData.quality
@@ -149,7 +117,7 @@ export default function AIToolkitPage() {
     if (regenerateData.output_format) nextOptions.output_format = regenerateData.output_format
     if (regenerateData.num_images) nextOptions.num_images = String(regenerateData.num_images)
 
-    setModelOptions(prev => ({ ...prev, ...nextOptions }))
+    handleSetModelOptions(prev => ({ ...prev, ...nextOptions }))
     clearRegenerateData()
   }, [clearRegenerateData, regenerateData])
 
@@ -233,7 +201,7 @@ export default function AIToolkitPage() {
   }
 
   const masonryColumns = useMemo(
-    () => distributeMasonryItems(showcaseItems, masonryColumnCount),
+    () => distributeMasonryItems(showcaseItems.length > 0 ? showcaseItems : SKELETON_SHOWCASE_ITEMS, masonryColumnCount),
     [masonryColumnCount, showcaseItems]
   )
 
@@ -279,11 +247,17 @@ export default function AIToolkitPage() {
           <PromptArea
             models={models}
             selectedModel={selectedModel}
-            onModelChange={setSelectedModel}
+            onModelChange={setUserSelectedModel}
             modelOptions={modelOptions}
-            onOptionsChange={setModelOptions}
+            onOptionsChange={handleSetModelOptions}
             className="ai-toolkit-prompt-area"
-            onGenerateSuccess={() => setIsNewSession(false)}
+            onGenerateStart={() => {
+              // Now we just wait on this page while generating, UI handles spinner
+            }}
+            onGenerateSuccess={(sessionId) => {
+              setIsNewSession(false)
+              navigate(`/session/${sessionId}`)
+            }}
           />
         </div>
       </div>
@@ -348,19 +322,21 @@ function AIToolkitMasonryBackdrop({
               >
                 {/* Skeleton placeholder — always rendered, fades out once image loads */}
                 <div className="ai-toolkit-masonry__skeleton" aria-hidden="true" />
-                <img
-                  src={item.src}
-                  alt=""
-                  width={item.width}
-                  height={item.height}
-                  loading="lazy"
-                  onLoad={e => {
-                    const tile = (e.currentTarget as HTMLImageElement).closest(
-                      ".ai-toolkit-masonry__tile"
-                    )
-                    tile?.classList.add("is-loaded")
-                  }}
-                />
+                {item.src && (
+                  <img
+                    src={item.src}
+                    alt=""
+                    width={item.width}
+                    height={item.height}
+                    loading="lazy"
+                    onLoad={e => {
+                      const tile = (e.currentTarget as HTMLImageElement).closest(
+                        ".ai-toolkit-masonry__tile"
+                      )
+                      tile?.classList.add("is-loaded")
+                    }}
+                  />
+                )}
               </figure>
             ))}
           </div>
