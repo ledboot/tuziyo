@@ -76,6 +76,8 @@ export default function AIToolkitPage() {
   const editInputRef = useRef<HTMLInputElement>(null)
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null)
+  const [regeneratePrompt, setRegeneratePrompt] = useState("")
+  const [regenerateNegativePrompt, setRegenerateNegativePrompt] = useState<string | undefined>()
   const sessionsFetchedRef = useRef(false)
   const navigate = useNavigate()
 
@@ -88,6 +90,7 @@ export default function AIToolkitPage() {
     userModelOptions,
     setUserSelectedModel,
     setUserModelOptions,
+    setUserPrompt,
   } = useModelStore()
 
   const selectedModel = userSelectedModel || (models.length > 0 ? models[0].id : "google/nano-banana-2")
@@ -108,6 +111,9 @@ export default function AIToolkitPage() {
 
     const nextOptions: Record<string, string> = {}
     setUserSelectedModel(regenerateData.model as ModelId)
+    setUserPrompt(regenerateData.prompt)
+    setRegeneratePrompt(regenerateData.prompt)
+    setRegenerateNegativePrompt(regenerateData.negative_prompt ?? "")
 
     if (regenerateData.size) nextOptions.size = regenerateData.size
     if (regenerateData.quality) nextOptions.quality = regenerateData.quality
@@ -116,10 +122,13 @@ export default function AIToolkitPage() {
     if (regenerateData.resolution) nextOptions.resolution = regenerateData.resolution
     if (regenerateData.output_format) nextOptions.output_format = regenerateData.output_format
     if (regenerateData.num_images) nextOptions.num_images = String(regenerateData.num_images)
+    if (regenerateData.google_search) nextOptions.google_search = regenerateData.google_search
+    if (regenerateData.image_search) nextOptions.image_search = regenerateData.image_search
+    if (regenerateData.background) nextOptions.background = regenerateData.background
 
     handleSetModelOptions(prev => ({ ...prev, ...nextOptions }))
     clearRegenerateData()
-  }, [clearRegenerateData, regenerateData])
+  }, [clearRegenerateData, regenerateData, setUserPrompt, setUserSelectedModel])
 
   useEffect(() => {
     fetchModels()
@@ -251,6 +260,8 @@ export default function AIToolkitPage() {
             modelOptions={modelOptions}
             onOptionsChange={handleSetModelOptions}
             className="ai-toolkit-prompt-area"
+            initialPrompt={regeneratePrompt}
+            initialNegativePrompt={regenerateNegativePrompt}
             onGenerateStart={() => {
               // Now we just wait on this page while generating, UI handles spinner
             }}

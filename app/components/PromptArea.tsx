@@ -19,7 +19,10 @@ interface PromptAreaProps {
   onGenerateStart?: (sessionId: string, prompt: string, data?: any) => void
   onGenerateSuccess?: (sessionId: string, data: any) => void
   initialPrompt?: string
+  initialNegativePrompt?: string
+  initialPromptVersion?: number
   initialImages?: UploadedImage[]
+  initialImagesVersion?: number
   autoGenerate?: boolean
   className?: string
 }
@@ -44,7 +47,7 @@ const PROMPT_MAX_LENGTH = 80000
 
 type UploadedImageStatus = "uploading" | "uploaded" | "error"
 
-interface UploadedImage {
+export interface UploadedImage {
   id: string
   previewUrl: string
   key?: string
@@ -101,7 +104,10 @@ export default function PromptArea({
   onGenerateStart,
   onGenerateSuccess,
   initialPrompt = "",
+  initialNegativePrompt,
+  initialPromptVersion,
   initialImages = [],
+  initialImagesVersion,
   autoGenerate = false,
   className = "",
 }: PromptAreaProps) {
@@ -135,7 +141,12 @@ export default function PromptArea({
 
   const selectedModelInfo = models.find(m => m.id === selectedModel)
   const requiredCredits = MODEL_CREDITS[selectedModel] || 0
-  const hasInsufficientCredits = Boolean(user && (user.credits || 0) < requiredCredits)
+  const availableCredits = user?.credits ?? 0
+  const hasInsufficientCredits = Boolean(user && availableCredits < requiredCredits)
+  const creditEstimateText =
+    requiredCredits > 0
+      ? `Cost ≈ ${requiredCredits.toLocaleString("en-US")} credits`
+      : "Cost ≈ 0 credits"
   const normalizedModelOptions = normalizeModelOptions(selectedModel, modelOptions)
   const optionGroups = buildOptionGroups(modelOptionConfig, normalizedModelOptions, onOptionsChange)
   const negativePromptConfig = modelOptionConfig.negative_prompt
@@ -161,6 +172,38 @@ export default function PromptArea({
     if (models.length === 0 || selectedModelInfo) return
     onModelChange(models[0].id)
   }, [models, onModelChange, selectedModelInfo])
+
+  useEffect(() => {
+    if (!initialPrompt && !initialPromptVersion) return
+    setPrompt(initialPrompt)
+    setUserPrompt(initialPrompt)
+  }, [initialPrompt, initialPromptVersion, setUserPrompt])
+
+  useEffect(() => {
+    if (initialNegativePrompt === undefined) return
+    setNegativePrompt(initialNegativePrompt)
+    setShowNegativePrompt(Boolean(initialNegativePrompt))
+  }, [initialNegativePrompt, initialPromptVersion])
+
+  useEffect(() => {
+    if (!initialImagesVersion) return
+    setUploadedImages(prev => {
+      const nextImages = [...prev]
+      for (const image of initialImages) {
+        const existingIndex = nextImages.findIndex(existing => {
+          if (image.key && existing.key) return existing.key === image.key
+          return existing.id === image.id
+        })
+        if (existingIndex >= 0) {
+          nextImages[existingIndex] = image
+        } else {
+          nextImages.push(image)
+        }
+      }
+      return nextImages
+    })
+    setHoveredImage(null)
+  }, [initialImages, initialImagesVersion])
 
   useEffect(() => {
     const normalizedOptions = normalizeModelOptions(selectedModel, modelOptions)
@@ -710,6 +753,15 @@ export default function PromptArea({
             )}
 
             <div className="flex-1" />
+
+            <div
+              className={`liquid-credit-estimate ${
+                hasInsufficientCredits ? "liquid-credit-estimate--warning" : ""
+              }`}
+              aria-live="polite"
+            >
+              {creditEstimateText}
+            </div>
 
             <button
               onClick={handleGenerate}

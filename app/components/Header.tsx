@@ -23,7 +23,9 @@ export default function Header() {
   const [showLangMenu, setShowLangMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const location = useLocation()
-  const { user, logout } = useUserStore()
+  const { user, token, logout, isLoading: isUserLoading, isFetching: isUserFetching } = useUserStore()
+  const isAuthPending = isUserLoading || isUserFetching
+  const hasStoredAuth = Boolean(user || token)
 
   const navItems: NavItem[] = [
     { title: t.nav.aiToolkit, to: "/ai-toolkit" },
@@ -224,7 +226,21 @@ export default function Header() {
             </div>
           </div>
 
-          {user ? (
+          {isAuthPending ? (
+            <div
+              className="flex h-10 items-center justify-end gap-[0.55rem]"
+              aria-hidden="true"
+            >
+              {hasStoredAuth ? (
+                <div className="skeleton size-8 rounded-full bg-white/15" />
+              ) : (
+                <>
+                  <div className="skeleton h-8 w-20 rounded-full bg-white/10" />
+                  <div className="skeleton h-8 w-24 rounded-xl bg-white/15" />
+                </>
+              )}
+            </div>
+          ) : user ? (
             <div
               className={`dropdown dropdown-end dropdown-hover ${showUserMenu ? "dropdown-open" : ""}`}
             >
@@ -374,7 +390,7 @@ export default function Header() {
                 )
               })}
 
-              {!user && (
+              {!isAuthPending && !user && (
                 <li className="mt-1">
                   <button
                     className="btn btn-ghost btn-sm rounded-full text-nav-submenu font-medium"

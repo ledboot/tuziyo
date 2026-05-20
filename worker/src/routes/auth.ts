@@ -12,6 +12,11 @@ interface GoogleCallbackBody {
   code_verifier: string;
 }
 
+interface GoogleTokenErrorResponse {
+  error?: string;
+  error_description?: string;
+}
+
 export async function handleGoogleCallback(c: Context<{ Bindings: Env }>) {
   const { code, code_verifier } = await c.req.json<GoogleCallbackBody>();
 
@@ -45,7 +50,7 @@ export async function handleGoogleCallback(c: Context<{ Bindings: Env }>) {
     });
 
     if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json();
+      const errorData = (await tokenResponse.json()) as GoogleTokenErrorResponse;
       throw new Error(
         `Token exchange failed: ${errorData.error_description || errorData.error}`,
       );

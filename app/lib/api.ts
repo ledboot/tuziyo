@@ -1,5 +1,4 @@
 const API_BASE = import.meta.env.DEV ? "http://localhost:8787" : "https://api.tuziyo.com"
-export const R2_IMAGE_BASE = "https://images.tuziyo.com"
 
 export const MODEL_CREDITS: Record<string, number> = {
   "google/nano-banana-2": 2,
@@ -214,6 +213,7 @@ export const api = {
           id: string
           title: string
           is_pinned: number
+          preview_image: string | null
           created_at: number
           updated_at: number
         }
@@ -227,6 +227,7 @@ export const api = {
           id: string
           title: string
           is_pinned: number
+          preview_image: string | null
           created_at: number
           updated_at: number
         }
@@ -237,6 +238,7 @@ export const api = {
           model: string
           prompt: string
           image_url: string | null
+          url: string | null
           aspect_ratio: string | null
           resolution: string | null
           image_size: string | null
@@ -245,6 +247,8 @@ export const api = {
           negative_prompt: string | null
           output_format: string | null
           num_images: number | null
+          google_search: number | null
+          image_search: number | null
           created_at: number
         }>
       }>(`/api/sessions/${id}`),
@@ -275,7 +279,7 @@ export const api = {
       reference_images?: string[]
       [key: string]: unknown
     }) =>
-      request<{ success: boolean; key?: string; imageUrl?: string; error?: string }>(
+      request<{ success: boolean; key?: string; url?: string; imageUrl?: string; error?: string }>(
         "/api/generate",
         {
           method: "POST",
@@ -294,6 +298,9 @@ export const api = {
           product_description: string
           unit_amount: number
           currency: string
+          recurring?: {
+            interval: string
+          } | null
           interval: string | null
           features: string[]
           credits: number

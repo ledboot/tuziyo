@@ -10,7 +10,7 @@ interface Product {
   product_description: string
   unit_amount: number
   currency: string
-  recurring: {
+  recurring?: {
     interval: string
   } | null
   interval: string | null

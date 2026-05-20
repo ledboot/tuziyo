@@ -66,6 +66,7 @@ function toFavoriteDetailImage(item: FavoriteItem): FavoriteDetailImage {
     model: item.type === "video" ? "video" : "openai/gpt-image-1.5",
     prompt: item.title,
     image_url: item.url,
+    url: item.url,
     aspect_ratio: null,
     resolution: null,
     image_size: null,

@@ -1,3 +1,5 @@
+import type { Context } from "hono"
+
 export interface Env {
   AI: Ai
   R2: R2Bucket
@@ -23,6 +25,15 @@ export interface UserPayload {
   userType: string
   credits: number
 }
+
+export interface AppVariables {
+  user: UserPayload | null
+}
+
+export type AuthenticatedContext = Context<{
+  Bindings: Env
+  Variables: AppVariables
+}>
 
 export type UserType = "free" | "starter" | "professional" | "enterprise"
 

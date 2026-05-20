@@ -1,7 +1,6 @@
-import type { Context } from "hono";
-import type { Env } from "../types";
+import type { AuthenticatedContext } from "../types";
 
-export async function handleGetTransactions(c: Context<{ Bindings: Env }>) {
+export async function handleGetTransactions(c: AuthenticatedContext) {
   const user = c.get("user");
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);

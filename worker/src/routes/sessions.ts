@@ -1,8 +1,42 @@
-import type { Context } from "hono";
 import { v4 as uuidv4 } from "uuid";
-import type { Env } from "../types";
+import type { AuthenticatedContext, Env } from "../types";
+import { getR2PublicUrl } from "../utils";
 
-export async function handleGetSessions(c: Context<{ Bindings: Env }>) {
+interface SessionListRecord {
+  id: string;
+  title: string;
+  is_pinned: number;
+  preview_image: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+interface SessionMessageRecord {
+  id: string;
+  role: string;
+  provider: string | null;
+  model: string;
+  prompt: string | null;
+  image_url: string | null;
+  aspect_ratio: string | null;
+  resolution: string | null;
+  image_size: string | null;
+  quality: string | null;
+  style: string | null;
+  negative_prompt: string | null;
+  output_format: string | null;
+  num_images: number | null;
+  google_search: number | null;
+  image_search: number | null;
+  created_at: number;
+}
+
+function toPublicImageUrl(env: Env, imageUrl: string | null) {
+  if (!imageUrl) return null;
+  return getR2PublicUrl(env, imageUrl) ?? null;
+}
+
+export async function handleGetSessions(c: AuthenticatedContext) {
   const user = c.get("user");
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);
@@ -22,10 +56,15 @@ export async function handleGetSessions(c: Context<{ Bindings: Env }>) {
     .bind(user.userId)
     .all();
 
-  return c.json({ sessions: sessions.results });
+  const results = (sessions.results as unknown as SessionListRecord[]).map(session => ({
+    ...session,
+    preview_image: toPublicImageUrl(c.env, session.preview_image),
+  }));
+
+  return c.json({ sessions: results });
 }
 
-export async function handleCreateSession(c: Context<{ Bindings: Env }>) {
+export async function handleCreateSession(c: AuthenticatedContext) {
   const user = c.get("user");
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);
@@ -48,7 +87,7 @@ export async function handleCreateSession(c: Context<{ Bindings: Env }>) {
   return c.json({ session: { id: sessionId, title: title || "New Chat", is_pinned: 0, created_at: now, updated_at: now } });
 }
 
-export async function handleGetSession(c: Context<{ Bindings: Env }>) {
+export async function handleGetSession(c: AuthenticatedContext) {
   const user = c.get("user");
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);
@@ -68,7 +107,9 @@ export async function handleGetSession(c: Context<{ Bindings: Env }>) {
   const messages = await c.env.DB
     .prepare(
       `
-      SELECT id, role, provider, model, prompt, image_url, aspect_ratio, resolution, created_at
+      SELECT id, role, provider, model, prompt, image_url, aspect_ratio, resolution,
+        image_size, quality, style, negative_prompt, output_format, num_images,
+        google_search, image_search, created_at
       FROM messages
       WHERE session_id = ? AND status = 1
       ORDER BY created_at ASC
@@ -77,10 +118,15 @@ export async function handleGetSession(c: Context<{ Bindings: Env }>) {
     .bind(sessionId)
     .all();
 
-  return c.json({ session, messages: messages.results });
+  const results = (messages.results as unknown as SessionMessageRecord[]).map(message => ({
+    ...message,
+    url: toPublicImageUrl(c.env, message.image_url),
+  }));
+
+  return c.json({ session, messages: results });
 }
 
-export async function handleDeleteSession(c: Context<{ Bindings: Env }>) {
+export async function handleDeleteSession(c: AuthenticatedContext) {
   const user = c.get("user");
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);
@@ -96,13 +142,16 @@ export async function handleDeleteSession(c: Context<{ Bindings: Env }>) {
   return c.json({ success: true });
 }
 
-export async function handleUpdateSession(c: Context<{ Bindings: Env }>) {
+export async function handleUpdateSession(c: AuthenticatedContext) {
   const user = c.get("user");
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
   const sessionId = c.req.param("id");
+  if (!sessionId) {
+    return c.json({ error: "Session ID is required" }, 400);
+  }
   const { title, is_pinned } = await c.req.json<{ title?: string; is_pinned?: number }>();
 
   const session = await c.env.DB
@@ -140,7 +189,7 @@ export async function handleUpdateSession(c: Context<{ Bindings: Env }>) {
   return c.json({ success: true });
 }
 
-export async function handleCreateMessage(c: Context<{ Bindings: Env }>) {
+export async function handleCreateMessage(c: AuthenticatedContext) {
   const user = c.get("user");
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);
@@ -181,5 +230,15 @@ export async function handleCreateMessage(c: Context<{ Bindings: Env }>) {
     .bind(now, sessionId)
     .run();
 
-  return c.json({ message: { id: messageId, role, prompt, model, image_url, created_at: now } });
+  return c.json({
+    message: {
+      id: messageId,
+      role,
+      prompt,
+      model,
+      image_url,
+      url: toPublicImageUrl(c.env, image_url || null),
+      created_at: now,
+    },
+  });
 }

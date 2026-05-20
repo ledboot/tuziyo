@@ -22,6 +22,13 @@ interface UserState {
   fetchUser: () => void;
 }
 
+interface AuthResponse {
+  error?: string;
+  message?: string;
+  token?: string;
+  user?: User;
+}
+
 const API_BASE = import.meta.env.DEV ? "http://localhost:8787" : "https://api.tuziyo.com";
 
 export const useUserStore = create<UserState>()(
@@ -43,7 +50,7 @@ export const useUserStore = create<UserState>()(
             body: JSON.stringify({ code, code_verifier: codeVerifier }),
           });
 
-          const data = await response.json();
+          const data = (await response.json()) as AuthResponse;
 
           if (data.error) {
             return { success: false, error: data.message || data.error };
@@ -91,15 +98,16 @@ export const useUserStore = create<UserState>()(
               })
                 .then((res) => res.json())
                 .then((data) => {
-                  if (data.user) {
-                    set({ user: data.user, isFetching: false });
+                  const authData = data as AuthResponse;
+                  if (authData.user) {
+                    set({ user: authData.user, isLoading: false, isFetching: false });
                   } else {
-                    set({ user: null, token: null, isFetching: false });
+                    set({ user: null, token: null, isLoading: false, isFetching: false });
                     localStorage.removeItem("tuziyo-user-storage");
                   }
                 })
                 .catch(() => {
-                  set({ user: null, token: null, isFetching: false });
+                  set({ user: null, token: null, isLoading: false, isFetching: false });
                   localStorage.removeItem("tuziyo-user-storage");
                 });
               return;

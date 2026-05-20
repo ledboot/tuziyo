@@ -1,9 +1,9 @@
 import { Stripe } from "stripe"
 import type { Context } from "hono"
-import type { Env } from "../types"
+import type { AuthenticatedContext, Env } from "../types"
 import { addCredits } from "./credits"
 
-function getStripe(c: Context<{ Bindings: Env }>): Stripe {
+function getStripe(c: { env: Env }): Stripe {
   return new Stripe(c.env.STRIPE_SECRET_KEY)
 }
 
@@ -11,6 +11,19 @@ const PLAN_CREDITS: Record<string, number> = {
   "AI Starter": 500,
   "AI Professional": 2000,
   "Enterprise": 5000,
+}
+
+function getSubscriptionPeriod(subscription: Stripe.Subscription) {
+  const legacySubscription = subscription as Stripe.Subscription & {
+    current_period_start?: number
+    current_period_end?: number
+  }
+  const firstItem = subscription.items.data[0]
+
+  return {
+    currentPeriodStart: legacySubscription.current_period_start ?? firstItem?.current_period_start ?? 0,
+    currentPeriodEnd: legacySubscription.current_period_end ?? firstItem?.current_period_end ?? 0,
+  }
 }
 
 export async function handleGetProducts(c: Context<{ Bindings: Env }>) {
@@ -45,7 +58,7 @@ export async function handleGetProducts(c: Context<{ Bindings: Env }>) {
   return c.json({ products })
 }
 
-export async function handleCreateCheckoutSession(c: Context<{ Bindings: Env }>) {
+export async function handleCreateCheckoutSession(c: AuthenticatedContext) {
   const stripe = getStripe(c)
   const { priceId } = await c.req.json<{ priceId: string }>()
 
@@ -125,6 +138,7 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
 
       if (userId && plan) {
         const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
+        const { currentPeriodStart, currentPeriodEnd } = getSubscriptionPeriod(subscription)
 
         await c.env.DB.prepare(
           `
@@ -148,8 +162,8 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
             priceId || "",
             plan.toLowerCase(),
             subscription.status,
-            subscription.current_period_start,
-            subscription.current_period_end,
+            currentPeriodStart,
+            currentPeriodEnd,
             timestamp,
             timestamp
           )
@@ -177,6 +191,7 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
 
     case "customer.subscription.updated": {
       const subscription = event.data.object as Stripe.Subscription
+      const { currentPeriodStart, currentPeriodEnd } = getSubscriptionPeriod(subscription)
       console.log("customer.subscription.updated")
 
       await c.env.DB.prepare(
@@ -191,8 +206,8 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
       )
         .bind(
           subscription.status,
-          subscription.current_period_start,
-          subscription.current_period_end,
+          currentPeriodStart,
+          currentPeriodEnd,
           timestamp,
           subscription.id
         )
@@ -251,7 +266,7 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
   return c.json({ received: true })
 }
 
-export async function handleGetSubscription(c: Context<{ Bindings: Env }>) {
+export async function handleGetSubscription(c: AuthenticatedContext) {
   const user = c.get("user")
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401)
@@ -268,7 +283,7 @@ export async function handleGetSubscription(c: Context<{ Bindings: Env }>) {
   return c.json({ subscription })
 }
 
-export async function handleCreateCustomerPortal(c: Context<{ Bindings: Env }>) {
+export async function handleCreateCustomerPortal(c: AuthenticatedContext) {
   const stripe = getStripe(c)
   const user = c.get("user")
   if (!user) {

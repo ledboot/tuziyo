@@ -971,8 +971,8 @@ select {
 .ai-toolkit-backdrop {
   position: absolute;
   top: 4.5rem;
-  left: -1.25rem;
-  right: -1.25rem;
+  left: 0;
+  right: 0;
   min-height: calc(100% + 8rem);
   z-index: 0;
   overflow: hidden;
@@ -994,13 +994,11 @@ select {
 .ai-toolkit-masonry {
   position: relative;
   display: flex;
+  width: 100%;
+  box-sizing: border-box;
   min-height: 100%;
   gap: clamp(0.25rem, 0.45vw, 0.5rem);
-  padding: 0 clamp(0.5rem, 1vw, 1rem) clamp(0.5rem, 1vw, 1rem);
-  transform: scale(1.035);
-  /* Scale from top so expansion only goes downward/sideways,
-     keeping the top edge flush with the header bottom. */
-  transform-origin: top center;
+  padding: 0 0 clamp(0.5rem, 1vw, 1rem);
 }
 
 .ai-toolkit-masonry__column {
@@ -1622,6 +1620,23 @@ select {
   color: #fff;
 }
 
+.liquid-credit-estimate {
+  display: inline-flex;
+  align-items: center;
+  height: 2.15rem;
+  min-height: 2.15rem;
+  padding: 0 0.25rem;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.liquid-credit-estimate--warning {
+  color: rgba(255, 198, 122, 0.95);
+}
+
 .liquid-generate-button {
   min-width: 8rem;
   height: 2.15rem;
@@ -1673,8 +1688,8 @@ select {
 
   .ai-toolkit-masonry {
     gap: 0.35rem;
-    padding: 0.35rem;
-    transform: translateY(-2.5rem) scale(1.04);
+    padding: 0 0 0.35rem;
+    transform: translateY(-2.5rem);
   }
 
   .ai-toolkit-masonry__tile {
@@ -1723,6 +1738,12 @@ select {
 
   .liquid-prompt-controls {
     gap: 0.45rem;
+  }
+
+  .liquid-credit-estimate {
+    width: 100%;
+    justify-content: flex-end;
+    padding-right: 0.1rem;
   }
 
   .liquid-generate-button {

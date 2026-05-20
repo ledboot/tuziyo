@@ -28,7 +28,7 @@ import {
   handleCreateMessage,
 } from "./routes/sessions"
 import { handleCreateReferenceImageUpload } from "./routes/uploads"
-import type { Env } from "./types"
+import type { AppVariables, Env } from "./types"
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -58,7 +58,7 @@ app.post("/api/stripe/webhook", handleStripeWebhook)
 
 // authenticated routes
 
-const protectedRoutes = new Hono()
+const protectedRoutes = new Hono<{ Bindings: Env; Variables: AppVariables }>()
 protectedRoutes.use("*", authMiddleware)
 
 protectedRoutes.post("/api/auth/logout", handleLogout)

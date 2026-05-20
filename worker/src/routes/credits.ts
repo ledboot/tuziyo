@@ -1,6 +1,5 @@
-import type { Context } from "hono";
 import { v4 as uuidv4 } from "uuid";
-import type { Env } from "../types";
+import type { AuthenticatedContext } from "../types";
 import { MODEL_CREDITS as CREDIT_MAP } from "../types";
 
 export async function getUserCredits(
@@ -102,7 +101,7 @@ export async function deductCredits(
   return { success: true };
 }
 
-export async function handleGetCredits(c: Context<{ Bindings: Env }>) {
+export async function handleGetCredits(c: AuthenticatedContext) {
   const user = c.get("user");
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);

@@ -4,9 +4,12 @@ import { SquarePen, Trash2, Pencil, Pin } from "lucide-react"
 interface Session {
   id: string
   title: string
-  lastModified: number
+  lastModified?: number
+  is_pinned?: number
+  created_at?: number
+  updated_at?: number
   pinned?: boolean
-  preview_image?: string
+  preview_image?: string | null
 }
 
 interface AIToolkitSidebarProps {
@@ -16,11 +19,11 @@ interface AIToolkitSidebarProps {
   currentSession: Session | null
   editingSessionId: string | null
   setEditingSessionId: (id: string | null) => void
-  setSessionHistory: React.Dispatch<React.SetStateAction<Session[]>>
+  setSessionHistory: React.Dispatch<React.SetStateAction<any[]>>
   setDeleteSessionId: (id: string | null) => void
   handleCreateSession: () => void
   handleSelectSession: (id: string) => void
-  editInputRef: React.RefObject<HTMLInputElement>
+  editInputRef: React.RefObject<HTMLInputElement | null>
 }
 
 export function AIToolkitSidebar({
@@ -107,6 +110,10 @@ function SessionItem({
   showSidebar,
 }: any) {
   const [imgError, setImgError] = React.useState(false)
+
+  React.useEffect(() => {
+    setImgError(false)
+  }, [s.preview_image])
 
   return (
     <div

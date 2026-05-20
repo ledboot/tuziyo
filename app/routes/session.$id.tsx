@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from "react"
 import { useParams, useNavigate, useLocation } from "react-router"
 import { Search } from "lucide-react"
 import { toast } from "sonner"
-import { api, R2_IMAGE_BASE } from "~/lib/api"
+import { api } from "~/lib/api"
 import { useUserStore } from "~/stores/userStore"
 import { useModelStore } from "~/stores/modelStore"
 import ImageDetailModal from "~/components/ImageDetailModal"
-import PromptArea from "~/components/PromptArea"
+import PromptArea, { type UploadedImage } from "~/components/PromptArea"
 import { AIToolkitSidebar } from "~/components/AIToolkitSidebar"
 
 type ModelId = string
@@ -26,6 +26,9 @@ interface Message {
   negative_prompt: string | null
   output_format: string | null
   num_images: number | null
+  url: string | null
+  google_search?: number | null
+  image_search?: number | null
   created_at: number
 }
 
@@ -33,6 +36,7 @@ interface Session {
   id: string
   title: string
   is_pinned: number
+  preview_image: string | null
   created_at: number
   updated_at: number
 }
@@ -42,12 +46,17 @@ export default function SessionDetailPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const generationState = location.state as any
-  const { user, token } = useUserStore()
+  const { user, token, isLoading: isUserLoading, isFetching: isUserFetching } = useUserStore()
 
   const [session, setSession] = useState<Session | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState<Message | null>(null)
+  const [recreatePrompt, setRecreatePrompt] = useState(generationState?.prompt ?? "")
+  const [recreateNegativePrompt, setRecreateNegativePrompt] = useState<string | undefined>()
+  const [recreateVersion, setRecreateVersion] = useState(0)
+  const [editImages, setEditImages] = useState<UploadedImage[]>(generationState?.images ?? [])
+  const [editImagesVersion, setEditImagesVersion] = useState(0)
 
   // Sidebar state — required by AIToolkitSidebar
   const [showSidebar, setShowSidebar] = useState(false)
@@ -97,13 +106,73 @@ export default function SessionDetailPage() {
   }
 
   useEffect(() => {
-    if (!id || !user || !token) {
+    if (!id) {
       setLoading(false)
       return
     }
+
+    if (isUserLoading || isUserFetching) {
+      setLoading(true)
+      return
+    }
+
+    if (!user || !token) {
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
     fetchSessionData().finally(() => setLoading(false))
     fetchModels()
-  }, [id, user, token])
+  }, [id, user, token, isUserLoading, isUserFetching])
+
+  const handleRecreate = (image: Message) => {
+    const nextOptions: Record<string, string> = {}
+
+    if (image.image_size) nextOptions.size = image.image_size
+    if (image.quality) nextOptions.quality = image.quality
+    if (image.style) nextOptions.style = image.style
+    if (image.aspect_ratio) nextOptions.aspect_ratio = image.aspect_ratio
+    if (image.resolution) nextOptions.resolution = image.resolution
+    if (image.output_format) nextOptions.output_format = image.output_format
+    if (image.num_images) nextOptions.num_images = String(image.num_images)
+    if (image.google_search) nextOptions.google_search = "true"
+    if (image.image_search) nextOptions.image_search = "true"
+
+    setUserSelectedModel(image.model)
+    setUserModelOptions({ ...modelOptions, ...nextOptions })
+    setRecreatePrompt(image.prompt)
+    setRecreateNegativePrompt(image.negative_prompt ?? "")
+    setRecreateVersion(version => version + 1)
+  }
+
+  const handleEdit = (image: Message) => {
+    if (!image.image_url || !image.url) {
+      toast.error("Image is not available for editing")
+      return
+    }
+
+    const imageModel = models.find(model => model.id === image.model && model.supportsImage)
+    const fallbackImageModel = models.find(model => model.supportsImage)
+    const nextModel = imageModel?.id ?? fallbackImageModel?.id
+
+    if (nextModel) {
+      setUserSelectedModel(nextModel)
+    }
+
+    setEditImages([
+      {
+        id: image.id,
+        previewUrl: image.url,
+        key: image.image_url,
+        status: "uploaded",
+      },
+    ])
+    setEditImagesVersion(version => version + 1)
+    setRecreatePrompt("")
+    setRecreateNegativePrompt("")
+    setRecreateVersion(version => version + 1)
+  }
 
   // Adapt allSessions → the shape AIToolkitSidebar expects
   const sidebarSessions = allSessions.map(s => ({
@@ -111,10 +180,16 @@ export default function SessionDetailPage() {
     title: s.title,
     lastModified: s.updated_at,
     pinned: Boolean(s.is_pinned),
+    preview_image: s.preview_image ?? undefined,
   }))
 
   const currentSidebarSession = session
-    ? { id: session.id, title: session.title, lastModified: session.updated_at }
+    ? {
+        id: session.id,
+        title: session.title,
+        lastModified: session.updated_at,
+        preview_image: session.preview_image ?? undefined,
+      }
     : null
 
   const handleCreateSession = () => navigate("/ai-toolkit")
@@ -176,7 +251,7 @@ export default function SessionDetailPage() {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {images.map(image => {
-                const imageUrl = image.image_url ? `${R2_IMAGE_BASE}/${image.image_url}` : null
+                const imageUrl = image.url
 
                 return (
                   <div
@@ -226,6 +301,8 @@ export default function SessionDetailPage() {
           image={selectedImage}
           sessionTitle={session.title}
           onClose={() => setSelectedImage(null)}
+          onRecreate={handleRecreate}
+          onEdit={handleEdit}
         />
 
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-base-100 via-base-100/90 to-transparent">
@@ -237,8 +314,11 @@ export default function SessionDetailPage() {
               modelOptions={modelOptions}
               onOptionsChange={handleSetModelOptions}
               currentSessionId={id}
-              initialPrompt={generationState?.prompt}
-              initialImages={generationState?.images}
+              initialPrompt={recreatePrompt}
+              initialNegativePrompt={recreateNegativePrompt}
+              initialPromptVersion={recreateVersion}
+              initialImages={editImages}
+              initialImagesVersion={editImagesVersion}
               autoGenerate={generationState?.autoGenerate}
               onGenerateStart={(sid, prompt) => {
                 if (sid === id) {

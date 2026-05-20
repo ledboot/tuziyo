@@ -14,6 +14,8 @@ import { MODEL_OPTIONS_CONFIG, validateModelOptions } from "../modelOptions"
 import {
   arrayBufferToDataUrl,
   createGeneratedImageKey,
+  getGeneratedImagePrefix,
+  getImageContentTypeFromKey,
   getR2PublicUrl,
   getReferenceImagePrefix,
   isAllowedReferenceImageContentType,
@@ -51,6 +53,31 @@ interface ImageRecord {
   image_url: string
 }
 
+interface FavoriteImageRecord {
+  favorite_id: string
+  content_type: string
+  favorite_created_at: number
+  id: string
+  session_id: string
+  session_title: string
+  role: string
+  provider: string | null
+  model: string
+  prompt: string | null
+  image_url: string
+  aspect_ratio: string | null
+  resolution: string | null
+  image_size: string | null
+  quality: string | null
+  style: string | null
+  negative_prompt: string | null
+  output_format: string | null
+  num_images: number | null
+  google_search: number | null
+  image_search: number | null
+  created_at: number
+}
+
 interface FavoriteRequestBody {
   favorited?: boolean
   favorite?: boolean
@@ -69,6 +96,11 @@ function getBoundedInt(value: string | null, fallback: number, min: number, max:
 
 function getRequestedFavorite(body: FavoriteRequestBody) {
   return body.favorited ?? body.favorite ?? body.is_favorite
+}
+
+function toPublicImageUrl(env: Env, imageUrl: string | null) {
+  if (!imageUrl) return null
+  return getR2PublicUrl(env, imageUrl) ?? null
 }
 
 export function buildAiInput(input: GenerateInput, referenceImages: PreparedReferenceImage[] = []) {
@@ -216,7 +248,8 @@ async function prepareReferenceImages(
     return { error: `This model supports at most ${maxCount} reference images` }
   }
 
-  const userPrefix = getReferenceImagePrefix(user.userId)
+  const referencePrefix = getReferenceImagePrefix(user.userId)
+  const generatedPrefix = getGeneratedImagePrefix(user.userId)
   const preparedImages: PreparedReferenceImage[] = []
 
   for (const referenceImageKey of referenceImages) {
@@ -225,7 +258,7 @@ async function prepareReferenceImages(
     }
 
     const key = referenceImageKey.replace(/^\/+/, "")
-    if (!key.startsWith(userPrefix)) {
+    if (!key.startsWith(referencePrefix) && !key.startsWith(generatedPrefix)) {
       return { error: "Invalid reference image key" }
     }
 
@@ -234,7 +267,9 @@ async function prepareReferenceImages(
       return { error: "Reference image upload was not found" }
     }
 
-    const contentType = normalizeContentType(object.httpMetadata?.contentType || "")
+    const contentType = normalizeContentType(
+      object.httpMetadata?.contentType || getImageContentTypeFromKey(key) || ""
+    )
     if (!isAllowedReferenceImageContentType(contentType)) {
       return { error: "Reference image must be PNG, JPEG, or WEBP" }
     }
@@ -326,8 +361,13 @@ export async function handleGetFavorites(c: AuthenticatedContext) {
     .bind(user.userId, user.userId)
     .first<{ total: number }>()
 
+  const results = (favorites.results as unknown as FavoriteImageRecord[]).map(favorite => ({
+    ...favorite,
+    url: toPublicImageUrl(c.env, favorite.image_url),
+  }))
+
   return c.json({
-    favorites: favorites.results,
+    favorites: results,
     total: total?.total ?? 0,
   })
 }
@@ -471,9 +511,15 @@ export async function handleGenerate(c: AuthenticatedContext) {
   const imageResponse = await fetch(imageUrl)
   const imageBuffer = await imageResponse.arrayBuffer()
 
-  const extension = input.output_format || "png"
+  const extension = imageUrl.split(".").pop()?.toLowerCase() || input.output_format || "png"
   const key = createGeneratedImageKey(user.userId, extension)
-  await c.env.R2.put(key, imageBuffer)
+  const fullImageUrl = getR2PublicUrl(c.env, key)
+  if (!fullImageUrl) {
+    return c.json({ success: false, error: "R2_PUBLIC_BASE_URL is required" }, 500)
+  }
+  await c.env.R2.put(key, imageBuffer, {
+    httpMetadata: { contentType: getImageContentTypeFromKey(key) || "image/png" },
+  })
 
   const now = Math.floor(Date.now() / 1000)
   let sessionId = input.sessionId
@@ -538,8 +584,7 @@ export async function handleGenerate(c: AuthenticatedContext) {
       .bind(now, sessionId)
       .run()
 
-    const fullImageUrl = `https://s3.tuziyo.com/${key}`
-    return c.json({ success: true, key, imageUrl: fullImageUrl })
+    return c.json({ success: true, key, url: fullImageUrl, imageUrl: fullImageUrl })
   }
 
   return c.json({ success: false, error: "Session not found" }, 500)

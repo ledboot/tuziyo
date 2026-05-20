@@ -1,7 +1,7 @@
 import { X, RotateCcw, Download, Star, Folder, Trash2, Video, Pencil, Maximize } from "lucide-react"
 import { useNavigate } from "react-router"
+import { toast } from "sonner"
 import { useGenerateStore } from "~/stores/generateStore"
-import { R2_IMAGE_BASE } from "~/lib/api"
 
 interface Message {
   id: string
@@ -18,6 +18,7 @@ interface Message {
   negative_prompt: string | null
   output_format: string | null
   num_images: number | null
+  url: string | null
   google_search?: number | null
   image_search?: number | null
   created_at: number
@@ -27,6 +28,8 @@ interface ImageDetailModalProps {
   image: Message | null
   sessionTitle: string
   onClose: () => void
+  onRecreate?: (image: Message) => void
+  onEdit?: (image: Message) => void
 }
 
 function formatTimestamp(timestamp: number): string {
@@ -47,21 +50,21 @@ function getModelName(modelId: string): string {
   return modelNames[modelId] || modelId
 }
 
-function resolveImageUrl(imageUrl: string | null): string | null {
-  if (!imageUrl) return null
-  if (/^https?:\/\//i.test(imageUrl)) return imageUrl
-  return `${R2_IMAGE_BASE}/${imageUrl.replace(/^\/+/, "")}`
-}
-
-export default function ImageDetailModal({ image, sessionTitle, onClose }: ImageDetailModalProps) {
+export default function ImageDetailModal({ image, sessionTitle, onClose, onRecreate, onEdit }: ImageDetailModalProps) {
   const navigate = useNavigate()
   const setRegenerateData = useGenerateStore((state) => state.setRegenerateData)
 
   if (!image) return null
 
-  const imageUrl = resolveImageUrl(image.image_url)
+  const imageUrl = image.url ?? null
 
   const handleRegenerate = () => {
+    if (onRecreate) {
+      onRecreate(image)
+      onClose()
+      return
+    }
+
     setRegenerateData({
       prompt: image.prompt,
       model: image.model,
@@ -73,8 +76,16 @@ export default function ImageDetailModal({ image, sessionTitle, onClose }: Image
       output_format: image.output_format || undefined,
       num_images: image.num_images || undefined,
       negative_prompt: image.negative_prompt || undefined,
+      google_search: image.google_search ? "true" : undefined,
+      image_search: image.image_search ? "true" : undefined,
     })
     navigate("/ai-toolkit")
+    onClose()
+  }
+
+  const handleEdit = () => {
+    if (!onEdit) return
+    onEdit(image)
     onClose()
   }
 
@@ -96,6 +107,11 @@ export default function ImageDetailModal({ image, sessionTitle, onClose }: Image
     } catch (error) {
       console.error("Download failed:", error)
     }
+  }
+
+  const handleCopyPrompt = async () => {
+    await navigator.clipboard.writeText(image.prompt)
+    toast.success("copied")
   }
 
   return (
@@ -145,17 +161,22 @@ export default function ImageDetailModal({ image, sessionTitle, onClose }: Image
             </div>
           </div>
 
-          {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
+          {/* Detail Content */}
+          <div className="flex-1 min-h-0 overflow-hidden pr-2">
             
             {/* Prompt */}
             <div className="mb-10">
               <h3 className="text-white font-bold mb-3 text-sm">Prompt</h3>
-              <div className="pl-3 border-l-2 border-white/20">
-                <p className="text-sm text-base-content/80 leading-relaxed break-words">
+              <button
+                type="button"
+                onClick={handleCopyPrompt}
+                className="group block w-full max-h-[min(18rem,32vh)] overflow-y-auto pr-2 text-left cursor-pointer"
+                aria-label="Copy prompt"
+              >
+                <p className="text-sm text-base-content/80 leading-relaxed break-words transition-colors group-hover:text-white">
                   {image.prompt}
                 </p>
-              </div>
+              </button>
               
               {image.negative_prompt && (
                 <div className="mt-6">
@@ -232,7 +253,7 @@ export default function ImageDetailModal({ image, sessionTitle, onClose }: Image
               <Video className="size-4 mr-1.5" />
               Video
             </button>
-            <button className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal">
+            <button onClick={handleEdit} disabled={!onEdit || !imageUrl} className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal">
               <Pencil className="size-4 mr-1.5" />
               Edit
             </button>

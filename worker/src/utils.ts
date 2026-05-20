@@ -14,6 +14,14 @@ export function getReferenceImageExtension(contentType: string) {
   return REFERENCE_IMAGE_CONTENT_TYPES[normalizeContentType(contentType)]
 }
 
+export function getImageContentTypeFromKey(key: string) {
+  const extension = key.split(".").pop()?.toLowerCase()
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg"
+  if (extension === "png") return "image/png"
+  if (extension === "webp") return "image/webp"
+  return undefined
+}
+
 export function isAllowedReferenceImageContentType(contentType: string) {
   return Object.hasOwn(REFERENCE_IMAGE_CONTENT_TYPES, normalizeContentType(contentType))
 }
@@ -26,6 +34,10 @@ export function getReferenceImagePrefix(userId: string) {
   return `reference-images/${toSafePathSegment(userId)}/`
 }
 
+export function getGeneratedImagePrefix(userId: string) {
+  return `generated-images/${toSafePathSegment(userId)}/`
+}
+
 export function generateR2Key(userId: string) {
   const now = new Date()
   const year = now.getFullYear()
@@ -35,6 +47,7 @@ export function generateR2Key(userId: string) {
 }
 
 export function getR2PublicUrl(env: Env, key: string) {
+  if (/^https?:\/\//i.test(key)) return key
   const baseUrl = env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, "")
   if (!baseUrl) return undefined
   return `${baseUrl}/${key.replace(/^\/+/, "")}`

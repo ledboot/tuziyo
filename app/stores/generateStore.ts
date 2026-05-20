@@ -11,6 +11,9 @@ interface RegenerateData {
   output_format?: string
   num_images?: number
   negative_prompt?: string
+  google_search?: string
+  image_search?: string
+  background?: string
 }
 
 interface GenerateState {
