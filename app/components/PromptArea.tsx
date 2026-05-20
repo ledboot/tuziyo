@@ -44,6 +44,17 @@ const OPTION_LABELS: Record<string, string> = {
 const REFERENCE_IMAGE_ACCEPT = "image/png,image/jpeg,image/webp"
 const REFERENCE_IMAGE_MAX_BYTES = 10 * 1024 * 1024
 const PROMPT_MAX_LENGTH = 80000
+const PROMPT_MIN_WIDTH = 800
+
+const getPromptMaxWidth = () => {
+  if (typeof window === "undefined") return 1100
+  const w = window.innerWidth
+  if (w >= 3840) return 2000
+  if (w >= 2560) return 1650
+  if (w >= 1920) return 1450
+  if (w >= 1440) return 1250
+  return 1100
+}
 
 type UploadedImageStatus = "uploading" | "uploaded" | "error"
 
@@ -449,8 +460,8 @@ export default function PromptArea({
     const startW = shell?.offsetWidth ?? panel.offsetWidth
     const startH = panel.offsetHeight
     const clampPromptWidth = (width: number) => {
-      const maxWidth = Math.min(window.innerWidth * 0.9, 1500)
-      const minWidth = Math.min(800, maxWidth)
+      const maxWidth = Math.min(window.innerWidth * 0.9, getPromptMaxWidth())
+      const minWidth = Math.min(PROMPT_MIN_WIDTH, maxWidth)
       return Math.min(maxWidth, Math.max(minWidth, width))
     }
     let frameId: number | null = null
@@ -478,12 +489,12 @@ export default function PromptArea({
       const dx = ev.clientX - startX
       const dy = ev.clientY - startY
 
-      // Width: panel is centered so expand symmetrically
+      // Width is hard-limited so dragging cannot keep expanding the prompt surface.
       if (dir === "left" || dir === "top-left") {
-        pendingWidth = startW - dx * 2
+        pendingWidth = clampPromptWidth(startW - dx)
       }
       if (dir === "right" || dir === "top-right") {
-        pendingWidth = startW + dx * 2
+        pendingWidth = clampPromptWidth(startW + dx)
       }
 
       // Height: panel anchored at bottom, drag up to grow

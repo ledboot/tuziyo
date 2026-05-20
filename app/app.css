@@ -1189,7 +1189,31 @@ select {
 
 .prompt-area-shell {
   /* JS only sets --prompt-w; CSS enforces min/max via clamp() */
-  width: clamp(800px, var(--prompt-w, 800px), min(90vw, 1500px));
+  width: clamp(800px, var(--prompt-w, 800px), min(90vw, 1100px));
+}
+
+@media (min-width: 1440px) {
+  .prompt-area-shell {
+    width: clamp(800px, var(--prompt-w, 800px), min(90vw, 1250px));
+  }
+}
+
+@media (min-width: 1920px) {
+  .prompt-area-shell {
+    width: clamp(800px, var(--prompt-w, 800px), min(90vw, 1450px));
+  }
+}
+
+@media (min-width: 2560px) {
+  .prompt-area-shell {
+    width: clamp(800px, var(--prompt-w, 800px), min(90vw, 1650px));
+  }
+}
+
+@media (min-width: 3840px) {
+  .prompt-area-shell {
+    width: clamp(800px, var(--prompt-w, 800px), min(90vw, 2000px));
+  }
 }
 
 .prompt-area-shell.is-resizing {

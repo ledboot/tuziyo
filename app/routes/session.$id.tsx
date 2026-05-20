@@ -185,11 +185,11 @@ export default function SessionDetailPage() {
 
   const currentSidebarSession = session
     ? {
-        id: session.id,
-        title: session.title,
-        lastModified: session.updated_at,
-        preview_image: session.preview_image ?? undefined,
-      }
+      id: session.id,
+      title: session.title,
+      lastModified: session.updated_at,
+      preview_image: session.preview_image ?? undefined,
+    }
     : null
 
   const handleCreateSession = () => navigate("/ai-toolkit")
@@ -228,7 +228,7 @@ export default function SessionDetailPage() {
         currentSession={currentSidebarSession}
         editingSessionId={editingSessionId}
         setEditingSessionId={setEditingSessionId}
-        setSessionHistory={() => {}}
+        setSessionHistory={() => { }}
         setDeleteSessionId={setDeleteSessionId}
         handleCreateSession={handleCreateSession}
         handleSelectSession={handleSelectSession}
@@ -305,36 +305,40 @@ export default function SessionDetailPage() {
           onEdit={handleEdit}
         />
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-base-100 via-base-100/90 to-transparent">
-          <div className="max-w-4xl mx-auto">
-            <PromptArea
-              models={models}
-              selectedModel={selectedModel}
-              onModelChange={setUserSelectedModel}
-              modelOptions={modelOptions}
-              onOptionsChange={handleSetModelOptions}
-              currentSessionId={id}
-              initialPrompt={recreatePrompt}
-              initialNegativePrompt={recreateNegativePrompt}
-              initialPromptVersion={recreateVersion}
-              initialImages={editImages}
-              initialImagesVersion={editImagesVersion}
-              autoGenerate={generationState?.autoGenerate}
-              onGenerateStart={(sid, prompt) => {
-                if (sid === id) {
-                  setIsGenerating(true)
-                  setPendingPrompt(prompt)
-                }
-              } }
-              onGenerateSuccess={async (sid, data) => {
-                if (sid === id) {
-                  setIsGenerating(false)
-                  setPendingPrompt(null)
-                  await fetchSessionData()
-                }
-              } }
-            />
-          </div>
+      </div>
+
+      <div
+        className={`ai-toolkit-prompt-dock ${user ? "ai-toolkit-prompt-dock--with-sidebar" : ""} is-visible`}
+      >
+        <div className="ai-toolkit-prompt-dock__inner pointer-events-auto">
+          <PromptArea
+            models={models}
+            selectedModel={selectedModel}
+            onModelChange={setUserSelectedModel}
+            modelOptions={modelOptions}
+            onOptionsChange={handleSetModelOptions}
+            className="ai-toolkit-prompt-area"
+            currentSessionId={id}
+            initialPrompt={recreatePrompt}
+            initialNegativePrompt={recreateNegativePrompt}
+            initialPromptVersion={recreateVersion}
+            initialImages={editImages}
+            initialImagesVersion={editImagesVersion}
+            autoGenerate={generationState?.autoGenerate}
+            onGenerateStart={(sid, prompt) => {
+              if (sid === id) {
+                setIsGenerating(true)
+                setPendingPrompt(prompt)
+              }
+            }}
+            onGenerateSuccess={async (sid, data) => {
+              if (sid === id) {
+                setIsGenerating(false)
+                setPendingPrompt(null)
+                await fetchSessionData()
+              }
+            }}
+          />
         </div>
       </div>
     </div>
