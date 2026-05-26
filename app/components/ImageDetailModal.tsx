@@ -1,7 +1,9 @@
-import { X, RotateCcw, Download, Star, Folder, Trash2, Video, Pencil, Maximize } from "lucide-react"
+import { useState, useEffect } from "react"
+import { X, RotateCcw, Download, Star, Folder, Trash2, Pencil } from "lucide-react"
 import { useNavigate } from "react-router"
 import { toast } from "sonner"
 import { useGenerateStore } from "~/stores/generateStore"
+import { api } from "~/lib/api"
 
 interface Message {
   id: string
@@ -22,6 +24,7 @@ interface Message {
   google_search?: number | null
   image_search?: number | null
   created_at: number
+  is_favorite?: number | boolean
 }
 
 interface ImageDetailModalProps {
@@ -30,6 +33,7 @@ interface ImageDetailModalProps {
   onClose: () => void
   onRecreate?: (image: Message) => void
   onEdit?: (image: Message) => void
+  onFavoriteToggle?: (imageId: string, isFavorited: boolean) => void
 }
 
 function formatTimestamp(timestamp: number): string {
@@ -50,9 +54,25 @@ function getModelName(modelId: string): string {
   return modelNames[modelId] || modelId
 }
 
-export default function ImageDetailModal({ image, sessionTitle, onClose, onRecreate, onEdit }: ImageDetailModalProps) {
+export default function ImageDetailModal({
+  image,
+  sessionTitle,
+  onClose,
+  onRecreate,
+  onEdit,
+  onFavoriteToggle,
+}: ImageDetailModalProps) {
   const navigate = useNavigate()
   const setRegenerateData = useGenerateStore((state) => state.setRegenerateData)
+
+  const [isFavorited, setIsFavorited] = useState(false)
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false)
+
+  useEffect(() => {
+    if (image) {
+      setIsFavorited(Boolean(image.is_favorite))
+    }
+  }, [image])
 
   if (!image) return null
 
@@ -114,6 +134,25 @@ export default function ImageDetailModal({ image, sessionTitle, onClose, onRecre
     toast.success("copied")
   }
 
+  const handleToggleFavorite = async () => {
+    if (isTogglingFavorite) return
+    setIsTogglingFavorite(true)
+
+    const nextFavorited = !isFavorited
+    setIsFavorited(nextFavorited)
+
+    try {
+      await api.images.favorite(image.id, nextFavorited)
+      toast.success(nextFavorited ? "Added to favorites" : "Removed from favorites")
+      onFavoriteToggle?.(image.id, nextFavorited)
+    } catch (error) {
+      setIsFavorited(!nextFavorited)
+      toast.error(error instanceof Error ? error.message : "Failed to update favorite")
+    } finally {
+      setIsTogglingFavorite(false)
+    }
+  }
+
   return (
     <div className="modal modal-open">
       <div className="modal-box max-w-[95vw] w-[1400px] h-[90vh] flex flex-col md:flex-row p-0 overflow-hidden bg-[#0c0c0c] liquid-glass border border-white/10 rounded-2xl shadow-2xl">
@@ -145,8 +184,17 @@ export default function ImageDetailModal({ image, sessionTitle, onClose, onRecre
               Download
             </button>
             <div className="flex items-center gap-2">
-              <button className="btn btn-sm btn-circle btn-ghost border border-white/20 text-white hover:bg-white/10">
-                <Star className="size-4" />
+              <button 
+                onClick={handleToggleFavorite}
+                disabled={isTogglingFavorite}
+                className={`btn btn-sm btn-circle border text-white ${
+                  isFavorited 
+                    ? "bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30 text-yellow-400" 
+                    : "btn-ghost border-white/20 hover:bg-white/10"
+                }`}
+                title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+              >
+                <Star className={`size-4 ${isFavorited ? "fill-yellow-400" : ""}`} />
               </button>
               <button className="btn btn-sm btn-circle btn-ghost border border-white/20 text-white hover:bg-white/10">
                 <Folder className="size-4" />
@@ -247,12 +295,7 @@ export default function ImageDetailModal({ image, sessionTitle, onClose, onRecre
             </div>
           </div>
 
-          {/* Bottom Actions */}
           <div className="pt-6 grid grid-cols-2 gap-3 mt-auto border-t border-white/5">
-            <button className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal">
-              <Video className="size-4 mr-1.5" />
-              Video
-            </button>
             <button onClick={handleEdit} disabled={!onEdit || !imageUrl} className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal">
               <Pencil className="size-4 mr-1.5" />
               Edit
@@ -260,10 +303,6 @@ export default function ImageDetailModal({ image, sessionTitle, onClose, onRecre
             <button onClick={handleRegenerate} className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal">
               <RotateCcw className="size-4 mr-1.5" />
               Recreate
-            </button>
-            <button className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal">
-              <Maximize className="size-4 mr-1.5" />
-              Upscale
             </button>
           </div>
           

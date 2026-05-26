@@ -35,6 +35,11 @@ export function LoginButton({ className }: { className?: string }) {
     localStorage.setItem("pkce_code_verifier", codeVerifier)
     localStorage.setItem("oauth_state", state)
 
+    const currentUrl = window.location.pathname + window.location.search
+    if (!currentUrl.includes("/auth/callback")) {
+      localStorage.setItem("login_redirect_url", currentUrl)
+    }
+
     const googleAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth")
     googleAuthUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID)
     googleAuthUrl.searchParams.set("redirect_uri", REDIRECT_URI)

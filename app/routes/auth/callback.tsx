@@ -49,9 +49,11 @@ export default function AuthCallback() {
       const result = await login(code, codeVerifier);
 
       if (result.success) {
+        const redirectUrl = localStorage.getItem("login_redirect_url") || "/";
+        localStorage.removeItem("login_redirect_url");
         localStorage.removeItem("pkce_code_verifier");
         localStorage.removeItem("oauth_state");
-        navigate("/");
+        navigate(redirectUrl);
       } else {
         setError(result.error || texts.login_failed);
       }

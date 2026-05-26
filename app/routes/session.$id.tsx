@@ -303,6 +303,14 @@ export default function SessionDetailPage() {
           onClose={() => setSelectedImage(null)}
           onRecreate={handleRecreate}
           onEdit={handleEdit}
+          onFavoriteToggle={(imageId, isFavorited) => {
+            setMessages(prev =>
+              prev.map(m => (m.id === imageId ? { ...m, is_favorite: isFavorited ? 1 : 0 } : m))
+            )
+            setSelectedImage(prev =>
+              prev && prev.id === imageId ? { ...prev, is_favorite: isFavorited ? 1 : 0 } : prev
+            )
+          }}
         />
 
       </div>

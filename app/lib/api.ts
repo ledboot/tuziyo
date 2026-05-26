@@ -317,6 +317,40 @@ export const api = {
     subscription: () => request<{ subscription: unknown }>("/api/stripe/subscription"),
     portal: () => request<{ url: string }>("/api/stripe/portal", { method: "POST" }),
   },
+
+  images: {
+    favorite: (id: string, favorited: boolean) =>
+      request<{ success: boolean; favorited: boolean }>(`/api/images/${id}/favorite`, {
+        method: "PATCH",
+        body: JSON.stringify({ favorited }),
+      }),
+    getFavorites: () =>
+      request<{
+        favorites: Array<{
+          favorite_id: string
+          favorite_created_at: number
+          id: string
+          role: string
+          provider: string | null
+          model: string
+          prompt: string
+          image_url: string | null
+          url: string | null
+          aspect_ratio: string | null
+          resolution: string | null
+          image_size: string | null
+          quality: string | null
+          style: string | null
+          negative_prompt: string | null
+          output_format: string | null
+          num_images: number | null
+          google_search: number | null
+          image_search: number | null
+          created_at: number
+        }>
+        total: number
+      }>("/api/favorites"),
+  },
 }
 
 export type Api = typeof api

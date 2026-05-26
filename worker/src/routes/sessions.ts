@@ -29,6 +29,7 @@ interface SessionMessageRecord {
   google_search: number | null;
   image_search: number | null;
   created_at: number;
+  is_favorite?: number;
 }
 
 function toPublicImageUrl(env: Env, imageUrl: string | null) {
@@ -107,15 +108,17 @@ export async function handleGetSession(c: AuthenticatedContext) {
   const messages = await c.env.DB
     .prepare(
       `
-      SELECT id, role, provider, model, prompt, image_url, aspect_ratio, resolution,
-        image_size, quality, style, negative_prompt, output_format, num_images,
-        google_search, image_search, created_at
-      FROM messages
-      WHERE session_id = ? AND status = 1
-      ORDER BY created_at ASC
+      SELECT m.id, m.role, m.provider, m.model, m.prompt, m.image_url, m.aspect_ratio, m.resolution,
+        m.image_size, m.quality, m.style, m.negative_prompt, m.output_format, m.num_images,
+        m.google_search, m.image_search, m.created_at,
+        (CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END) AS is_favorite
+      FROM messages m
+      LEFT JOIN content_favorites f ON f.message_id = m.id AND f.user_id = ? AND f.content_type = 'image'
+      WHERE m.session_id = ? AND m.status = 1
+      ORDER BY m.created_at ASC
     `
     )
-    .bind(sessionId)
+    .bind(user.userId, sessionId)
     .all();
 
   const results = (messages.results as unknown as SessionMessageRecord[]).map(message => ({

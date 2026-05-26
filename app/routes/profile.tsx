@@ -88,6 +88,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [loadingTransactions, setLoadingTransactions] = useState(false)
   const [selectedFavorite, setSelectedFavorite] = useState<FavoriteDetailImage | null>(null)
+  const [favorites, setFavorites] = useState<FavoriteDetailImage[]>([])
+  const [loadingFavorites, setLoadingFavorites] = useState(false)
 
   // Example state for sidebar selection
   const [activeTab, setActiveTab] = useState("credits")
@@ -123,6 +125,25 @@ export default function ProfilePage() {
       .catch(console.error)
       .finally(() => setLoadingTransactions(false))
   }, [user])
+
+  useEffect(() => {
+    if (!user || activeTab !== "favorites") return
+
+    setLoadingFavorites(true)
+    api.images
+      .getFavorites()
+      .then(data => {
+        if (data.favorites) {
+          const items = data.favorites.map(fav => ({
+            ...fav,
+            is_favorite: 1,
+          }))
+          setFavorites(items as FavoriteDetailImage[])
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoadingFavorites(false))
+  }, [user, activeTab])
 
   if (!user) {
     return (
@@ -366,49 +387,67 @@ export default function ProfilePage() {
                 <div className="border-b border-white/5 pb-6">
                   <h1 className="text-3xl font-bold tracking-tight text-white">Favorites</h1>
                   <p className="text-base-content/60 mt-2">
-                    View the images and videos you've liked from details pages.
+                    View the images you've liked from details pages.
                   </p>
                 </div>
 
-                {/* Favorites Grid */}
-                <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-                  {MOCK_FAVORITES.map(item => (
-                    <button
-                      type="button"
-                      key={item.id}
-                      onClick={() => setSelectedFavorite(toFavoriteDetailImage(item))}
-                      className="group relative aspect-[3/4] overflow-hidden rounded-2xl bg-white/5 border border-white/10 text-left transition-all hover:border-primary/50 hover:shadow-[0_0_20px_rgba(var(--color-primary),0.2)] focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
-                      aria-label={`Open ${item.title} detail`}
-                    >
-                      <img
-                        src={item.url}
-                        alt={item.title}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
+                {loadingFavorites ? (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="size-8 animate-spin text-primary" />
+                  </div>
+                ) : favorites.length === 0 ? (
+                  <div className="text-center py-16">
+                    <div className="inline-flex items-center justify-center size-16 rounded-full bg-white/5 mb-4 border border-white/10">
+                      <Heart className="size-6 text-white/40" />
+                    </div>
+                    <p className="text-lg text-white/80 font-medium">No favorites yet</p>
+                    <p className="text-base-content/50 mt-1">
+                      Your liked images will appear here once you favorite them.
+                    </p>
+                  </div>
+                ) : (
+                  /* Favorites Grid */
+                  <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+                    {favorites.map(item => (
+                      <button
+                        type="button"
+                        key={item.id}
+                        onClick={() => setSelectedFavorite(item)}
+                        className="group relative aspect-[3/4] overflow-hidden rounded-2xl bg-white/5 border border-white/10 text-left transition-all hover:border-primary/50 hover:shadow-[0_0_20px_rgba(var(--color-primary),0.2)] focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+                        aria-label={`Open detail`}
+                      >
+                        {item.url ? (
+                          <img
+                            src={item.url}
+                            alt={item.prompt}
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center bg-black/40 text-base-content/40">
+                            No image
+                          </div>
+                        )}
 
-                      {/* Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4 flex flex-col justify-end">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-white font-medium text-sm truncate pr-2">
-                            {item.title}
-                          </h4>
-                          <div className="bg-white/10 backdrop-blur-md p-1.5 rounded-lg">
-                            {item.type === "video" ? (
-                              <Play className="size-3 text-white" fill="currentColor" />
-                            ) : (
+                        {/* Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4 flex flex-col justify-end">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-white font-medium text-sm truncate pr-2">
+                              {item.prompt}
+                            </h4>
+                            <div className="bg-white/10 backdrop-blur-md p-1.5 rounded-lg shrink-0">
                               <ImageIcon className="size-3 text-white" />
-                            )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Type Indicator (Always visible but subtle) */}
-                      <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-[10px] font-bold text-white uppercase tracking-wider">
-                        {item.type}
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                        {/* Type Indicator */}
+                        <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-[10px] font-bold text-white uppercase tracking-wider">
+                          IMAGE
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -419,6 +458,12 @@ export default function ProfilePage() {
         image={selectedFavorite}
         sessionTitle="Favorites"
         onClose={() => setSelectedFavorite(null)}
+        onFavoriteToggle={(imageId, isFavorited) => {
+          if (!isFavorited) {
+            setFavorites(prev => prev.filter(f => f.id !== imageId))
+            setSelectedFavorite(null)
+          }
+        }}
       />
     </div>
   )

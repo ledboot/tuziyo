@@ -35,7 +35,7 @@ const app = new Hono<{ Bindings: Env }>()
 app.use(
   "*",
   cors({
-    origin: "*",
+    origin: (origin) => origin,
     allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     exposeHeaders: ["Content-Type", "Authorization", "Content-Length"],
@@ -55,6 +55,7 @@ app.get("/api/ai-toolkit/showcase", c => {
 })
 
 app.post("/api/stripe/webhook", handleStripeWebhook)
+app.get("/api/stripe/products", handleGetProducts)
 
 // authenticated routes
 
@@ -80,7 +81,6 @@ protectedRoutes.get("/api/sessions/:id", handleGetSession)
 protectedRoutes.delete("/api/sessions/:id", handleDeleteSession)
 protectedRoutes.patch("/api/sessions/:id", handleUpdateSession)
 protectedRoutes.post("/api/sessions/:id/messages", handleCreateMessage)
-protectedRoutes.get("/api/stripe/products", handleGetProducts)
 protectedRoutes.post("/api/stripe/checkout", handleCreateCheckoutSession)
 protectedRoutes.get("/api/stripe/subscription", handleGetSubscription)
 protectedRoutes.post("/api/stripe/portal", handleCreateCustomerPortal)

@@ -147,7 +147,23 @@ export default function PromptArea({
     state => state.modelOptionsConfig[selectedModel] ?? EMPTY_MODEL_OPTIONS_CONFIG
   )
   const isModelsLoading = useModelStore(state => state.isLoading)
+  const modelError = useModelStore(state => state.error)
   const normalizeModelOptions = useModelStore(state => state.normalizeModelOptions)
+
+  const [hasStartedLoading, setHasStartedLoading] = useState(false)
+
+  useEffect(() => {
+    if (isModelsLoading) {
+      setHasStartedLoading(true)
+    }
+  }, [isModelsLoading])
+
+  const shouldHide = !isModelsLoading && (modelError !== null || (hasStartedLoading && models.length === 0))
+
+  if (shouldHide) {
+    return null
+  }
+
   const isModelDataPending = isModelsLoading || models.length === 0
 
   const selectedModelInfo = models.find(m => m.id === selectedModel)
@@ -765,14 +781,16 @@ export default function PromptArea({
 
             <div className="flex-1" />
 
-            <div
-              className={`liquid-credit-estimate ${
-                hasInsufficientCredits ? "liquid-credit-estimate--warning" : ""
-              }`}
-              aria-live="polite"
-            >
-              {creditEstimateText}
-            </div>
+            {prompt.trim() && (
+              <div
+                className={`liquid-credit-estimate ${
+                  hasInsufficientCredits ? "liquid-credit-estimate--warning" : ""
+                }`}
+                aria-live="polite"
+              >
+                {creditEstimateText}
+              </div>
+            )}
 
             <button
               onClick={handleGenerate}
