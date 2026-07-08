@@ -155,6 +155,8 @@ CREATE TABLE IF NOT EXISTS generation_tasks (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     session_id TEXT NOT NULL,
+    model TEXT,
+    provider TEXT,
     status TEXT NOT NULL CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
     result TEXT, -- JSON string containing output info: {"imageUrl": "...", "messageId": "..."}
     error TEXT, -- Error message if failed

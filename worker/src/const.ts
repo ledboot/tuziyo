@@ -7,3 +7,11 @@ export const UserTypeMap: Record<string, string> = {
   professional: "professional",
   creator: "creator",
 }
+
+export const PROVIDERS = {
+  CLOUDFLARE: "cloudflare",
+  EVOLINK: "evolink",
+  BYTEPLUS: "byteplus",
+} as const
+
+export type Provider = typeof PROVIDERS[keyof typeof PROVIDERS]

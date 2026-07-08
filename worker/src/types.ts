@@ -15,6 +15,8 @@ export interface Env {
   STRIPE_SECRET_KEY: string
   STRIPE_WEBHOOK_SECRET: string
   FRONTEND_URL: string
+  ARK_API_KEY: string
+  EVOLINK_API_KEY: string
 }
 
 export interface UserPayload {

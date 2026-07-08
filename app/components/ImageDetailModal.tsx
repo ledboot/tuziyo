@@ -215,16 +215,23 @@ export default function ImageDetailModal({
             {/* Prompt */}
             <div className="mb-10">
               <h3 className="text-white font-bold mb-3 text-sm">Prompt</h3>
-              <button
-                type="button"
+              <div
                 onClick={handleCopyPrompt}
-                className="group block w-full max-h-[min(18rem,32vh)] overflow-y-auto pr-2 text-left cursor-pointer"
+                className="group block w-full max-h-[min(18rem,32vh)] overflow-y-auto pr-2 text-left cursor-pointer [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleCopyPrompt();
+                  }
+                }}
                 aria-label="Copy prompt"
               >
                 <p className="text-sm text-base-content/80 leading-relaxed break-words transition-colors group-hover:text-white">
                   {image.prompt}
                 </p>
-              </button>
+              </div>
               
               {image.negative_prompt && (
                 <div className="mt-6">
@@ -242,16 +249,16 @@ export default function ImageDetailModal({
             <div className="mb-6">
               <h3 className="text-white font-bold mb-5 text-sm">Settings</h3>
               <div className="grid grid-cols-3 gap-y-6 gap-x-4">
-                <div>
+                <div className="col-span-2">
                   <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Model</div>
-                  <div className="text-sm text-white">{getModelName(image.model)}</div>
+                  <div className="text-sm text-white break-all">{getModelName(image.model)}</div>
                 </div>
                 
                 {image.aspect_ratio && (
                   <div>
                     <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Aspect ratio</div>
                     <div className="text-sm text-white flex items-center gap-1.5">
-                      <div className="w-4 h-3 border border-white/40 rounded-[2px]"></div>
+                      <div className="w-4 h-3 border border-white/40 rounded-[2px] shrink-0"></div>
                       {image.aspect_ratio}
                     </div>
                   </div>
@@ -270,6 +277,13 @@ export default function ImageDetailModal({
                     <div className="text-sm text-white uppercase">{image.output_format}</div>
                   </div>
                 )}
+
+                {(image.resolution || image.image_size) && (
+                  <div>
+                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Resolution</div>
+                    <div className="text-sm text-white">{image.resolution || image.image_size}</div>
+                  </div>
+                )}
                 
                 <div className="col-span-2">
                   <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Date created</div>
@@ -277,13 +291,6 @@ export default function ImageDetailModal({
                     {formatTimestamp(image.created_at)}
                   </div>
                 </div>
-                
-                {image.image_size && (
-                  <div>
-                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Size</div>
-                    <div className="text-sm text-white">{image.image_size}</div>
-                  </div>
-                )}
                 
                 {image.style && (
                   <div>

@@ -147,11 +147,6 @@ export const MODEL_OPTIONS_CONFIG: Record<string, Record<string, ModelOption>> =
       values: ["png", "jpeg"],
       defaultValue: "png",
     },
-    negative_prompt: {
-      name: "Negative Prompt",
-      type: ModelOptionType.TEXTAREA,
-      values: [],
-    },
   },
   "openai/gpt-image-1.5": {
     size: {
