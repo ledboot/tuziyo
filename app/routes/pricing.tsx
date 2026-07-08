@@ -1,24 +1,40 @@
 import { useState, useEffect } from "react"
-import { Check, Loader2 } from "lucide-react"
+import {
+  Check,
+  X,
+  Loader2,
+  Zap,
+  ChevronDown,
+  Info,
+  Shield,
+  HelpCircle,
+  Plus,
+  Minus,
+} from "lucide-react"
 import { useUserStore } from "~/stores/userStore"
 import { api } from "~/lib/api"
 
 interface Product {
-  id: string
   product_id: string
   product_name: string
   product_description: string
-  unit_amount: number
-  currency: string
-  recurring?: {
-    interval: string
-  } | null
-  interval: string | null
   features: string[]
   credits: number
   images: number
   sort: number
   recommend: boolean
+  prices: {
+    monthly: {
+      id: string
+      unit_amount: number
+      currency: string
+    } | null
+    yearly: {
+      id: string
+      unit_amount: number
+      currency: string
+    } | null
+  }
 }
 
 interface Model {
@@ -29,85 +45,116 @@ interface Model {
   supportsImage?: boolean
 }
 
-const COMPARISON_CATEGORIES = [
-  {
-    title: "Credits & Performance",
-    features: [
-      { name: "Monthly Credits", starter: "500 Credits", pro: "2,000 Credits", enterprise: "5,000 Credits" },
-      { name: "Estimated Images", starter: "~1,000 / month", pro: "~4,000 / month", enterprise: "~10,000 / month" },
-      { name: "Queue Priority", starter: "Standard Priority", pro: "High Priority", enterprise: "Max Priority (Dedicated GPU)" },
-      { name: "Parallel Generations", starter: "2 concurrent", pro: "5 concurrent", enterprise: "Unlimited" },
-    ]
-  },
-  {
-    title: "Model & Customization",
-    features: [
-      { name: "Standard Models Access", starter: true, pro: true, enterprise: true },
-      { name: "Premium Models (WAN 2.6)", starter: false, pro: true, enterprise: true },
-      { name: "Early Access / Beta Models", starter: false, pro: "Priority Access", enterprise: "Full Access" },
-      { name: "Reference Images per Prompt", starter: "Up to 3 images", pro: "Up to 16 images", enterprise: "Unlimited + Custom Data" },
-      { name: "Custom Fine-Tuned Models", starter: false, pro: false, enterprise: true },
-    ]
-  },
-  {
-    title: "Integration & Support",
-    features: [
-      { name: "Developer API Access", starter: false, pro: "Standard API", enterprise: "Full Custom API" },
-      { name: "API Rate Limits", starter: "—", pro: "60 requests / min", enterprise: "Custom High-Volume" },
-      { name: "Customer Support", starter: "Email Support", pro: "24h Priority Email", enterprise: "Dedicated Slack & TAM" },
-      { name: "Commercial Licensing", starter: true, pro: true, enterprise: "Enterprise SLA & Indemnity" },
-    ]
-  }
-]
-
 const FAQ_ITEMS = [
   {
     q: "What are credits?",
-    a: "Credits are the currency used for AI generation activities on Imagine.Art. They are deducted based on the tool, model, output type (image/video), and the number of generations."
+    a: "Credits are the currency used for AI generation activities on tuziyo. They are deducted based on the tool, model, output type (image/video), and the complexity of generations.",
   },
   {
     q: "How are credits rolled over?",
-    a: "Credits reset at the start of each billing cycle (monthly, quarterly, yearly) and do not carry over. If credits run out mid-cycle, you can upgrade your plan or purchase additional credits."
+    a: "Subscription credits reset at the start of each billing cycle and unused subscription credits do not carry over. One-time purchased credits remain available until used.",
   },
   {
-    q: "Can I use imagineArt for free?",
-    a: "Yes, you can register and use our platform for free with limited daily credits. Upgrading to a paid plan unlocks premium models, higher priorities, and more credits."
+    q: "How do annual plan credits work?",
+    a: "Annual plans are billed once per year, but subscription credits are issued monthly on your subscription date. Each monthly grant replaces unused subscription credits from the previous grant period; purchased credits remain available.",
   },
   {
-    q: "Do I have to buy a plan to unlock video generation?",
-    a: "Video generation is available on our Professional and Enterprise plans. Starter plan and free accounts are limited to standard image generations."
+    q: "Can I use tuziyo for free?",
+    a: "Yes, you can register and use our platform for free with limited daily credits. Upgrading to a paid plan unlocks premium models, higher priorities, and more credits.",
   },
   {
     q: "What is the difference between buying credits and subscriptions?",
-    a: "Subscriptions provide recurring credits monthly or yearly at a highly discounted rate with priority queue access, while one-time credit packages can be purchased as add-ons whenever you run out."
+    a: "Subscriptions provide recurring credits that reset each billing cycle with priority queue access. One-time credit packages are add-ons that stay in your account and are used after subscription credits.",
   },
   {
-    q: "How to cancel",
-    a: "You can cancel your subscription at any time via the Customer Portal in your Account settings. Your paid features will remain active until the end of your current billing period."
+    q: "What happens if a subscription payment fails?",
+    a: "We provide a 7-day grace period after a failed renewal payment. If payment is still unresolved after 7 days, subscription credits are cleared and the account is downgraded to Free; purchased credits remain available.",
+  },
+  {
+    q: "How to cancel my subscription?",
+    a: "You can cancel your subscription at any time via the Customer Portal in your Account settings. Your paid features will remain active until the end of your current billing period.",
   },
   {
     q: "Refund policy?",
-    a: "Due to the high GPU computing cost of AI generations, we generally do not offer refunds once credits have been used. If you face technical issues, please contact our support team."
+    a: "Due to the high GPU computing cost of AI generations, we generally do not offer refunds once credits have been used. If you face technical issues, please contact our support team.",
   },
   {
-    q: "How to Downgrade",
-    a: "You can downgrade your subscription via the Customer Portal. The changes will take effect at the start of your next billing cycle."
+    q: "How to Downgrade?",
+    a: "You can downgrade your subscription via the Customer Portal. The changes will take effect at the start of your next billing cycle.",
   },
   {
     q: "What if my generations fail?",
-    a: "Credits for failed generations are refunded instantly, and you will see the notification in your usage analytics."
+    a: "Credits for failed generations are refunded instantly, and you will see the notification in your usage analytics.",
   },
   {
     q: "Commercial Use Policy",
-    a: "All images generated under Starter, Professional, and Enterprise subscription plans come with full commercial rights. You own the assets you create."
-  }
+    a: "All images generated under Starter, Professional, and Creator subscription plans come with full commercial rights. You own the assets you create.",
+  },
 ]
+
+// 3种等级的模型支持配置
+
+function FAQItem({ q, a }: { q: string; a: string }) {
+  const [isOpen, setIsOpen] = useState(false)
+  return (
+    <div className="border-b border-[#161a23] py-5">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between text-left group py-2 cursor-pointer"
+      >
+        <span
+          className={`text-[15px] font-extrabold transition-colors duration-300 ${
+            isOpen ? "text-primary" : "text-gray-200 group-hover:text-white"
+          }`}
+        >
+          {q}
+        </span>
+        <div
+          className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ml-4 transition-all duration-300 ${
+            isOpen
+              ? "bg-primary/10 text-primary border border-primary/20"
+              : "bg-[#181d2a] text-gray-400 border border-[#272e42] group-hover:bg-[#202738] group-hover:text-white"
+          }`}
+        >
+          <div className="relative w-3.5 h-3.5 flex items-center justify-center">
+            <div
+              className={`absolute transition-all duration-300 transform ${
+                isOpen ? "rotate-90 opacity-0 scale-75" : "rotate-0 opacity-100 scale-100"
+              }`}
+            >
+              <Plus size={14} />
+            </div>
+            <div
+              className={`absolute transition-all duration-300 transform ${
+                isOpen ? "rotate-0 opacity-100 scale-100" : "-rotate-90 opacity-0 scale-75"
+              }`}
+            >
+              <Minus size={14} />
+            </div>
+          </div>
+        </div>
+      </button>
+      <div
+        className={`grid transition-all duration-300 ease-in-out ${
+          isOpen ? "grid-rows-[1fr] opacity-100 mt-4" : "grid-rows-[0fr] opacity-0"
+        }`}
+      >
+        <div className="overflow-hidden text-xs md:text-sm text-gray-400 leading-relaxed font-medium">
+          {a}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function PricingPage() {
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly")
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
   const [products, setProducts] = useState<Product[]>([])
-  const [models, setModels] = useState<Model[]>([])
+  const [planModelsConfig, setPlanModelsConfig] = useState<Record<
+    string,
+    Array<{ name: string; supported: boolean; label?: string }>
+  > | null>(null)
   const { user, token } = useUserStore()
 
   useEffect(() => {
@@ -119,14 +166,12 @@ export default function PricingPage() {
         }
       })
       .catch(console.error)
-  }, [])
 
-  useEffect(() => {
     api.models
       .list()
       .then(data => {
-        if (data.models) {
-          setModels(data.models)
+        if (data.plan_models_config) {
+          setPlanModelsConfig(data.plan_models_config)
         }
       })
       .catch(console.error)
@@ -163,217 +208,286 @@ export default function PricingPage() {
     }).format(amount / 100)
   }
 
-  const renderValue = (val: string | boolean) => {
-    if (typeof val === "boolean") {
-      return val ? (
-        <Check className="size-5 text-primary mx-auto" />
-      ) : (
-        <span className="text-base-content/20">—</span>
-      )
+  // 根据产品名/排序等对计划进行归类：Starter / Professional / Creator
+  const getPlanKey = (name: string): "starter" | "professional" | "creator" => {
+    const lowerName = name.toLowerCase()
+    if (lowerName.includes("starter") || lowerName.includes("basic")) {
+      return "starter"
+    } else if (lowerName.includes("creator") || lowerName.includes("enterprise")) {
+      return "creator"
+    } else {
+      return "professional"
     }
-    return val
+  }
+
+  // 渲染每个计划的附加特征列表
+  const getAdditionalFeatures = (planKey: "starter" | "professional" | "creator") => {
+    if (planKey === "starter") {
+      return [
+        "Up to ~500 standard Image Generations/month",
+        "General Commercial Terms",
+        "Image Generation Visibility: Public",
+        "Priority Support",
+      ]
+    } else if (planKey === "professional") {
+      return [
+        "Up to ~1,500 standard Image Generations/month",
+        "General Commercial Terms",
+        "Image Generation Visibility: Private",
+        "24h Priority Support",
+      ]
+    } else {
+      return [
+        "Up to ~5,000 standard Image Generations/month",
+        "All styles and models",
+        "General Commercial Terms",
+        "Image Generation Visibility: Private",
+        "Dedicated Slack & TAM Support",
+      ]
+    }
+  }
+
+  // 不同的方案的主题样式
+  const getPlanStyles = (planKey: "starter" | "professional" | "creator") => {
+    switch (planKey) {
+      case "starter":
+        return {
+          cardBorder: "border-[#1e293b] hover:border-indigo-500/40 bg-[#0f172a]/20",
+          badgeBg: "bg-slate-800 text-slate-300",
+          btnClass: "bg-slate-800 hover:bg-slate-700 text-white border-none",
+          creditsText: "text-indigo-400",
+          glowShadow: "hover:shadow-[0_0_30px_rgba(99,102,241,0.05)]",
+          accentColor: "indigo-500",
+          name: "Starter",
+          desc: "For newcomers taking their first steps",
+          badgeText: null,
+        }
+      case "professional":
+        return {
+          cardBorder:
+            "border-primary bg-primary/5 shadow-2xl shadow-primary/5 ring-1 ring-primary/20",
+          badgeBg: "bg-primary text-accent-content",
+          btnClass:
+            "bg-primary hover:opacity-90 text-primary-content border-none shadow-lg shadow-primary/20",
+          creditsText: "text-primary",
+          glowShadow: "hover:shadow-3xl hover:shadow-primary/15",
+          accentColor: "primary",
+          name: "Professional",
+          desc: "For rising creators to level up their game",
+          badgeText: "MOST POPULAR",
+        }
+      case "creator":
+        return {
+          cardBorder: "border-accent bg-accent/5 shadow-2xl shadow-accent/5 ring-1 ring-accent/20",
+          badgeBg: "bg-accent text-accent-content",
+          btnClass:
+            "bg-accent hover:opacity-90 text-accent-content border-none shadow-lg shadow-accent/20",
+          creditsText: "text-accent",
+          glowShadow: "hover:shadow-3xl hover:shadow-accent/15",
+          accentColor: "accent",
+          name: "Creator",
+          desc: "A full production engine for powerhouses",
+          badgeText: "SPECIAL OFFER",
+        }
+    }
   }
 
   return (
-    <div className="min-h-screen bg-base-100 text-base-content">
-      <div className="container mx-auto px-4 py-16 max-w-6xl">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 tracking-tight">Simple, Transparent Pricing</h1>
-          <p className="text-lg text-base-content/60 max-w-2xl mx-auto">
-            Choose the plan that fits your needs.
+    <div className="min-h-screen bg-[#060709] text-gray-100 selection:bg-indigo-500/30">
+      <div className="container mx-auto py-40 max-w-4xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-[1440px]">
+        {/* Header Section */}
+        <div className="text-center mb-16 relative">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight bg-gradient-to-r from-white via-gray-200 to-gray-500 bg-clip-text text-transparent">
+            Simple, Premium Pricing
+          </h1>
+          <p className="text-md md:text-lg text-gray-400 max-w-none mx-auto font-medium whitespace-nowrap">
+            Unlock professional-grade AI generation models with our flexible plans.
           </p>
         </div>
 
-        <div className="mb-20">
-          <h2 className="text-2xl font-bold mb-8 text-center tracking-tight">Supported Models</h2>
-          <div className="flex flex-wrap justify-center gap-6">
-            {models.map(model => (
-              <div 
-                key={model.id} 
-                className="flex items-center gap-4 px-6 py-4 rounded-2xl bg-base-200/30 backdrop-blur-md"
-              >
-                <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-base-200/40 p-2">
-                  <img src={model.icon} alt={model.name} className="w-full h-full object-contain invert" />
-                </div>
-                <div>
-                  <div className="font-bold text-sm tracking-tight">{model.name}</div>
-                  <div className="text-xs text-base-content/50 font-medium">{model.provider}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="text-center mb-8">
-          <div className="inline-flex rounded-xl p-1.5 bg-base-200 border border-base-200/30 backdrop-blur-md">
+        {/* Billing Period Toggle */}
+        <div className="text-center mb-16 relative z-10">
+          <div className="inline-flex items-center rounded-full p-1.5 bg-[#0f1115] border border-[#1b1e24] shadow-inner">
             <button
-              className={`btn btn-sm rounded-lg px-6 ${billingPeriod === "monthly" ? "btn-primary shadow-sm" : "btn-ghost"}`}
+              className={`flex items-center gap-1.5 px-6 py-2.5 rounded-full text-xs font-black transition-all duration-300 cursor-pointer ${
+                billingPeriod === "monthly"
+                  ? "bg-white text-[#060709] shadow-lg shadow-black/35 scale-100 font-extrabold"
+                  : "bg-transparent text-gray-400 hover:text-white hover:scale-102"
+              }`}
               onClick={() => setBillingPeriod("monthly")}
             >
               Monthly
             </button>
+
             <button
-              className={`btn btn-sm rounded-lg px-6 ${billingPeriod === "yearly" ? "btn-primary shadow-sm" : "btn-ghost"}`}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-black transition-all duration-300 cursor-pointer ${
+                billingPeriod === "yearly"
+                  ? "bg-white text-[#060709] shadow-lg shadow-black/35 scale-100 font-extrabold"
+                  : "bg-transparent text-gray-400 hover:text-white hover:scale-102"
+              }`}
               onClick={() => setBillingPeriod("yearly")}
             >
-              Yearly
+              <span>Yearly</span>
+              <span
+                className={`text-[9px] font-black px-2 py-0.5 rounded-lg shadow-[0_0_12px_rgba(124,58,237,0.5)] bg-[#7c3aed] text-white ${
+                  billingPeriod === "yearly" ? "animate-pulse" : ""
+                }`}
+              >
+                Save 20%
+              </span>
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
-          {products
-            .filter(p => p.interval === (billingPeriod === "monthly" ? "month" : "year"))
-            .sort((a, b) => a.sort - b.sort)
-            .map(product => {
-              const isRecommend = product.recommend
+        {/* Pricing Cards Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-28 relative z-10">
+          {products.map(product => {
+            const planKey = getPlanKey(product.product_name)
+            const styles = getPlanStyles(planKey)
+            const additionalFeatures = getAdditionalFeatures(planKey)
+            const modelsList = (planModelsConfig && planModelsConfig[planKey]) || []
 
-              return (
-                <div
-                  key={product.id}
-                  className={`relative rounded-3xl p-8 flex flex-col justify-between backdrop-blur-md transition-all duration-300 hover:translate-y-[-4px] ${
-                    isRecommend
-                      ? "bg-base-200/40 shadow-xl ring-2 ring-primary border border-primary/20"
-                      : "bg-base-200/20 border border-base-200/50 shadow-sm"
-                  }`}
-                >
-                  {isRecommend && (
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                      <span className="badge badge-primary badge-sm font-semibold tracking-wider uppercase text-[10px] py-2 px-3">Most Popular</span>
-                    </div>
-                  )}
-                  <div>
-                    <div className="text-center mb-6">
-                      <h3 className="text-2xl font-bold mb-3 tracking-tight">{product.product_name}</h3>
-                      <div className="flex items-baseline justify-center gap-1.5 mb-2">
-                        <span className="text-5xl font-extrabold tracking-tight">
-                          {formatPrice(product.unit_amount || 0, product.currency)}
-                        </span>
-                        <span className="text-base-content/50 font-medium">/mo</span>
-                      </div>
-                      {product.interval === "year" && (
-                        <p className="text-xs text-primary font-semibold mt-1">
-                          {formatPrice(product.unit_amount || 0, product.currency)} billed yearly
-                        </p>
-                      )}
-                    </div>
+            const activePrice =
+              billingPeriod === "monthly" ? product.prices.monthly : product.prices.yearly
+            if (!activePrice) return null // 降级处理：若该周期价格没有配置，不显示该卡片
 
-                    <div className="border-t border-b border-base-200/50 py-4 mb-6 space-y-2 text-center">
-                      <p className="text-md font-bold text-base-content">
-                        {product.credits.toLocaleString()} Credits/month
+            return (
+              <div
+                key={product.product_id}
+                className={`relative rounded-3xl p-8 flex flex-col justify-between border backdrop-blur-xl transition-all duration-500 hover:translate-y-[-8px] ${styles.cardBorder} ${styles.glowShadow}`}
+              >
+                {/* Glowing Top Badge */}
+                {styles.badgeText && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span
+                      className={`badge ${styles.badgeBg} badge-sm font-extrabold tracking-widest uppercase text-[9px] py-2 px-4 rounded-full border-none shadow-[0_0_12px_rgba(0,0,0,0.5)]`}
+                    >
+                      {styles.badgeText}
+                    </span>
+                  </div>
+                )}
+
+                <div>
+                  {/* Header info */}
+                  <div className="mb-8">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-2xl font-black tracking-tight text-white">
+                        {styles.name}
+                      </h3>
+                    </div>
+                    <p className="text-xs text-gray-400 font-medium mb-6">{styles.desc}</p>
+
+                    {/* Pricing block */}
+                    <div className="flex items-baseline gap-1.5 mb-1">
+                      <span className="text-5xl font-black text-white tracking-tight">
+                        {formatPrice(
+                          billingPeriod === "yearly"
+                            ? (activePrice.unit_amount || 0) / 12
+                            : activePrice.unit_amount || 0,
+                          activePrice.currency
+                        )}
+                      </span>
+                      <span className="text-gray-400 text-sm font-semibold">/month</span>
+                    </div>
+                    {billingPeriod === "yearly" ? (
+                      <p className="text-[10px] text-gray-400 font-semibold tracking-wide mt-1">
+                        Billed annually
                       </p>
-                      <p className="text-xs text-primary font-medium">
-                        ~{product.images.toLocaleString()} images/month
+                    ) : (
+                      <p className="text-[10px] text-gray-400 font-semibold tracking-wide mt-1">
+                        Billed monthly
                       </p>
-                    </div>
+                    )}
+                  </div>
 
-                    <ul className="space-y-3.5 mb-8">
-                      {product.features.map(feature => (
-                        <li key={feature} className="flex items-start gap-3 text-sm text-base-content/85">
-                          <Check className="size-4.5 text-primary mt-0.5 flex-shrink-0" />
-                          <span>{feature}</span>
+                  {/* Subscription Action Button */}
+                  <button
+                    className={`btn btn-block py-3.5 rounded-2xl font-extrabold text-sm transition-all duration-300 transform active:scale-95 ${styles.btnClass}`}
+                    onClick={() => handleSubscribe(activePrice.id)}
+                    disabled={loadingPlan === activePrice.id}
+                  >
+                    {loadingPlan === activePrice.id ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="size-4.5 animate-spin" />
+                        Processing...
+                      </span>
+                    ) : (
+                      "Get Started"
+                    )}
+                  </button>
+
+                  {/* Credits Counter */}
+                  <div className="mt-8 mb-8 flex items-center gap-2">
+                    <span className="text-sm font-bold tracking-tight text-white">
+                      {product.credits.toLocaleString()} credits per month
+                    </span>
+                  </div>
+
+                  {/* Additional Features Section */}
+                  <div className="mb-8 border-t border-[#161a23] pt-6">
+                    <h4 className="text-xs font-black text-gray-300 uppercase tracking-wider mb-4">
+                      Additional Features
+                    </h4>
+                    <ul className="space-y-3">
+                      {additionalFeatures.map((feat, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-start gap-2.5 text-xs text-gray-300 font-medium"
+                        >
+                          <Check className="size-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                          <span>{feat}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
 
-                  <button
-                    className="btn btn-block py-3 font-semibold rounded-xl transition-all duration-200 btn-primary text-white hover:shadow-lg"
-                    onClick={() => handleSubscribe(product.id)}
-                    disabled={loadingPlan === product.id}
-                  >
-                    {loadingPlan === product.id ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin mr-2" />
-                        Loading...
-                      </>
-                    ) : (
-                      "Subscribe"
-                    )}
-                  </button>
+                  {/* Unlimited Generations Section */}
+                  <div className="border-t border-[#161a23] pt-6">
+                    <h4 className="text-xs font-black text-gray-300 uppercase tracking-wider mb-4">
+                      Unlimited Generations
+                    </h4>
+                    <ul className="space-y-3">
+                      {modelsList.map((modelItem, idx) => (
+                        <li
+                          key={idx}
+                          className={`flex items-start gap-2.5 text-xs font-medium ${
+                            modelItem.supported ? "text-gray-300" : "text-gray-500 opacity-40"
+                          }`}
+                        >
+                          {modelItem.supported ? (
+                            <Check className="size-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                          ) : (
+                            <X className="size-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                          )}
+                          <span>{modelItem.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-              )
-            })}
+              </div>
+            )
+          })}
         </div>
 
-        {/* Plan Comparison Table Section */}
-        <div className="mb-24">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-3 tracking-tight">Compare Plans & Features</h2>
-            <p className="text-base-content/60 max-w-xl mx-auto text-sm">
-              Find the perfect plan tailored to your generation volume and business needs.
+        {/* Premium FAQ Section */}
+        <div className="mt-28 w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-[1440px] mx-auto border-t border-[#161a23] pt-20">
+          <div className="text-center mb-16 relative">
+            <HelpCircle className="size-8 mx-auto text-primary mb-4 animate-bounce" />
+            <h2 className="text-3xl font-black text-white tracking-tight mb-3">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-gray-400 text-sm max-w-none mx-auto font-medium whitespace-nowrap">
+              Everything you need to know about tuziyo billing, credits, and memberships.
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-3xl border border-base-200/50 bg-base-200/10 backdrop-blur-md shadow-xl">
-            <table className="table w-full border-collapse min-w-[768px]">
-              <thead>
-                <tr className="border-b border-base-200/50 bg-base-200/30">
-                  <th className="py-6 px-8 w-[34%]"></th>
-                  <th className="py-6 px-8 text-center text-sm font-bold w-[22%] text-base-content/95">
-                    <span className="text-base-content font-bold text-xl">Starter</span>
-                  </th>
-                  <th className="py-6 px-8 text-center text-sm font-bold w-[22%] text-base-content/95">
-                    <span className="text-base-content font-bold text-xl">Professional</span>
-                  </th>
-                  <th className="py-6 px-8 text-center text-sm font-bold w-[22%] text-base-content/95">
-                    <span className="text-base-content font-bold text-xl">Enterprise</span>
-                  </th>
-                </tr>
-              </thead>
-              {COMPARISON_CATEGORIES.map((cat, idx) => (
-                <tbody key={idx} className="border-t border-base-200/30">
-                  <tr className="bg-base-200/20">
-                    <td colSpan={4} className="py-4 px-8 text-left text-xs font-extrabold text-primary uppercase tracking-widest bg-base-200/20">
-                      {cat.title}
-                    </td>
-                  </tr>
-                  {cat.features.map((feat, fIdx) => (
-                    <tr key={fIdx} className="border-b border-base-200/10 hover:bg-base-200/20 transition-colors duration-150">
-                      <td className="py-4.5 px-8 text-left text-sm font-medium text-base-content/85">
-                        {feat.name}
-                      </td>
-                      <td className="py-4.5 px-8 text-center text-sm text-base-content/65">
-                        {renderValue(feat.starter)}
-                      </td>
-                      <td className="py-4.5 px-8 text-center text-sm text-base-content/65">
-                        {renderValue(feat.pro)}
-                      </td>
-                      <td className="py-4.5 px-8 text-center text-sm text-base-content/65">
-                        {renderValue(feat.enterprise)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              ))}
-            </table>
-          </div>
-        </div>
-
-        <div className="mt-24 max-w-4xl mx-auto border-t border-base-200/50 pt-16">
-          <h2 className="text-3xl font-bold mb-10 text-center tracking-tight">Frequently asked questions</h2>
-          <div className="space-y-1">
+          <div className="w-full max-w-3xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-[1200px] mx-auto">
             {FAQ_ITEMS.map((faq, idx) => (
-              <div key={idx} className="collapse collapse-plus border-b border-base-200/30 rounded-none bg-transparent">
-                <input type="checkbox" name={`faq-accordion-${idx}`} className="peer" />
-                <div className="collapse-title text-base font-semibold pr-12 py-5 peer-checked:text-primary transition-colors duration-200">
-                  {faq.q}
-                </div>
-                <div className="collapse-content text-base-content/75 pb-5 leading-relaxed text-sm">
-                  <p>{faq.a}</p>
-                </div>
-              </div>
+              <FAQItem key={idx} q={faq.q} a={faq.a} />
             ))}
           </div>
-        </div>
-
-        <div className="text-center mt-16">
-          <p className="text-base-content/50 text-sm">
-            Still have questions?{" "}
-            <a href="/contact" className="link link-primary font-semibold">
-              Contact our support team
-            </a>
-          </p>
         </div>
       </div>
     </div>

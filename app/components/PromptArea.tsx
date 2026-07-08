@@ -7,7 +7,28 @@ import { CustomSelect, type SelectOption } from "~/components/CustomSelect"
 import { ModelOptions, type OptionGroup } from "~/components/ModelOptions"
 import { useUserStore } from "~/stores/userStore"
 import { useModelStore, type Model, type ModelOptionsConfig } from "~/stores/modelStore"
-import { api, getApiErrorMessage, MODEL_CREDITS } from "~/lib/api"
+import { api, getApiErrorMessage } from "~/lib/api"
+
+// Plan → allowed model short-names (model id after last "/")
+const PLAN_ALLOWED_MODELS: Record<string, Set<string>> = {
+  starter: new Set(["seedream-4.0", "nano-banana", "gpt-image-1.5"]),
+  professional: new Set([
+    "seedream-4.0", "nano-banana", "gpt-image-1.5",
+    "seedream-4.5", "nano-banana-pro", "grok-imagine-image", "recraftv4",
+  ]),
+  creator: new Set([
+    "seedream-4.0", "nano-banana", "gpt-image-1.5",
+    "seedream-4.5", "nano-banana-pro", "grok-imagine-image", "recraftv4",
+    "wan-2.6-image", "nano-banana-2", "seedream-5-lite", "imagen-4",
+    "gpt-image-2", "grok-imagine-image-quality", "recraftv4-pro",
+  ]),
+}
+
+const PLAN_UPGRADE_LABEL: Record<string, string> = {
+  starter: "Starter",
+  professional: "Professional",
+  creator: "Creator",
+}
 
 interface PromptAreaProps {
   models: Model[]
@@ -167,7 +188,7 @@ export default function PromptArea({
   const isModelDataPending = isModelsLoading || models.length === 0
 
   const selectedModelInfo = models.find(m => m.id === selectedModel)
-  const requiredCredits = MODEL_CREDITS[selectedModel] || 0
+  const requiredCredits = selectedModelInfo?.credits || 0
   const availableCredits = user?.credits ?? 0
   const hasInsufficientCredits = Boolean(user && availableCredits < requiredCredits)
   const creditEstimateText =
@@ -183,22 +204,75 @@ export default function PromptArea({
   const isPromptAtCharacterLimit = promptCharacterCount >= PROMPT_MAX_LENGTH
   const isUploadingImages = uploadedImages.some(image => image.status === "uploading")
   const hasFailedUploads = uploadedImages.some(image => image.status === "error")
-  const modelSelectOptions: SelectOption[] = models.map(model => ({
-    value: model.id,
-    label: model.name,
-    icon: <img src={model.icon} alt={model.provider} className="size-5 rounded invert" />,
-    badge: model.isNew ? (
-      <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-primary text-primary-content rounded-full flex items-center gap-0.5">
-        <Sparkles className="size-2.5" />
-        NEW
-      </span>
-    ) : undefined,
-  }))
+  const modelSelectOptions: SelectOption[] = models.map(model => {
+    // Determine which plan key the logged-in user belongs to
+    let planKey: "starter" | "professional" | "creator" | null = null
+    if (user) {
+      const ut = (user.userType ?? "").toLowerCase()
+      if (ut === "professional") planKey = "professional"
+      else if (ut === "creator" || ut === "enterprise") planKey = "creator"
+      else planKey = "starter" // free / starter / unknown
+    }
+    // null means not logged in → all models available
+    const shortName = model.id.split("/").pop() ?? model.id
+    const isDisabled =
+      planKey !== null && !PLAN_ALLOWED_MODELS[planKey]?.has(shortName)
+
+    // Determine which plan unlocks this model
+    let requiredPlan = ""
+    if (isDisabled) {
+      if (PLAN_ALLOWED_MODELS.professional.has(shortName)) {
+        requiredPlan = PLAN_UPGRADE_LABEL.professional
+      } else {
+        requiredPlan = PLAN_UPGRADE_LABEL.creator
+      }
+    }
+
+    return {
+      value: model.id,
+      label: model.name,
+      icon: <img src={model.icon} alt={model.provider} className="size-5 rounded invert" />,
+      badge: model.isNew ? (
+        <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-primary text-primary-content rounded-full flex items-center gap-0.5">
+          <Sparkles className="size-2.5" />
+          NEW
+        </span>
+      ) : undefined,
+      disabled: isDisabled,
+      disabledReason: isDisabled
+        ? `Requires ${requiredPlan} plan or above`
+        : undefined,
+    }
+  })
 
   useEffect(() => {
-    if (models.length === 0 || selectedModelInfo) return
-    onModelChange(models[0].id)
-  }, [models, onModelChange, selectedModelInfo])
+    if (models.length === 0) return
+
+    let planKey: "starter" | "professional" | "creator" | null = null
+    if (user) {
+      const ut = (user.userType ?? "").toLowerCase()
+      if (ut === "professional") planKey = "professional"
+      else if (ut === "creator" || ut === "enterprise") planKey = "creator"
+      else planKey = "starter" // free / starter / unknown
+    }
+
+    const isAllowed = (modelId: string) => {
+      if (planKey === null) return true // Not logged in -> all models allowed
+      const shortName = modelId.split("/").pop() ?? modelId
+      return PLAN_ALLOWED_MODELS[planKey]?.has(shortName) ?? false
+    }
+
+    // If currently selected model is valid and allowed, do nothing
+    if (selectedModelInfo && isAllowed(selectedModel)) {
+      return
+    }
+
+    // Otherwise, select the first allowed model
+    const firstAllowed = models.find(m => isAllowed(m.id))
+    if (firstAllowed) {
+      onModelChange(firstAllowed.id)
+    }
+  }, [user, models, selectedModel, selectedModelInfo, onModelChange])
 
   useEffect(() => {
     if (!initialPrompt && !initialPromptVersion) return

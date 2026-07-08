@@ -1,7 +1,7 @@
 import { Link, NavLink, useLocation } from "react-router"
 import { ChevronDown, Globe, LogOut, Menu, User, X } from "lucide-react"
 import { languageNames, useI18n, type Language } from "~/lib/i18n"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useUserStore } from "../stores/userStore"
 
 interface NavItemSimple {
@@ -26,20 +26,12 @@ export default function Header() {
   const { user, token, logout, isLoading: isUserLoading, isFetching: isUserFetching } = useUserStore()
   const isAuthPending = isUserLoading || isUserFetching
   const hasStoredAuth = Boolean(user || token)
+  const isAiToolkit = location.pathname.startsWith("/ai-toolkit")
 
   const navItems: NavItem[] = [
+    { title: t.nav.home, to: "/" },
     { title: t.nav.aiToolkit, to: "/ai-toolkit" },
-    {
-      title: t.nav.tools,
-      children: [
-        { title: t.nav.inpainting, to: "/inpainting" },
-        { title: t.nav.resize, to: "/resize" },
-        { title: t.nav.crop, to: "/crop" },
-        { title: t.nav.convert, to: "/convert" },
-      ],
-    },
     { title: t.nav.pricing, to: "/pricing" },
-    { title: t.nav.api, to: "/api" },
   ]
 
   const closeMenus = () => {
@@ -53,23 +45,64 @@ export default function Header() {
     window.dispatchEvent(new CustomEvent("openLoginModal"))
   }
 
-  const isAiToolkit = location.pathname.startsWith("/ai-toolkit")
+  useEffect(() => {
+    if (showMobileMenu) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = ""
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [showMobileMenu])
+
+
+
   const headerClasses = isAiToolkit
     ? "fixed top-0 left-0 w-full z-[100] text-white group/header"
-    : "fixed top-0 left-0 w-full z-[100] text-white backdrop-blur-[18px] border-b border-white/5 bg-base-100/50"
+    : "fixed top-0 left-0 w-full z-[100] text-white"
 
-  const navClasses = isAiToolkit
-    ? "flex items-center h-11 px-4 rounded-xl liquid-glass-pill"
-    : "flex items-center h-11 px-4"
+  const navClasses = "ai-toolkit-nav-shell"
+
+  const headerInnerClasses =
+    "grid grid-cols-[1fr_auto_1fr] min-h-20 max-[1023px]:min-h-[60px] w-full items-center gap-6 px-6 max-[1023px]:grid-cols-[1fr_auto]"
+
+  const isSegmentedNavItemActive = (to: string) => {
+    if (to === "/") return location.pathname === "/"
+    const [path, hash = ""] = to.split("#")
+    if (location.pathname !== path) return false
+    return hash ? location.hash === `#${hash}` : !location.hash
+  }
 
   return (
-    <header className={headerClasses}>
+    <header
+      className={headerClasses}
+      style={
+        !isAiToolkit
+          ? {
+              background:
+                "linear-gradient(to bottom, oklch(14% 0 0 / 0.6) 0%, oklch(14% 0 0 / 0) 100%)",
+            }
+          : undefined
+      }
+    >
       {/* Top blur gradient layer - only for AI Toolkit */}
       {isAiToolkit && (
         <div className="absolute inset-0 z-[-1] [mask-image:linear-gradient(to_bottom,black,transparent)] backdrop-blur-xl pointer-events-none" />
       )}
+
+      {/* Progressive backdrop-blur layer - for non-AI Studio pages (like homepage) */}
+      {!isAiToolkit && (
+        <div
+          className="absolute inset-0 z-[-1] backdrop-blur-md pointer-events-none"
+          style={{
+            maskImage: "linear-gradient(to bottom, black 30%, transparent 85%)",
+            WebkitMaskImage: "linear-gradient(to bottom, black 30%, transparent 85%)",
+          }}
+        />
+      )}
       
-      <div className="grid grid-cols-3 min-h-[4.5rem] w-full items-center gap-6 px-6 max-[719px]:min-h-[4.15rem]">
+      <div className={headerInnerClasses}>
         <div className="flex justify-start">
         <Link
           to="/"
@@ -83,100 +116,42 @@ export default function Header() {
         </Link>
         </div>
 
-        <div className="flex justify-center">
+        <div className="hidden justify-center lg:flex">
 
         <nav
           className={navClasses}
           aria-label={t.nav.mainNavigation}
         >
-          <ul className="menu menu-horizontal h-full gap-3 bg-transparent p-0 items-center list-none">
+          <ul className="ai-toolkit-nav-list">
             {navItems.map(item => {
-              if ("children" in item) {
-                const hasActiveChild = item.children.some(child =>
-                  location.pathname.startsWith(child.to)
-                )
-
-                return (
-                  <li className="h-10 w-28 text-nowrap" key={item.title}>
-                    <div className="group dropdown dropdown-hover h-full w-full bg-transparent">
-                      <button
-                        type="button"
-                        tabIndex={0}
-                        className={[
-                          "!flex h-full w-full items-center justify-center gap-1 rounded-full text-center text-nav-root font-normal",
-                          hasActiveChild
-                            ? "text-primary font-semibold"
-                            : "text-nav-menu group-hover:text-primary transition-colors",
-                        ].join(" ")}
-                      >
-                        <span className="font-normal text-nav-root">{item.title}</span>
-                        <ChevronDown className="size-4 transition-transform duration-200 group-hover:-rotate-180" />
-                      </button>
-                      <div
-                        className="dropdown-content left-1/2 -translate-x-1/2 z-50 pt-1"
-                        tabIndex={0}
-                      >
-                        <ul className="menu menu-md ms-0 w-40 gap-1 rounded-box liquid-glass-dropdown p-1 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
-                          {item.children.map(child => (
-                            <li key={child.to}>
-                              <NavLink
-                                to={child.to}
-                                className={({ isActive }) =>
-                                  [
-                                    "!flex w-full items-center justify-start rounded-lg text-left px-3 py-2 bg-transparent text-nav-submenu hover:cursor-pointer",
-                                    isActive
-                                      ? "text-primary font-bold"
-                                      : "text-nav-menu hover:bg-white/10 hover:text-primary transition-colors",
-                                  ].join(" ")
-                                }
-                              >
-                                {child.title}
-                              </NavLink>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </li>
-                )
-              }
-
-              if (item.external) {
-                return (
-                  <li className="group h-10 w-28 text-nowrap" key={item.to}>
-                    <a
-                      href={item.to}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={[
-                        "flex h-full w-full items-center justify-center rounded-lg px-2 text-center text-nav-root font-normal",
-                        location.pathname.startsWith(item.to)
-                          ? "text-primary font-bold"
-                          : "text-nav-menu group-hover:text-primary transition-colors",
-                      ].join(" ")}
-                    >
-                      {item.title}
-                    </a>
-                  </li>
-                )
-              }
+              if ("children" in item) return null
 
               return (
-                <li className="group h-10 w-28 text-nowrap" key={item.to}>
-                  <NavLink
-                    to={item.to}
-                    className={({ isActive }) =>
-                      [
-                        "!flex h-full w-full items-center justify-center bg-transparent px-4 text-center text-nav-root font-normal",
-                        isActive
-                          ? "text-primary font-bold"
-                          : "text-nav-menu group-hover:text-primary transition-colors",
-                      ].join(" ")
-                    }
+              <li key={item.to}>
+                {item.external ? (
+                  <a
+                    href={item.to}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={[
+                      "ai-toolkit-nav-item",
+                      isSegmentedNavItemActive(item.to) ? "is-active" : "",
+                    ].join(" ")}
                   >
                     {item.title}
-                  </NavLink>
-                </li>
+                  </a>
+                ) : (
+                  <Link
+                    to={item.to}
+                    className={[
+                      "ai-toolkit-nav-item",
+                      isSegmentedNavItemActive(item.to) ? "is-active" : "",
+                    ].join(" ")}
+                  >
+                    {item.title}
+                  </Link>
+                )}
+              </li>
               )
             })}
           </ul>
@@ -185,13 +160,13 @@ export default function Header() {
 
         {/* Right Column: Actions */}
         <div className="flex justify-end items-center gap-[0.55rem]">
-          <div className="hidden md:flex items-center gap-[0.55rem]">
+          <div className="hidden lg:flex items-center gap-[0.55rem]">
           <div
             className={`group dropdown dropdown-hover h-10 w-28 ${showLangMenu ? "dropdown-open" : ""}`}
           >
             <button
               type="button"
-              className="!flex h-full w-full items-center justify-center gap-1 rounded-full text-center text-nav-root font-normal text-nav-menu group-hover:text-primary cursor-pointer transition-colors"
+              className="!flex h-full w-full items-center justify-center gap-1 rounded-full text-center text-nav-root font-normal text-nav-menu group-hover:!text-gray-100 cursor-pointer transition-colors"
               onClick={() => setShowLangMenu(value => !value)}
               aria-label={t.nav.changeLanguage}
               aria-expanded={showLangMenu}
@@ -214,8 +189,8 @@ export default function Header() {
                       className={[
                         "justify-between font-normal text-nav-submenu",
                         lang === nextLang
-                          ? "text-primary font-bold"
-                          : "text-nav-menu hover:bg-white/10 hover:text-primary transition-colors",
+                          ? "text-primary font-bold hover:!text-gray-100"
+                          : "text-nav-menu hover:bg-white/10 hover:!text-gray-100 transition-colors",
                       ].join(" ")}
                     >
                       {languageNames[nextLang]}
@@ -252,22 +227,18 @@ export default function Header() {
                 aria-expanded={showUserMenu}
                 tabIndex={0}
               >
-                {user.avatarUrl ? (
-                  <img
-                    className="size-full rounded-full object-cover"
-                    src={user.avatarUrl}
-                    alt={user.name}
-                  />
-                ) : (
-                  user.name.charAt(0).toUpperCase()
-                )}
+                <img
+                  className="size-full rounded-full object-cover"
+                  src="/default-avatar.svg"
+                  alt={user.name}
+                />
               </button>
               <div className="dropdown-content z-50 pt-1" tabIndex={0}>
                 <ul className="menu menu-md w-40 gap-1 rounded-box liquid-glass-dropdown p-2 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
                   <li>
                     <button
                       type="button"
-                      className="justify-between rounded-lg text-nav-submenu font-normal text-nav-menu hover:bg-white/10 hover:text-primary transition-colors"
+                      className="justify-between rounded-lg text-nav-submenu font-normal text-nav-menu hover:bg-white/10 hover:!text-gray-100 transition-colors"
                       onClick={() => {
                         if (location.pathname === "/profile") return
                         closeMenus()
@@ -281,7 +252,7 @@ export default function Header() {
                   <li>
                     <button
                       type="button"
-                      className="justify-between rounded-lg text-nav-submenu font-normal text-nav-menu hover:bg-white/10 hover:text-primary transition-colors"
+                      className="justify-between rounded-lg text-nav-submenu font-normal text-nav-menu hover:bg-white/10 hover:!text-gray-100 transition-colors"
                       onClick={() => {
                         closeMenus()
                         logout()
@@ -297,14 +268,14 @@ export default function Header() {
           ) : (
             <>
               <button
-                className="!flex h-full w-28 items-center justify-center gap-1 rounded-full text-center text-nav-root font-normal text-nav-menu hover:bg-transparent hover:text-primary transition-colors"
+                className="!flex h-full w-28 items-center justify-center gap-1 rounded-full text-center text-nav-root font-normal text-nav-menu hover:bg-transparent hover:!text-gray-100 transition-colors"
                 type="button"
                 onClick={openLogin}
               >
                 {t.nav.login}
               </button>
               <button
-                className="btn btn-primary btn-sm rounded-xl text-nav-root font-medium"
+                className="header-register-btn"
                 type="button"
                 onClick={openLogin}
               >
@@ -312,97 +283,123 @@ export default function Header() {
               </button>
             </>
           )}
+          </div>
 
           <button
             type="button"
-            className="btn btn-circle btn-ghost btn-sm md:hidden"
+            className="btn btn-circle btn-ghost btn-sm lg:hidden"
             onClick={() => setShowMobileMenu(value => !value)}
             aria-label={t.nav.openMenu}
             aria-expanded={showMobileMenu}
           >
             {showMobileMenu ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
-        </div>
 
         {showMobileMenu && (
-          <div className="absolute top-[calc(100%+0.5rem)] right-4 left-4 z-50 md:hidden">
-            <ul className="menu gap-1 rounded-box liquid-glass-dropdown p-2 text-nav-submenu shadow-2xl">
-              {navItems.map(item => {
-                if ("children" in item) {
-                  return item.children.map(child => (
-                    <li key={child.to}>
-                      <NavLink
-                        to={child.to}
-                        onClick={closeMenus}
-                        className={({ isActive }) =>
-                          [
-                            "!flex w-full items-center justify-center rounded-lg text-center text-nav-submenu font-normal",
-                            isActive
-                              ? "text-primary font-bold"
-                              : "text-nav-menu hover:bg-white/10 hover:text-primary transition-colors",
-                          ].join(" ")
-                        }
-                      >
-                        {child.title}
-                      </NavLink>
-                    </li>
-                  ))
-                }
+          <>
+            {/* Backdrop */}
+            <div
+              className="mobile-menu-backdrop lg:hidden"
+              onClick={closeMenus}
+              aria-hidden="true"
+            />
+            {/* Drawer Panel */}
+            <div className="mobile-menu-drawer lg:hidden">
+              {/* Header row */}
+              <div className="flex items-center justify-between">
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-[0.55rem] text-xl font-semibold tracking-normal text-white uppercase no-underline"
+                  onClick={closeMenus}
+                >
+                  <span className="flex items-center gap-2">
+                    <img className="h-9 w-9" src="/logo.svg" alt="" />
+                    <span className="text-xl">tuziyo</span>
+                  </span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={closeMenus}
+                  className="p-2 text-white/70 hover:text-white transition-all duration-200 cursor-pointer hover:scale-110 active:scale-90"
+                  aria-label="Close menu"
+                >
+                  <X className="size-6" />
+                </button>
+              </div>
 
-                if (item.external) {
+              {/* Navigation links */}
+              <nav className="flex-1 flex flex-col justify-start gap-6 mt-12 overflow-y-auto">
+                {navItems.map(item => {
+                  if ("children" in item) return null
+                  const isActive = isSegmentedNavItemActive(item.to)
                   return (
-                    <li key={item.to}>
-                      <a
-                        href={item.to}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={[
-                          "!flex w-full items-center justify-center rounded-lg text-center text-nav-submenu font-normal",
-                          location.pathname.startsWith(item.to)
-                            ? "text-primary font-bold"
-                            : "text-nav-menu hover:bg-white/10 hover:text-primary transition-colors",
-                        ].join(" ")}
-                        onClick={closeMenus}
-                      >
-                        {item.title}
-                      </a>
-                    </li>
-                  )
-                }
-
-                return (
-                  <li key={item.to}>
-                    <NavLink
+                    <Link
+                      key={item.to}
                       to={item.to}
                       onClick={closeMenus}
-                      className={({ isActive }) =>
-                        [
-                          "!flex w-full items-center justify-center rounded-lg text-center text-nav-submenu font-normal",
-                          isActive
-                            ? "text-primary font-semibold"
-                            : "text-nav-menu hover:bg-white/10 hover:text-primary transition-colors",
-                        ].join(" ")
-                      }
+                      className={`text-2xl font-medium tracking-tight transition-colors duration-200 ${
+                        isActive ? "text-[#00C2B8]" : "text-white/80 hover:text-white"
+                      }`}
                     >
                       {item.title}
-                    </NavLink>
-                  </li>
-                )
-              })}
+                    </Link>
+                  )
+                })}
 
-              {!isAuthPending && !user && (
-                <li className="mt-1">
-                  <button
-                    className="btn btn-ghost btn-sm rounded-full text-nav-submenu font-medium"
-                    type="button"
-                    onClick={openLogin}
+                {/* User profile (if logged in) */}
+                {user && (
+                  <div className="border-t border-white/5 pt-6 mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-full overflow-hidden">
+                        <img
+                          src="/default-avatar.svg"
+                          alt=""
+                          className="size-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <div className="text-white font-medium">{user.name}</div>
+                        <div className="text-xs text-white/50">{user.email}</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeMenus()
+                        logout()
+                      }}
+                      className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 font-medium"
+                    >
+                      <LogOut className="size-4" />
+                      {t.nav.logout}
+                    </button>
+                  </div>
+                )}
+              </nav>
+
+              {/* Bottom action buttons */}
+              {!isAuthPending && (
+                <div className="mt-auto flex flex-col gap-3 pt-6 border-t border-white/5">
+                  <Link
+                    to="/ai-toolkit"
+                    onClick={closeMenus}
+                    className="mobile-menu-btn-primary"
                   >
-                    {t.nav.register}
-                  </button>
-                </li>
+                    {t.home.start}
+                  </Link>
+                  {!user && (
+                    <button
+                      type="button"
+                      onClick={openLogin}
+                      className="mobile-menu-btn-secondary"
+                    >
+                      {t.nav.login}
+                    </button>
+                  )}
+                </div>
               )}
-            </ul>
-          </div>
+            </div>
+          </>
         )}
         </div>
       </div>

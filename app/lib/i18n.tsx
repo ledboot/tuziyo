@@ -68,11 +68,9 @@ export interface Translations {
   }
   home: {
     heroLead: string
-    heroAccent: string
     heroBody: string
     start: string
     explore: string
-    proof: string
     proofTags: string[]
     proofAriaLabel: string
     heroVisualAriaLabel: string
@@ -202,11 +200,9 @@ export interface Translations {
 type HomeMarketingTranslations = Pick<
   Translations["home"],
   | "heroLead"
-  | "heroAccent"
   | "heroBody"
   | "start"
   | "explore"
-  | "proof"
   | "proofTags"
   | "proofAriaLabel"
   | "heroVisualAriaLabel"
@@ -236,110 +232,106 @@ type HomeMarketingTranslations = Pick<
 >
 
 const enHomeMarketing: HomeMarketingTranslations = {
-  heroLead: "Turn prompts into",
-  heroAccent: "images and videos",
+  heroLead: "Create any visual you can imagine",
   heroBody:
-    "Choose a model, tune the options, and manage generated visual assets in one focused workspace.",
-  start: "Start creating",
-  explore: "Open examples",
-  proof: "Built for prompt-led production",
-  proofTags: ["Prompt", "Models", "Assets"],
-  proofAriaLabel: "Prompt-led production workflow",
-  heroVisualAriaLabel: "AI generated media examples",
-  generationTitle: "Create With Models",
+    "A cinematic creative workspace for generating images and videos, editing pictures, and preparing polished assets for every project.",
+  start: "Start Free Now",
+  explore: "Explore the suite",
+  proofTags: ["Images", "Videos", "Editing"],
+  proofAriaLabel: "Creative model and tool strip",
+  heroVisualAriaLabel: "Cinematic creative workspace preview",
+  generationTitle: "Everything you need to shape the shot",
   generationDesc:
-    "Move from a written idea to usable image and video outputs without leaving the workspace.",
-  imageTitle: "Image Workflow",
-  imageDesc: "Generate still visuals for concepts, products, covers, and campaign directions.",
-  imagePrompt: "A product scene with reflective glass, soft daylight, and refined composition...",
+    "Move from idea to finished asset with image creation, video direction, and practical editing tools in one elegant flow.",
+  imageTitle: "Image creation",
+  imageDesc: "Create product shots, campaign visuals, covers, and concept frames with a polished production look.",
+  imagePrompt: "A cinematic product scene with reflective glass, soft daylight, and refined composition...",
   imageAction: "Create image",
-  videoTitle: "Video Workflow",
-  videoDesc: "Draft short motion concepts from text, reference frames, and model-specific controls.",
-  videoPrompt: "A slow camera move through a futuristic street after rain...",
+  videoTitle: "Video concepts",
+  videoDesc: "Explore cinematic motion ideas for ads, stories, launch films, and visual experiments.",
+  videoPrompt: "A slow camera move through a mirrored hall filled with floating masks...",
   videoAction: "Create video",
-  toolkitTitle: "AI Toolkit",
-  toolkitDesc: "Utility tools for preparing, editing, and exporting generated assets.",
-  galleryTitle: "Output Examples",
-  galleryDesc: "A quick view of the kinds of visual assets the workspace is built to support.",
-  galleryImageAlt: "AI inspiration",
+  toolkitTitle: "Picture finishing",
+  toolkitDesc: "Retouch, crop, resize, and convert images so every output is ready to publish.",
+  galleryTitle: "High-impact visuals for every format",
+  galleryDesc: "From posters and product scenes to social cuts and cinematic frames, keep the visual direction consistent.",
+  galleryImageAlt: "Creative visual sample",
   browse: "Open studio",
-  voicesTitle: "Workflow Highlights",
-  voicesDesc: "Core building blocks that should stay consistent across new product surfaces.",
-  ctaTitle: "Start a new creation session",
-  ctaDesc: "Use prompts, models, and utility tools together in one visual production flow.",
-  register: "Register free",
+  voicesTitle: "From idea to final asset",
+  voicesDesc: "Generate the direction, refine the frame, then export images and video-ready assets without breaking momentum.",
+  ctaTitle: "Make your next visual with tuziyo",
+  ctaDesc: "Start with an idea, shape the look, and finish it with the tools your content needs.",
+  register: "Start Free Now",
   tools: [
-    ["Resize", "Resize images while preserving visual quality."],
-    ["Convert Format", "Convert images across JPG, PNG and WebP."],
-    ["Inpainting", "Remove unwanted elements and complete scenes."],
-    ["More Tools", "Crop, compress, rotate and unlock more utilities."],
+    ["Resize", "Resize images for social, product, and publishing formats while preserving quality."],
+    ["Convert Format", "Convert assets across JPG, PNG, WebP, and production-friendly export formats."],
+    ["Inpainting", "Remove unwanted elements, repair scenes, and complete missing image areas."],
+    ["Crop", "Reframe generated or uploaded images for thumbnails, covers, and campaign layouts."],
   ],
   testimonials: [
     [
-      "Model Choice",
-      "Generation setup",
-      "Switch between image and video models while keeping the creative brief clear.",
+      "Prompt",
+      "Creative brief",
+      "Start from a short idea, a product direction, or a reference frame.",
     ],
     [
-      "Option Control",
-      "Production settings",
-      "Expose only the controls that matter for the selected model and output type.",
+      "Generate",
+      "Image and video",
+      "Create still visuals and short motion concepts from the same workspace.",
     ],
     [
-      "Session Memory",
-      "Creative continuity",
-      "Keep prompts, outputs, references, and iteration history attached to a session.",
+      "Edit",
+      "Image finishing",
+      "Repair, crop, resize, and convert outputs without breaking the creative flow.",
     ],
     [
-      "Utility Stack",
-      "Asset finishing",
-      "Resize, convert, crop, and repair assets without leaving the product flow.",
+      "Export",
+      "Ready to use",
+      "Prepare final assets for campaigns, social posts, product pages, and internal drafts.",
     ],
   ],
 }
 
 const zhHomeMarketing: HomeMarketingTranslations = {
-  heroLead: "把提示词变成",
-  heroAccent: "图片与视频",
-  heroBody: "选择模型、调整参数、管理生成结果，在一个工作区完成视觉资产生产。",
-  start: "开始创作",
-  explore: "查看示例",
-  proof: "为提示词生产流程设计",
-  proofTags: ["提示词", "模型", "资产"],
-  proofAriaLabel: "提示词生产流程",
-  heroVisualAriaLabel: "AI 生成媒体示例",
-  generationTitle: "模型生成",
-  generationDesc: "从一句想法进入图片和视频生成流程，不需要离开当前工作区。",
-  imageTitle: "图片工作流",
-  imageDesc: "用于概念图、产品图、封面和营销视觉方向的静态图生成。",
-  imagePrompt: "一个带反射玻璃、柔和日光和精致构图的产品场景...",
+  heroLead: "创作你想象中的任何视觉",
+  heroBody: "一个有电影质感的创作工作区，用来生成图片和视频、编辑图片，并整理出适合项目使用的成品资产。",
+  start: "免费开始",
+  explore: "浏览套件",
+  proofTags: ["图片", "视频", "编辑"],
+  proofAriaLabel: "创作模型与工具条",
+  heroVisualAriaLabel: "电影感创作工作区预览",
+  generationTitle: "从想法到画面，一套工具完成",
+  generationDesc: "把图片创作、视频方向和实用图片处理放在一个优雅流程里，从概念到成品更顺。",
+  imageTitle: "图片创作",
+  imageDesc: "生成产品图、营销视觉、封面和概念帧，保持更成熟的视觉质感。",
+  imagePrompt: "一个带反射玻璃、柔和日光和精致构图的电影感产品场景...",
   imageAction: "创建图片",
-  videoTitle: "视频工作流",
-  videoDesc: "通过文字、参考帧和模型参数，快速生成短视频概念。",
-  videoPrompt: "雨后一条未来街道中的缓慢镜头推进...",
+  videoTitle: "视频概念",
+  videoDesc: "探索适合广告、故事、发布短片和创意测试的电影感动态画面。",
+  videoPrompt: "镜头缓慢穿过一间充满漂浮面具的镜面大厅...",
   videoAction: "创建视频",
-  toolkitTitle: "AI Toolkit",
-  toolkitDesc: "用于准备、编辑和导出生成资产的实用工具。",
-  galleryTitle: "输出示例",
-  galleryDesc: "展示工作区需要支撑的常见视觉资产类型。",
-  galleryImageAlt: "AI 灵感示例",
+  toolkitTitle: "图片精修处理",
+  toolkitDesc: "修补、裁剪、调整尺寸、转换格式，让每张图都能直接进入发布流程。",
+  galleryTitle: "适配各种格式的高质感视觉",
+  galleryDesc: "从海报、产品场景到社媒切图和电影感画面，保持一致的视觉方向。",
+  galleryImageAlt: "创意视觉示例",
   browse: "打开创作台",
-  voicesTitle: "工作流亮点",
-  voicesDesc: "后续新增产品界面也应保持一致的核心能力模块。",
-  ctaTitle: "开始新的创作会话",
-  ctaDesc: "把提示词、模型和工具组合在一个视觉生产流程中使用。",
-  register: "注册免费使用",
+  voicesTitle: "从想法到成品资产",
+  voicesDesc: "确定方向、完善画面，再导出图片和视频可用素材，不打断创作节奏。",
+  ctaTitle: "用 tuziyo 创作下一张视觉",
+  ctaDesc: "从一个想法开始，塑造画面质感，再用合适工具完成它。",
+  register: "免费开始",
   tools: [
-    ["Resize", "调整图像尺寸，支持自定义宽高和常用比例。"],
-    ["Convert Format", "转换图像格式，支持 JPG、PNG、WebP 等。"],
-    ["Inpainting", "智能去除图像中不需要的元素，完美填充背景。"],
-    ["更多工具", "裁剪、压缩、旋转、修饰等更多实用工具。"],
+    ["Resize", "为社媒、商品图和发布场景调整尺寸，同时尽量保持画质。"],
+    ["Convert Format", "在 JPG、PNG、WebP 等常用格式之间快速转换。"],
+    ["Inpainting", "去除多余元素、修复画面，并补全缺失的图片区域。"],
+    ["Crop", "为缩略图、封面和营销版式重新裁剪生成或上传的图片。"],
   ],
   testimonials: [
-    ["模型选择", "生成配置", "在图片与视频模型之间切换，同时保持清晰的创作意图。"],
-    ["参数控制", "生产设置", "只展示当前模型和输出类型真正需要的控制项。"],
-    ["会话记忆", "连续迭代", "提示词、结果、参考图和迭代历史都应跟随同一个会话。"],
-    ["工具组合", "资产收尾", "在产品流程内完成尺寸、格式、裁剪和修复等处理。"],
+    ["提示词", "创意简报", "从一句想法、一个产品方向或一张参考图开始。"],
+    ["生成", "图片与视频", "在同一个工作区生成静态视觉和短视频概念。"],
+    ["编辑", "图片收尾", "修复、裁剪、调整尺寸和转换格式，不打断创作流程。"],
+    ["导出", "可直接使用", "准备适合营销、社媒、商品页和内部提案的最终资产。"],
   ],
 }
 
@@ -398,7 +390,7 @@ export const translations: Record<Language, Translations> = {
       register: "Register free",
       profile: "Profile",
       logout: "Logout",
-      home: "tuziyo home",
+      home: "Home",
       mainNavigation: "Main navigation",
       changeLanguage: "Change language",
       openUserMenu: "Open user menu",

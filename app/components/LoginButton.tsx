@@ -24,10 +24,16 @@ function generateRandomString(length: number) {
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 const REDIRECT_URI = import.meta.env.VITE_REDIRECT_URI
 
-export function LoginButton({ className }: { className?: string }) {
+type LoginButtonProps = {
+  className?: string
+  onClick?: () => void
+}
+
+export function LoginButton({ className, onClick }: LoginButtonProps) {
   const [loading, setLoading] = useState(false)
 
   const handleGoogleLogin = async () => {
+    onClick?.()
     setLoading(true)
     const codeVerifier = generateRandomString(64)
     const codeChallenge = await generateCodeChallenge(codeVerifier)

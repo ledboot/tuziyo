@@ -1,6 +1,16 @@
 import { useState, useEffect, type ComponentProps } from "react"
 import { Link } from "react-router"
-import { Coins, Loader2, Calendar, CreditCard, LogOut, Heart, Play, Image as ImageIcon } from "lucide-react"
+import {
+  Coins,
+  Loader2,
+  Calendar,
+  CreditCard,
+  LogOut,
+  Heart,
+  Play,
+  Image as ImageIcon,
+  Crown,
+} from "lucide-react"
 import ImageDetailModal from "~/components/ImageDetailModal"
 import { useUserStore } from "~/stores/userStore"
 import { api } from "~/lib/api"
@@ -12,11 +22,18 @@ interface Transaction {
   description: string
   model: string | null
   credits_per_image: number | null
+  invoice_id: string | null
+  credit_period_start: number | null
+  credit_period_end: number | null
   created_at: number
 }
 
 interface CreditInfo {
   balance: number
+  subscription_balance: number
+  purchased_balance: number
+  subscription_period_start: number | null
+  subscription_period_end: number | null
   total_purchased: number
   total_used: number
 }
@@ -36,6 +53,18 @@ function formatCredits(amount: number): string {
   return amount > 0 ? `+${amount}` : `${amount}`
 }
 
+function formatVipLevel(userType: string): string {
+  const vipLevels: Record<string, string> = {
+    free: "Free",
+    starter: "Starter",
+    professional: "Professional",
+    creator: "Creator",
+  }
+
+  const normalizedType = userType.trim().toLowerCase()
+  return vipLevels[normalizedType] ?? (userType || "Free")
+}
+
 interface FavoriteItem {
   id: string
   type: "image" | "video"
@@ -47,12 +76,48 @@ interface FavoriteItem {
 type FavoriteDetailImage = NonNullable<ComponentProps<typeof ImageDetailModal>["image"]>
 
 const MOCK_FAVORITES: FavoriteItem[] = [
-  { id: "1", type: "image", url: "https://picsum.photos/seed/tuziyo1/800/600", title: "Neon Dreams", createdAt: 1715241600 },
-  { id: "2", type: "video", url: "https://picsum.photos/seed/tuziyo2/800/1000", title: "Future City", createdAt: 1715231600 },
-  { id: "3", type: "image", url: "https://picsum.photos/seed/tuziyo3/800/800", title: "Abstract Flow", createdAt: 1715221600 },
-  { id: "4", type: "image", url: "https://picsum.photos/seed/tuziyo4/1000/800", title: "Cyber Samurai", createdAt: 1715211600 },
-  { id: "5", type: "video", url: "https://picsum.photos/seed/tuziyo5/800/600", title: "Digital Rain", createdAt: 1715201600 },
-  { id: "6", type: "image", url: "https://picsum.photos/seed/tuziyo6/800/1200", title: "Ethereal Landscape", createdAt: 1715191600 },
+  {
+    id: "1",
+    type: "image",
+    url: "https://picsum.photos/seed/tuziyo1/800/600",
+    title: "Neon Dreams",
+    createdAt: 1715241600,
+  },
+  {
+    id: "2",
+    type: "video",
+    url: "https://picsum.photos/seed/tuziyo2/800/1000",
+    title: "Future City",
+    createdAt: 1715231600,
+  },
+  {
+    id: "3",
+    type: "image",
+    url: "https://picsum.photos/seed/tuziyo3/800/800",
+    title: "Abstract Flow",
+    createdAt: 1715221600,
+  },
+  {
+    id: "4",
+    type: "image",
+    url: "https://picsum.photos/seed/tuziyo4/1000/800",
+    title: "Cyber Samurai",
+    createdAt: 1715211600,
+  },
+  {
+    id: "5",
+    type: "video",
+    url: "https://picsum.photos/seed/tuziyo5/800/600",
+    title: "Digital Rain",
+    createdAt: 1715201600,
+  },
+  {
+    id: "6",
+    type: "image",
+    url: "https://picsum.photos/seed/tuziyo6/800/1200",
+    title: "Ethereal Landscape",
+    createdAt: 1715191600,
+  },
 ]
 
 const PROFILE_PAGE_SHELL =
@@ -168,6 +233,12 @@ export default function ProfilePage() {
             <div className="mb-10 px-2">
               <h2 className="text-xl font-bold text-white mb-1">{user.name}</h2>
               <p className="text-base-content/60 text-sm font-medium">{user.email}</p>
+              <div className="mt-4 inline-flex max-w-full items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-primary">
+                <Crown className="size-4 shrink-0" />
+                <span className="truncate text-xs font-bold uppercase tracking-wider">
+                  {formatVipLevel(user.userType)}
+                </span>
+              </div>
             </div>
 
             {/* Navigation Menu */}
@@ -256,10 +327,19 @@ export default function ProfilePage() {
                           <div className="flex gap-6 pb-1">
                             <div className="flex flex-col">
                               <span className="text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-1.5">
-                                Total Purchased
+                                Subscription
+                              </span>
+                              <span className="text-lg font-bold text-primary">
+                                {credits.subscription_balance.toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="w-px bg-white/10 my-1"></div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-1.5">
+                                Purchased
                               </span>
                               <span className="text-lg font-bold text-green-400">
-                                +{credits.total_purchased.toLocaleString()}
+                                {credits.purchased_balance.toLocaleString()}
                               </span>
                             </div>
                             <div className="w-px bg-white/10 my-1"></div>

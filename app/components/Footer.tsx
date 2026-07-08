@@ -54,32 +54,6 @@ export default function Footer() {
           </div>
 
           <div className="footer-links-col">
-            <h4 className="footer-links-title">Image tools</h4>
-            <ul className="footer-links-list">
-              <li>
-                <Link to="/inpainting" className="footer-link">
-                  {t.nav.inpainting}
-                </Link>
-              </li>
-              <li>
-                <Link to="/resize" className="footer-link">
-                  {t.nav.resize}
-                </Link>
-              </li>
-              <li>
-                <Link to="/crop" className="footer-link">
-                  {t.nav.crop}
-                </Link>
-              </li>
-              <li>
-                <Link to="/convert" className="footer-link">
-                  {t.nav.convert}
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div className="footer-links-col">
             <h4 className="footer-links-title">Resources</h4>
             <ul className="footer-links-list">
               <li>

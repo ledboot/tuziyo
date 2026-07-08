@@ -1,13 +1,5 @@
 const API_BASE = import.meta.env.DEV ? "http://localhost:8787" : "https://api.tuziyo.com"
 
-export const MODEL_CREDITS: Record<string, number> = {
-  "google/nano-banana-2": 2,
-  "alibaba/wan-2.6-image": 1,
-  "bytedance/seedream-5-lite": 3,
-  "openai/gpt-image-1.5": 5,
-  "openai/gpt-image-2": 5,
-}
-
 export interface ApiModelOption {
   name: string
   type: "select" | "checkbox" | "textarea"
@@ -125,7 +117,14 @@ export const api = {
   },
 
   models: {
-    list: () => request<{ models: ApiModel[] }>("/api/models"),
+    list: () =>
+      request<{
+        models: ApiModel[]
+        plan_models_config: Record<
+          string,
+          Array<{ name: string; supported: boolean; label?: string }>
+        >
+      }>("/api/models"),
   },
 
   aiToolkit: {
@@ -150,7 +149,7 @@ export const api = {
         size: file.size,
         model,
       })
-      console.log("aaaaa",upload.headers)
+      console.log("aaaaa", upload.headers)
 
       const response = await fetch(upload.uploadUrl, {
         method: "PUT",
@@ -174,9 +173,17 @@ export const api = {
 
   credits: {
     get: () =>
-      request<{ credits: { balance: number; total_purchased: number; total_used: number } }>(
-        "/api/credits"
-      ),
+      request<{
+        credits: {
+          balance: number
+          subscription_balance: number
+          purchased_balance: number
+          subscription_period_start: number | null
+          subscription_period_end: number | null
+          total_purchased: number
+          total_used: number
+        }
+      }>("/api/credits"),
   },
 
   transactions: {
@@ -189,6 +196,9 @@ export const api = {
           description: string
           model: string | null
           credits_per_image: number | null
+          invoice_id: string | null
+          credit_period_start: number | null
+          credit_period_end: number | null
           created_at: number
         }>
         total: number
@@ -292,21 +302,26 @@ export const api = {
     products: () =>
       request<{
         products: Array<{
-          id: string
           product_id: string
           product_name: string
           product_description: string
-          unit_amount: number
-          currency: string
-          recurring?: {
-            interval: string
-          } | null
-          interval: string | null
           features: string[]
           credits: number
           images: number
           sort: number
           recommend: boolean
+          prices: {
+            monthly: {
+              id: string
+              unit_amount: number
+              currency: string
+            } | null
+            yearly: {
+              id: string
+              unit_amount: number
+              currency: string
+            } | null
+          }
         }>
       }>("/api/stripe/products"),
     checkout: (priceId: string) =>

@@ -62,30 +62,6 @@ const resolvedOgImage = ogImage ?? `${MAIN_ORIGIN}/og-index.png`;
 
           <nav class="hidden md:flex items-center justify-center gap-6 lg:gap-8">
             <a
-              href={`${MAIN_ORIGIN}/inpainting`}
-              class="text-sm font-bold transition-all hover:text-primary-brand text-slate-600 dark:text-slate-400"
-            >
-              Inpainting
-            </a>
-            <a
-              href={`${MAIN_ORIGIN}/resize`}
-              class="text-sm font-bold transition-all hover:text-primary-brand text-slate-600 dark:text-slate-400"
-            >
-              Resize
-            </a>
-            <a
-              href={`${MAIN_ORIGIN}/crop`}
-              class="text-sm font-bold transition-all hover:text-primary-brand text-slate-600 dark:text-slate-400"
-            >
-              Crop
-            </a>
-            <a
-              href={`${MAIN_ORIGIN}/convert`}
-              class="text-sm font-bold transition-all hover:text-primary-brand text-slate-600 dark:text-slate-400"
-            >
-              Convert
-            </a>
-            <a
               href={`${base}`}
               class="text-sm font-bold transition-all text-primary-brand"
             >
@@ -149,34 +125,6 @@ const resolvedOgImage = ogImage ?? `${MAIN_ORIGIN}/og-index.png`;
                   </svg>
                 </a>
               </div>
-            </div>
-
-            <div>
-              <h4 class="text-2xs font-black uppercase tracking-[0.2em] text-slate-400 mb-6">
-                Tools
-              </h4>
-              <ul class="space-y-4 text-sm font-bold text-slate-600 dark:text-slate-400">
-                <li>
-                  <a class="hover:text-primary-brand transition-colors" href={`${MAIN_ORIGIN}/inpainting`}>
-                    Inpainting
-                  </a>
-                </li>
-                <li>
-                  <a class="hover:text-primary-brand transition-colors" href={`${MAIN_ORIGIN}/resize`}>
-                    Resize
-                  </a>
-                </li>
-                <li>
-                  <a class="hover:text-primary-brand transition-colors" href={`${MAIN_ORIGIN}/crop`}>
-                    Crop
-                  </a>
-                </li>
-                <li>
-                  <a class="hover:text-primary-brand transition-colors" href={`${MAIN_ORIGIN}/convert`}>
-                    Convert
-                  </a>
-                </li>
-              </ul>
             </div>
 
             <div>
@@ -262,10 +210,6 @@ const resolvedOgImage = ogImage ?? `${MAIN_ORIGIN}/og-index.png`;
           </div>
 
           <nav class="flex flex-col gap-2">
-            <a href={`${MAIN_ORIGIN}/inpainting`} class="flex items-center py-3 text-base font-bold text-slate-600 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-colors border-b border-slate-100 dark:border-slate-900/50">Inpainting</a>
-            <a href={`${MAIN_ORIGIN}/resize`} class="flex items-center py-3 text-base font-bold text-slate-600 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-colors border-b border-slate-100 dark:border-slate-900/50">Resize</a>
-            <a href={`${MAIN_ORIGIN}/crop`} class="flex items-center py-3 text-base font-bold text-slate-600 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-colors border-b border-slate-100 dark:border-slate-900/50">Crop</a>
-            <a href={`${MAIN_ORIGIN}/convert`} class="flex items-center py-3 text-base font-bold text-slate-600 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-colors border-b border-slate-100 dark:border-slate-900/50">Convert</a>
             <a href={`${base}`} class="flex items-center py-3 text-base font-bold text-primary-brand transition-colors border-b border-slate-100 dark:border-slate-900/50">Blog</a>
           </nav>
           

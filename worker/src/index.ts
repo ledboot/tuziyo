@@ -17,7 +17,11 @@ import {
   handleGetSubscription,
   handleCreateCustomerPortal,
 } from "./routes/stripe"
-import { handleGetCredits } from "./routes/credits"
+import {
+  handleAnnualSubscriptionCreditGrants,
+  handleCreditMaintenance,
+  handleGetCredits,
+} from "./routes/credits"
 import { handleGetTransactions } from "./routes/transactions"
 import {
   handleGetSessions,
@@ -28,14 +32,18 @@ import {
   handleCreateMessage,
 } from "./routes/sessions"
 import { handleCreateReferenceImageUpload } from "./routes/uploads"
+import { PLAN_MODELS_CONFIG } from "./types"
 import type { AppVariables, Env } from "./types"
 
 const app = new Hono<{ Bindings: Env }>()
 
+const ANNUAL_SUBSCRIPTION_GRANT_CRON = "0 0 * * *"
+const CREDIT_MAINTENANCE_CRON = "10 0 * * *"
+
 app.use(
   "*",
   cors({
-    origin: (origin) => origin,
+    origin: origin => origin,
     allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     exposeHeaders: ["Content-Type", "Authorization", "Content-Length"],
@@ -47,7 +55,10 @@ app.use(
 app.post("/api/auth/google/callback", handleGoogleCallback)
 
 app.get("/api/models", c => {
-  return c.json({ models: getModels() })
+  return c.json({
+    models: getModels(),
+    plan_models_config: PLAN_MODELS_CONFIG,
+  })
 })
 
 app.get("/api/ai-toolkit/showcase", c => {
@@ -87,4 +98,27 @@ protectedRoutes.post("/api/stripe/portal", handleCreateCustomerPortal)
 
 app.route("/", protectedRoutes)
 
-export default app
+export default {
+  fetch: app.fetch,
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    if (controller.cron === ANNUAL_SUBSCRIPTION_GRANT_CRON) {
+      ctx.waitUntil(
+        handleAnnualSubscriptionCreditGrants(env.DB).then(result => {
+          console.log("annual subscription credit grants completed:", result)
+        })
+      )
+      return
+    }
+
+    if (controller.cron === CREDIT_MAINTENANCE_CRON) {
+      ctx.waitUntil(
+        handleCreditMaintenance(env.DB).then(result => {
+          console.log("credit maintenance completed:", result)
+        })
+      )
+      return
+    }
+
+    console.warn(`Unhandled cron trigger: ${controller.cron}`)
+  },
+}

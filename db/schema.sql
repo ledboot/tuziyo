@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
     avatar_url TEXT,
-    user_type TEXT NOT NULL DEFAULT 'free' CHECK(user_type IN ('free', 'starter', 'professional', 'enterprise')),
+    user_type TEXT NOT NULL DEFAULT 'free',
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
@@ -65,14 +65,20 @@ CREATE TABLE IF NOT EXISTS messages (
 -- 5. 订阅表 (Subscriptions)
 CREATE TABLE IF NOT EXISTS subscriptions (
     id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
+    user_id TEXT UNIQUE NOT NULL,
     stripe_subscription_id TEXT UNIQUE NOT NULL,
     stripe_customer_id TEXT UNIQUE NOT NULL,
     price_id TEXT NOT NULL,
-    plan TEXT NOT NULL DEFAULT 'starter' CHECK(plan IN ('starter', 'professional', 'enterprise')),
+    plan TEXT NOT NULL DEFAULT 'starter',
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'past_due', 'canceled', 'trialing', 'incomplete')),
     current_period_start INTEGER NOT NULL,
     current_period_end INTEGER NOT NULL,
+    credit_grant_interval TEXT NOT NULL DEFAULT 'month' CHECK(credit_grant_interval IN ('month', 'year')),
+    monthly_credit_amount INTEGER NOT NULL DEFAULT 0,
+    last_credit_grant_at INTEGER,
+    next_credit_grant_at INTEGER,
+    payment_failed_at INTEGER,
+    grace_period_ends_at INTEGER,
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -86,12 +92,17 @@ CREATE INDEX IF NOT EXISTS idx_messages_session_id ON messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_messages_status ON messages(status);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer_id ON subscriptions(stripe_customer_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_subscription_id ON subscriptions(stripe_subscription_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
 
 -- 6. 用户 Credits 余额表
 CREATE TABLE IF NOT EXISTS user_credits (
     id TEXT PRIMARY KEY,
     user_id TEXT UNIQUE NOT NULL,
     balance INTEGER NOT NULL DEFAULT 0,
+    subscription_balance INTEGER NOT NULL DEFAULT 0,
+    purchased_balance INTEGER NOT NULL DEFAULT 0,
+    subscription_period_start INTEGER,
+    subscription_period_end INTEGER,
     total_purchased INTEGER NOT NULL DEFAULT 0,
     total_used INTEGER NOT NULL DEFAULT 0,
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
@@ -102,11 +113,14 @@ CREATE TABLE IF NOT EXISTS user_credits (
 CREATE TABLE IF NOT EXISTS credit_transactions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
-    amount INTEGER NOT NULL,
+    amount INTEGER NOT NULL CHECK(amount != 0),
     type TEXT NOT NULL CHECK(type IN ('subscription', 'purchase', 'generation', 'refund', 'adjustment', 'onboarding')),
     description TEXT,
     model TEXT,
     credits_per_image INTEGER,
+    invoice_id TEXT,
+    credit_period_start INTEGER,
+    credit_period_end INTEGER,
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -114,6 +128,8 @@ CREATE TABLE IF NOT EXISTS credit_transactions (
 CREATE INDEX IF NOT EXISTS idx_user_credits_user_id ON user_credits(user_id);
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_user_id ON credit_transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_created_at ON credit_transactions(created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_credit_transactions_invoice_id ON credit_transactions(invoice_id) WHERE invoice_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_credit_transactions_subscription_period ON credit_transactions(user_id, credit_period_start, credit_period_end) WHERE type = 'subscription' AND credit_period_start IS NOT NULL AND credit_period_end IS NOT NULL;
 
 -- 8. 用户内容收藏表
 CREATE TABLE IF NOT EXISTS content_favorites (

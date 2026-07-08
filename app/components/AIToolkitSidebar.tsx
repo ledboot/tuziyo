@@ -1,5 +1,7 @@
 import React from "react"
 import { SquarePen, Trash2, Pencil, Pin } from "lucide-react"
+import { api } from "~/lib/api"
+import { toast } from "sonner"
 
 interface Session {
   id: string
@@ -154,6 +156,15 @@ function SessionItem({
                         item.id === s.id ? { ...item, title: newTitle } : item
                       )
                     )
+                    api.sessions.update(s.id, { title: newTitle }).catch(() => {
+                      // rollback on failure
+                      setSessionHistory((prev: any) =>
+                        prev.map((item: any) =>
+                          item.id === s.id ? { ...item, title: s.title } : item
+                        )
+                      )
+                      toast.error("Rename failed, please try again.")
+                    })
                   }
                   setEditingSessionId(null)
                 }}
@@ -179,7 +190,7 @@ function SessionItem({
               e.stopPropagation()
               setEditingSessionId(s.id)
             }}
-            className="p-1 hover:bg-white/10 rounded text-white/50 hover:text-white transition-colors"
+            className="p-1 hover:bg-white/10 rounded text-white/50 hover:text-white transition-colors cursor-pointer"
             title="Rename"
           >
             <Pencil className="size-3" />
@@ -189,7 +200,7 @@ function SessionItem({
               e.stopPropagation()
               setDeleteSessionId(s.id)
             }}
-            className="p-1 hover:bg-white/10 rounded text-white/50 hover:text-red-400 transition-colors"
+            className="p-1 hover:bg-white/10 rounded text-white/50 hover:text-red-400 transition-colors cursor-pointer"
             title="Delete"
           >
             <Trash2 className="size-3" />
@@ -203,7 +214,7 @@ function SessionItem({
                 )
               )
             }}
-            className={`p-1 hover:bg-white/10 rounded transition-colors ${
+            className={`p-1 hover:bg-white/10 rounded transition-colors cursor-pointer ${
               s.pinned ? "text-blue-400" : "text-white/30 hover:text-white"
             }`}
             title={s.pinned ? "Unpin" : "Pin"}

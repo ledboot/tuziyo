@@ -8,6 +8,8 @@ import {
   type UserPayload,
   ReferenceImageFormat,
   type PreparedReferenceImage,
+  MODEL_CREDITS,
+  PLAN_MODELS_CONFIG,
 } from "../types"
 import { deductCredits } from "./credits"
 import { MODEL_OPTIONS_CONFIG, validateModelOptions } from "../modelOptions"
@@ -467,6 +469,28 @@ export async function handleGenerate(c: AuthenticatedContext) {
     return c.json({ error: `model must be one of: ${IMAGE_MODEL_IDS.join(", ")}` }, 400)
   }
 
+  // Validate model permissions based on user's subscription plan
+  const userType = user.userType || "free"
+  let planKey: "starter" | "professional" | "creator" = "starter"
+  if (userType === "professional") {
+    planKey = "professional"
+  } else if (userType === "creator" || userType === "enterprise") {
+    planKey = "creator"
+  }
+
+  const allowedModelsConfig = PLAN_MODELS_CONFIG[planKey] || []
+  const shortName = input.model.split("/").pop() || input.model
+  const isSupported = allowedModelsConfig.some(m => m.name === shortName && m.supported)
+
+  if (!isSupported) {
+    return c.json(
+      {
+        error: `This model is not supported on your ${userType} plan. Please upgrade your subscription to unlock this model.`,
+      },
+      403
+    )
+  }
+
   const optionValidation = validateModelOptions(
     input.model,
     input as unknown as Record<string, string | number | boolean>
@@ -591,7 +615,81 @@ export async function handleGenerate(c: AuthenticatedContext) {
 }
 
 export function getModels(): ModelConfig[] {
-  return [
+  const list = [
+    {
+      id: "bytedance/seedream-4.0",
+      name: "Seedream 4.0",
+      provider: "ByteDance",
+      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/bytedance.svg",
+      supportsImage: false,
+      isNew: false,
+      options: MODEL_OPTIONS_CONFIG["bytedance/seedream-4.0"],
+    },
+    {
+      id: "google/nano-banana",
+      name: "Nano Banana",
+      provider: "Google",
+      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg",
+      supportsImage: false,
+      isNew: false,
+      options: MODEL_OPTIONS_CONFIG["google/nano-banana"],
+    },
+    {
+      id: "openai/gpt-image-1.5",
+      name: "GPT Image 1.5",
+      provider: "OpenAI",
+      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/openai.svg",
+      supportsImage: true,
+      referenceImageCount: 1,
+      referenceImageFormat: ReferenceImageFormat.BASE64,
+      isNew: false,
+      options: MODEL_OPTIONS_CONFIG["openai/gpt-image-1.5"],
+    },
+    {
+      id: "bytedance/seedream-4.5",
+      name: "Seedream 4.5",
+      provider: "ByteDance",
+      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/bytedance.svg",
+      supportsImage: false,
+      isNew: false,
+      options: MODEL_OPTIONS_CONFIG["bytedance/seedream-4.5"],
+    },
+    {
+      id: "google/nano-banana-pro",
+      name: "Nano Banana Pro",
+      provider: "Google",
+      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg",
+      supportsImage: false,
+      isNew: false,
+      options: MODEL_OPTIONS_CONFIG["google/nano-banana-pro"],
+    },
+    {
+      id: "xai/grok-imagine-image",
+      name: "Grok Imagine",
+      provider: "xAI",
+      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/xai.svg",
+      supportsImage: false,
+      isNew: false,
+      options: MODEL_OPTIONS_CONFIG["xai/grok-imagine-image"],
+    },
+    {
+      id: "recraft/recraftv4",
+      name: "Recraft V4",
+      provider: "Recraft",
+      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/recraft.svg",
+      supportsImage: false,
+      isNew: false,
+      options: MODEL_OPTIONS_CONFIG["recraft/recraftv4"],
+    },
+    {
+      id: "alibaba/wan-2.6-image",
+      name: "WAN 2.6",
+      provider: "Alibaba",
+      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/alibaba.svg",
+      supportsImage: false,
+      isNew: false,
+      options: MODEL_OPTIONS_CONFIG["alibaba/wan-2.6-image"],
+    },
     {
       id: "google/nano-banana-2",
       name: "Nano Banana 2",
@@ -604,17 +702,8 @@ export function getModels(): ModelConfig[] {
       options: MODEL_OPTIONS_CONFIG["google/nano-banana-2"],
     },
     {
-      id: "alibaba/wan-2.6-image",
-      name: "WAN 2.6",
-      provider: "Alibaba",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/alibaba.svg",
-      supportsImage: false,
-      isNew: false,
-      options: MODEL_OPTIONS_CONFIG["alibaba/wan-2.6-image"],
-    },
-    {
       id: "bytedance/seedream-5-lite",
-      name: "Seedream 5",
+      name: "Seedream 5 Lite",
       provider: "ByteDance",
       icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/bytedance.svg",
       supportsImage: true,
@@ -624,15 +713,13 @@ export function getModels(): ModelConfig[] {
       options: MODEL_OPTIONS_CONFIG["bytedance/seedream-5-lite"],
     },
     {
-      id: "openai/gpt-image-1.5",
-      name: "GPT Image 1.5",
-      provider: "OpenAI",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/openai.svg",
-      supportsImage: true,
-      referenceImageCount: 1,
-      referenceImageFormat: ReferenceImageFormat.BASE64,
-      isNew: true,
-      options: MODEL_OPTIONS_CONFIG["openai/gpt-image-1.5"],
+      id: "google/imagen-4",
+      name: "Imagen 4",
+      provider: "Google",
+      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg",
+      supportsImage: false,
+      isNew: false,
+      options: MODEL_OPTIONS_CONFIG["google/imagen-4"],
     },
     {
       id: "openai/gpt-image-2",
@@ -645,5 +732,28 @@ export function getModels(): ModelConfig[] {
       isNew: true,
       options: MODEL_OPTIONS_CONFIG["openai/gpt-image-2"],
     },
+    {
+      id: "xai/grok-imagine-image-quality",
+      name: "Grok Imagine Quality",
+      provider: "xAI",
+      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/xai.svg",
+      supportsImage: false,
+      isNew: false,
+      options: MODEL_OPTIONS_CONFIG["xai/grok-imagine-image-quality"],
+    },
+    {
+      id: "recraft/recraftv4-pro",
+      name: "Recraft V4 Pro",
+      provider: "Recraft",
+      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/recraft.svg",
+      supportsImage: false,
+      isNew: true,
+      options: MODEL_OPTIONS_CONFIG["recraft/recraftv4-pro"],
+    },
   ]
+
+  return list.map(model => ({
+    ...model,
+    credits: MODEL_CREDITS[model.id] || 0,
+  }))
 }

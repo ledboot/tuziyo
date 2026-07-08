@@ -22,6 +22,7 @@ export const ModelSchema = z.object({
   referenceImageFormat: z.enum(["url", "base64"]).optional(),
   isNew: z.boolean().optional(),
   options: z.record(ModelOptionSchema).optional(),
+  credits: z.number().default(0),
 })
 
 export type ModelOptionType = z.infer<typeof ModelOptionTypeSchema>

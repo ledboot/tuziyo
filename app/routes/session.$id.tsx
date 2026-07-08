@@ -228,7 +228,19 @@ export default function SessionDetailPage() {
         currentSession={currentSidebarSession}
         editingSessionId={editingSessionId}
         setEditingSessionId={setEditingSessionId}
-        setSessionHistory={() => { }}
+        setSessionHistory={(updater: any) => {
+          setAllSessions(prev => {
+            const next = typeof updater === "function" ? updater(
+              prev.map(s => ({ ...s, pinned: Boolean(s.is_pinned) }))
+            ) : updater
+            // merge updated fields back into allSessions shape
+            return prev.map(s => {
+              const updated = next.find((n: any) => n.id === s.id)
+              if (!updated) return s
+              return { ...s, title: updated.title ?? s.title, is_pinned: updated.is_pinned ?? (updated.pinned ? 1 : 0) }
+            })
+          })
+        }}
         setDeleteSessionId={setDeleteSessionId}
         handleCreateSession={handleCreateSession}
         handleSelectSession={handleSelectSession}

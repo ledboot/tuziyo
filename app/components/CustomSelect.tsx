@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
-import { ChevronDown, Check } from "lucide-react"
+import { ChevronDown, Check, Lock } from "lucide-react"
 
 export interface SelectOption {
   value: string
   label: string
   icon?: React.ReactNode
   badge?: React.ReactNode
+  disabled?: boolean
+  disabledReason?: string
 }
 
 interface CustomSelectProps {
@@ -106,18 +108,24 @@ export function CustomSelect({
           <button
             key={opt.value}
             type="button"
-            onClick={() => handleOptionClick(opt.value)}
-            className={`flex items-center gap-2 rounded-lg px-2 py-2 whitespace-nowrap w-full text-left cursor-pointer transition-colors ${
-              value === opt.value
-                ? "text-primary font-semibold underline underline-offset-4 decoration-2"
-                : "hover:bg-white/20"
+            disabled={opt.disabled}
+            onClick={() => !opt.disabled && handleOptionClick(opt.value)}
+            title={opt.disabled ? (opt.disabledReason ?? "Not available on your plan") : undefined}
+            className={`flex items-center gap-2 rounded-lg px-2 py-2 whitespace-nowrap w-full text-left transition-colors ${
+              opt.disabled
+                ? "opacity-40 cursor-not-allowed"
+                : value === opt.value
+                  ? "text-primary font-semibold underline underline-offset-4 decoration-2 cursor-pointer"
+                  : "hover:bg-white/20 cursor-pointer"
             }`}
           >
-            {opt.icon}
+            <span className={opt.disabled ? "opacity-60" : ""}>{opt.icon}</span>
             <span className="flex-1 whitespace-nowrap">{opt.label}</span>
             <span className="flex items-center gap-2 shrink-0">
               {opt.badge}
-              {value === opt.value && <Check className="size-4" />}
+              {opt.disabled
+                ? <Lock className="size-3 opacity-50" />
+                : value === opt.value && <Check className="size-4" />}
             </span>
           </button>
         ))}
