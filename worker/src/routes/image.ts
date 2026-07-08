@@ -11,7 +11,7 @@ import {
   MODEL_CREDITS,
   PLAN_MODELS_CONFIG,
 } from "../types"
-import { deductCredits } from "./credits"
+import { deductCredits, getUserCredits } from "./credits"
 import { MODEL_OPTIONS_CONFIG, validateModelOptions } from "../modelOptions"
 import {
   arrayBufferToDataUrl,
@@ -215,7 +215,7 @@ async function getUserImage(c: AuthenticatedContext, imageId: string, userId: st
     `
       SELECT m.id, m.session_id, m.image_url
       FROM messages m
-      INNER JOIN sessions s ON s.id = m.session_id
+      INNER JOIN sessions s ON s.id = m.session_id AND s.status = 1
       WHERE m.id = ? AND s.user_id = ? AND m.status = 1 AND m.image_url IS NOT NULL
       LIMIT 1
     `
@@ -342,7 +342,7 @@ export async function handleGetFavorites(c: AuthenticatedContext) {
         m.created_at
       FROM content_favorites f
       INNER JOIN messages m ON m.id = f.message_id
-      INNER JOIN sessions s ON s.id = m.session_id
+      INNER JOIN sessions s ON s.id = m.session_id AND s.status = 1
       WHERE f.user_id = ? AND f.content_type = 'image' AND s.user_id = ? AND m.status = 1 AND m.image_url IS NOT NULL
       ORDER BY f.created_at DESC
       LIMIT ? OFFSET ?
@@ -356,7 +356,7 @@ export async function handleGetFavorites(c: AuthenticatedContext) {
       SELECT COUNT(*) AS total
       FROM content_favorites f
       INNER JOIN messages m ON m.id = f.message_id
-      INNER JOIN sessions s ON s.id = m.session_id
+      INNER JOIN sessions s ON s.id = m.session_id AND s.status = 1
       WHERE f.user_id = ? AND f.content_type = 'image' AND s.user_id = ? AND m.status = 1 AND m.image_url IS NOT NULL
     `
   )
@@ -440,7 +440,7 @@ export async function handleDeleteImage(c: AuthenticatedContext) {
       "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND message_id = ?"
     ).bind(user.userId, image.id),
     c.env.DB.prepare("UPDATE messages SET status = 2 WHERE id = ?").bind(image.id),
-    c.env.DB.prepare("UPDATE sessions SET updated_at = ? WHERE id = ? AND user_id = ?").bind(
+    c.env.DB.prepare("UPDATE sessions SET updated_at = ? WHERE id = ? AND user_id = ? AND status = 1").bind(
       now,
       image.session_id,
       user.userId
@@ -504,47 +504,17 @@ export async function handleGenerate(c: AuthenticatedContext) {
     )
   }
 
-  const referenceImageResult = await prepareReferenceImages(c, input, user)
-  if (referenceImageResult.error) {
-    return c.json({ error: referenceImageResult.error }, 400)
+  // Pre-check credits balance
+  const creditsPerImage = MODEL_CREDITS[input.model]
+  if (!creditsPerImage) {
+    return c.json({ error: `Unknown model: ${input.model}` }, 400)
+  }
+  const userCredits = await getUserCredits(c.env.DB, user.userId)
+  if (userCredits.balance < creditsPerImage) {
+    return c.json({ error: "Insufficient credits" }, 402)
   }
 
-  const aiInput = buildAiInput(input, referenceImageResult.images)
-  console.log("aiInput model", input.model, JSON.stringify(input), JSON.stringify(aiInput))
-  // TODO: 测试先注释，使用写死的url
-  // const result = await c.env.AI.run(input.model, aiInput, {
-  //   gateway: { id: "image-ai-gateway" },
-  // })
-
-  // if (result.state !== "Completed") {
-  //   return c.json({ error: "AI generation failed" }, 500)
-  // }
-
-  // const imageUrl = result.result.image || result.result.images?.[0]
-  // if (!imageUrl) {
-  //   return c.json({ error: "no image returned from AI" }, 500)
-  // }
-  const imageUrl =
-    "https://pub-04a6d208d361438ea01b797e6973bd19.r2.dev/catalog/openai__gpt-image-2/simple-generation.png"
-
-  const deductResult = await deductCredits(c.env.DB, user.userId, 0, input.model)
-  if (!deductResult.success) {
-    return c.json({ error: deductResult.error }, 402)
-  }
-
-  const imageResponse = await fetch(imageUrl)
-  const imageBuffer = await imageResponse.arrayBuffer()
-
-  const extension = imageUrl.split(".").pop()?.toLowerCase() || input.output_format || "png"
-  const key = createGeneratedImageKey(user.userId, extension)
-  const fullImageUrl = getR2PublicUrl(c.env, key)
-  if (!fullImageUrl) {
-    return c.json({ success: false, error: "R2_PUBLIC_BASE_URL is required" }, 500)
-  }
-  await c.env.R2.put(key, imageBuffer, {
-    httpMetadata: { contentType: getImageContentTypeFromKey(key) || "image/png" },
-  })
-
+  // Setup session synchronously if it doesn't exist
   const now = Math.floor(Date.now() / 1000)
   let sessionId = input.sessionId
 
@@ -556,26 +526,131 @@ export async function handleGenerate(c: AuthenticatedContext) {
     )
       .bind(sessionId, user.userId, title, now, now)
       .run()
+  } else {
+    // Check if session exists
+    const session = await c.env.DB.prepare("SELECT * FROM sessions WHERE id = ? AND user_id = ? AND status = 1")
+      .bind(sessionId, user.userId)
+      .first()
+    if (!session) {
+      return c.json({ error: "Session not found" }, 404)
+    }
   }
 
-  const session = await c.env.DB.prepare("SELECT * FROM sessions WHERE id = ? AND user_id = ?")
-    .bind(sessionId, user.userId)
-    .first()
+  // Prepare reference images (if any)
+  const referenceImageResult = await prepareReferenceImages(c, input, user)
+  if (referenceImageResult.error) {
+    return c.json({ error: referenceImageResult.error }, 400)
+  }
 
-  if (session) {
-    const sessionTitle = (session as { title: string }).title
-    if (sessionTitle === "New Session") {
-      const title = input.prompt.slice(0, 100).trim() || "New Session"
-      await c.env.DB.prepare("UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?")
-        .bind(title, now, sessionId)
-        .run()
+  // Generate task ID and insert task as pending
+  const taskId = uuidv4()
+  await c.env.DB.prepare(
+    `INSERT INTO generation_tasks (id, user_id, session_id, status, created_at, updated_at) VALUES (?, ?, ?, 'pending', ?, ?)`
+  )
+    .bind(taskId, user.userId, sessionId, now, now)
+    .run()
+
+  // Run the background generation process
+  c.executionCtx.waitUntil(
+    runBackgroundGeneration(c, taskId, user.userId, sessionId, input, referenceImageResult.images || [])
+  )
+
+  return c.json({
+    success: true,
+    taskId,
+    sessionId,
+  })
+}
+
+async function runBackgroundGeneration(
+  c: AuthenticatedContext,
+  taskId: string,
+  userId: string,
+  sessionId: string,
+  input: GenerateInput,
+  referenceImages: PreparedReferenceImage[]
+) {
+  const db = c.env.DB
+  const now = Math.floor(Date.now() / 1000)
+
+  // 1. Update task to processing
+  await db.prepare(
+    "UPDATE generation_tasks SET status = 'processing', updated_at = ? WHERE id = ?"
+  )
+    .bind(now, taskId)
+    .run()
+
+  try {
+    const aiInput = buildAiInput(input, referenceImages)
+    console.log("aiInput model in bg", input.model, JSON.stringify(aiInput))
+
+    // Call Cloudflare AI
+    const result = (await c.env.AI.run(input.model as any, aiInput, {
+      gateway: { id: "image-ai-gateway" },
+    })) as any
+    console.log("bg generate result", JSON.stringify(result))
+
+    if (result.state !== "Completed") {
+      throw new Error("AI generation failed or not completed")
     }
 
+    const imageUrl = (result.result as any).image || (result.result as any).images?.[0]
+    if (!imageUrl) {
+      throw new Error("no image returned from AI")
+    }
+
+    // Deduct credits
+    const deductResult = await deductCredits(db, userId, input.model)
+    if (!deductResult.success) {
+      throw new Error(deductResult.error || "Failed to deduct credits")
+    }
+
+    // Download the image
+    const imageResponse = await fetch(imageUrl)
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to fetch generated image: ${imageResponse.statusText}`)
+    }
+    const imageBuffer = await imageResponse.arrayBuffer()
+
+    // Upload to R2
+    const extension = imageUrl.split("?")[0].split(".").pop()?.toLowerCase() || input.output_format || "png"
+    const key = createGeneratedImageKey(userId, extension)
+    const fullImageUrl = getR2PublicUrl(c.env, key)
+    if (!fullImageUrl) {
+      throw new Error("R2_PUBLIC_BASE_URL is required")
+    }
+
+    await c.env.R2.put(key, imageBuffer, {
+      httpMetadata: { contentType: getImageContentTypeFromKey(key) || "image/png" },
+    })
+
+    // Update Session title (if it was "New Session" or "New Chat" or "新对话")
+    const session = await db.prepare("SELECT title FROM sessions WHERE id = ? AND user_id = ? AND status = 1")
+      .bind(sessionId, userId)
+      .first()
+
+    if (session) {
+      const sessionTitle = (session as { title: string }).title
+      if (
+        sessionTitle === "New Session" ||
+        sessionTitle === "New Chat" ||
+        sessionTitle === "新对话" ||
+        sessionTitle === "新会话"
+      ) {
+        const title = input.prompt.slice(0, 100).trim() || "New Session"
+        await db.prepare("UPDATE sessions SET title = ?, updated_at = ? WHERE id = ? AND status = 1")
+          .bind(title, now, sessionId)
+          .run()
+      }
+    }
+
+    // Insert Message
     const messageId = uuidv4()
     const toDbValue = (v: unknown) => (v === undefined ? null : v)
     const googleSearchVal = input.google_search === "true" || input.google_search === true ? 1 : 0
     const imageSearchVal = input.image_search === "true" || input.image_search === true ? 1 : 0
-    await c.env.DB.prepare(
+
+    await db.prepare(
       `
         INSERT INTO messages (id, session_id, user_id, role, provider, model, prompt, aspect_ratio, resolution, google_search, image_search, image_size, quality, style, negative_prompt, output_format, num_images, image_url, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -584,7 +659,7 @@ export async function handleGenerate(c: AuthenticatedContext) {
       .bind(
         messageId,
         sessionId,
-        user.userId,
+        userId,
         "user",
         input.provider || null,
         input.model,
@@ -604,15 +679,77 @@ export async function handleGenerate(c: AuthenticatedContext) {
       )
       .run()
 
-    await c.env.DB.prepare("UPDATE sessions SET updated_at = ? WHERE id = ?")
+    // Update session updated_at
+    await db.prepare("UPDATE sessions SET updated_at = ? WHERE id = ? AND status = 1")
       .bind(now, sessionId)
       .run()
 
-    return c.json({ success: true, key, url: fullImageUrl, imageUrl: fullImageUrl })
+    // Save task status to completed
+    const taskResult = JSON.stringify({
+      success: true,
+      key,
+      url: fullImageUrl,
+      imageUrl: fullImageUrl,
+      sessionId,
+      messageId,
+    })
+
+    await db.prepare(
+      "UPDATE generation_tasks SET status = 'completed', result = ?, updated_at = ? WHERE id = ?"
+    )
+      .bind(taskResult, now, taskId)
+      .run()
+
+  } catch (error: any) {
+    console.error("Background generation task error:", error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+
+    // Save task status to failed
+    await db.prepare(
+      "UPDATE generation_tasks SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
+    )
+      .bind(errorMessage, now, taskId)
+      .run()
+  }
+}
+
+export async function handleGetTaskStatus(c: AuthenticatedContext) {
+  const user = c.get("user")
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401)
   }
 
-  return c.json({ success: false, error: "Session not found" }, 500)
+  const taskId = c.req.param("id")
+  if (!taskId) {
+    return c.json({ error: "Task ID is required" }, 400)
+  }
+
+  const task = await c.env.DB.prepare(
+    "SELECT * FROM generation_tasks WHERE id = ? AND user_id = ?"
+  )
+    .bind(taskId, user.userId)
+    .first()
+
+  if (!task) {
+    return c.json({ error: "Task not found" }, 404)
+  }
+
+  const taskRecord = task as {
+    status: string
+    result: string | null
+    error: string | null
+  }
+
+  const parsedResult = taskRecord.result ? JSON.parse(taskRecord.result) : null
+
+  return c.json({
+    success: true,
+    status: taskRecord.status,
+    result: parsedResult,
+    error: taskRecord.error,
+  })
 }
+
 
 export function getModels(): ModelConfig[] {
   const list = [

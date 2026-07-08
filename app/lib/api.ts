@@ -261,6 +261,10 @@ export const api = {
           image_search: number | null
           created_at: number
         }>
+        pendingTasks?: Array<{
+          id: string
+          status: string
+        }>
       }>(`/api/sessions/${id}`),
     delete: (id: string) => request(`/api/sessions/${id}`, { method: "DELETE" }),
     update: (id: string, data: { title?: string; is_pinned?: number }) =>
@@ -289,13 +293,27 @@ export const api = {
       reference_images?: string[]
       [key: string]: unknown
     }) =>
-      request<{ success: boolean; key?: string; url?: string; imageUrl?: string; error?: string }>(
+      request<{ success: boolean; taskId?: string; sessionId?: string; error?: string }>(
         "/api/generate",
         {
           method: "POST",
           body: JSON.stringify(params),
         }
       ),
+    getTaskStatus: (taskId: string) =>
+      request<{
+        success: boolean
+        status: "pending" | "processing" | "completed" | "failed"
+        result?: {
+          success: boolean
+          key?: string
+          url?: string
+          imageUrl?: string
+          sessionId?: string
+          messageId?: string
+        }
+        error?: string
+      }>(`/api/generate/task/${taskId}`),
   },
 
   stripe: {

@@ -75,6 +75,7 @@ export default function SessionDetailPage() {
   } = useModelStore()
   const [isGenerating, setIsGenerating] = useState(false)
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
+  const [pollingTaskId, setPollingTaskId] = useState<string | null>(null)
 
   const selectedModel = userSelectedModel || (models.length > 0 ? models[0].id : "google/nano-banana-2")
   const modelOptions = userModelOptions || {}
@@ -99,11 +100,73 @@ export default function SessionDetailPage() {
       setSession(sessionData.session)
       setMessages(sessionData.messages as Message[])
       setAllSessions(listData.sessions as unknown as Session[])
+
+      // Auto-resume polling if there are pending tasks
+      if (sessionData.pendingTasks && sessionData.pendingTasks.length > 0) {
+        const activeTask = sessionData.pendingTasks[0]
+        setPollingTaskId(activeTask.id)
+        setIsGenerating(true)
+      }
     } catch (error) {
       console.error("Failed to load session:", error)
       toast.error("Failed to load session")
     }
   }
+
+  // Extract taskId from URL search parameters on mount
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    const urlTaskId = searchParams.get("taskId")
+    if (urlTaskId && id) {
+      setPollingTaskId(urlTaskId)
+      setIsGenerating(true)
+      const statePrompt = location.state?.prompt
+      if (statePrompt) {
+        setPendingPrompt(statePrompt)
+      }
+      // Strip taskId from the URL to keep it clean
+      navigate(`/session/${id}`, { replace: true, state: location.state })
+    }
+  }, [location.search, id, navigate, location.state])
+
+  // Poll for task status
+  useEffect(() => {
+    if (!pollingTaskId || !id) return
+
+    let isSubscribed = true
+    let intervalId: any = null
+
+    const checkStatus = async () => {
+      try {
+        const res = await api.generate.getTaskStatus(pollingTaskId)
+        if (!isSubscribed) return
+
+        if (res.status === "completed") {
+          setIsGenerating(false)
+          setPendingPrompt(null)
+          setPollingTaskId(null)
+          toast.success("Generation completed!")
+          await fetchSessionData()
+        } else if (res.status === "failed") {
+          setIsGenerating(false)
+          setPendingPrompt(null)
+          setPollingTaskId(null)
+          toast.error(res.error || "Generation failed")
+          await fetchSessionData()
+        }
+      } catch (error) {
+        console.error("Failed to poll task status:", error)
+      }
+    }
+
+    intervalId = setInterval(checkStatus, 1500)
+    void checkStatus()
+
+    return () => {
+      isSubscribed = false
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [pollingTaskId, id])
 
   useEffect(() => {
     if (!id) {
@@ -356,6 +419,13 @@ export default function SessionDetailPage() {
                 setIsGenerating(false)
                 setPendingPrompt(null)
                 await fetchSessionData()
+              }
+            }}
+            onGeneratePending={(sid, taskId, prompt) => {
+              if (sid === id) {
+                setPendingPrompt(prompt)
+                setPollingTaskId(taskId)
+                setIsGenerating(true)
               }
             }}
           />

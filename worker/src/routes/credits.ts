@@ -206,7 +206,6 @@ export async function grantSubscriptionCredits(
 export async function deductCredits(
   db: D1Database,
   userId: string,
-  amount: number,
   model: string
 ): Promise<{ success: boolean; error?: string }> {
   const creditsPerImage = CREDIT_MAP[model]

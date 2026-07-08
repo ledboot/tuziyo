@@ -39,6 +39,7 @@ interface PromptAreaProps {
   currentSessionId?: string | null
   onGenerateStart?: (sessionId: string, prompt: string, data?: any) => void
   onGenerateSuccess?: (sessionId: string, data: any) => void
+  onGeneratePending?: (sessionId: string, taskId: string, prompt: string) => void
   initialPrompt?: string
   initialNegativePrompt?: string
   initialPromptVersion?: number
@@ -135,6 +136,7 @@ export default function PromptArea({
   currentSessionId,
   onGenerateStart,
   onGenerateSuccess,
+  onGeneratePending,
   initialPrompt = "",
   initialNegativePrompt,
   initialPromptVersion,
@@ -505,13 +507,21 @@ export default function PromptArea({
         return
       }
 
+      const returnedTaskId = data.taskId
+      const returnedSessionId = data.sessionId || sessionId
+
       setPrompt("")
       setUserPrompt("")
       setShowNegativePrompt(false)
       uploadedImages.forEach(image => URL.revokeObjectURL(image.previewUrl))
       setUploadedImages([])
       setHoveredImage(null)
-      onGenerateSuccess?.(sessionId!, data)
+
+      if (onGeneratePending && returnedTaskId) {
+        onGeneratePending(returnedSessionId!, returnedTaskId, prompt)
+      } else {
+        onGenerateSuccess?.(returnedSessionId!, data)
+      }
     } catch (error) {
       console.error("Generate error:", error)
       toast.error(

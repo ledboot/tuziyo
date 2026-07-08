@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     title TEXT NOT NULL DEFAULT '新对话',
     is_pinned INTEGER NOT NULL DEFAULT 0,
     preview_image TEXT DEFAULT '',
+    status INTEGER NOT NULL DEFAULT 1 CHECK(status IN (1, 2)), -- 1: active, 2: deleted
+    deleted_at INTEGER DEFAULT NULL,
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -147,3 +149,22 @@ CREATE INDEX IF NOT EXISTS idx_content_favorites_user_id ON content_favorites(us
 CREATE INDEX IF NOT EXISTS idx_content_favorites_content_type ON content_favorites(content_type);
 CREATE INDEX IF NOT EXISTS idx_content_favorites_message_id ON content_favorites(message_id);
 CREATE INDEX IF NOT EXISTS idx_content_favorites_created_at ON content_favorites(created_at);
+
+-- 9. 异步生成任务表 (Generation Tasks)
+CREATE TABLE IF NOT EXISTS generation_tasks (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
+    result TEXT, -- JSON string containing output info: {"imageUrl": "...", "messageId": "..."}
+    error TEXT, -- Error message if failed
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_generation_tasks_user_id ON generation_tasks(user_id);
+CREATE INDEX IF NOT EXISTS idx_generation_tasks_session_id ON generation_tasks(session_id);
+CREATE INDEX IF NOT EXISTS idx_generation_tasks_status ON generation_tasks(status);
+

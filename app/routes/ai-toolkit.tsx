@@ -269,6 +269,12 @@ export default function AIToolkitPage() {
               setIsNewSession(false)
               navigate(`/session/${sessionId}`)
             }}
+            onGeneratePending={(sessionId, taskId, prompt) => {
+              setIsNewSession(false)
+              navigate(`/session/${sessionId}?taskId=${taskId}`, {
+                state: { prompt },
+              })
+            }}
           />
         </div>
       </div>

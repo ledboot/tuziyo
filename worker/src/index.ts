@@ -4,6 +4,7 @@ import { authMiddleware, getUser } from "./middleware/auth"
 import {
   handleDeleteImage,
   handleGenerate,
+  handleGetTaskStatus,
   handleGetFavorites,
   getModels,
   handleSetImageFavorite,
@@ -80,6 +81,7 @@ protectedRoutes.get("/api/auth/me", c => {
 })
 
 protectedRoutes.post("/api/generate", handleGenerate)
+protectedRoutes.get("/api/generate/task/:id", handleGetTaskStatus)
 protectedRoutes.post("/api/uploads/reference-image/presign", handleCreateReferenceImageUpload)
 protectedRoutes.get("/api/credits", handleGetCredits)
 protectedRoutes.get("/api/transactions", handleGetTransactions)

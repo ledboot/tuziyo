@@ -49,7 +49,7 @@ export async function handleGetSessions(c: AuthenticatedContext) {
       SELECT s.id, s.title, s.is_pinned, s.created_at, s.updated_at,
         (SELECT m.image_url FROM messages m WHERE m.session_id = s.id AND m.status = 1 AND m.image_url IS NOT NULL ORDER BY m.created_at ASC LIMIT 1) as preview_image
       FROM sessions s
-      WHERE s.user_id = ?
+      WHERE s.user_id = ? AND s.status = 1
       ORDER BY s.is_pinned DESC, s.updated_at DESC
       LIMIT 50
     `
@@ -97,7 +97,7 @@ export async function handleGetSession(c: AuthenticatedContext) {
   const sessionId = c.req.param("id");
 
   const session = await c.env.DB
-    .prepare("SELECT * FROM sessions WHERE id = ? AND user_id = ?")
+    .prepare("SELECT * FROM sessions WHERE id = ? AND user_id = ? AND status = 1")
     .bind(sessionId, user.userId)
     .first();
 
@@ -126,7 +126,22 @@ export async function handleGetSession(c: AuthenticatedContext) {
     url: toPublicImageUrl(c.env, message.image_url),
   }));
 
-  return c.json({ session, messages: results });
+  const pendingTasksResult = await c.env.DB
+    .prepare(
+      `
+      SELECT id, status
+      FROM generation_tasks
+      WHERE user_id = ? AND session_id = ? AND status IN ('pending', 'processing')
+      `
+    )
+    .bind(user.userId, sessionId)
+    .all();
+
+  return c.json({
+    session,
+    messages: results,
+    pendingTasks: pendingTasksResult.results || [],
+  });
 }
 
 export async function handleDeleteSession(c: AuthenticatedContext) {
@@ -137,9 +152,10 @@ export async function handleDeleteSession(c: AuthenticatedContext) {
 
   const sessionId = c.req.param("id");
 
+  const now = Math.floor(Date.now() / 1000);
   await c.env.DB
-    .prepare("DELETE FROM sessions WHERE id = ? AND user_id = ?")
-    .bind(sessionId, user.userId)
+    .prepare("UPDATE sessions SET status = 2, deleted_at = ? WHERE id = ? AND user_id = ?")
+    .bind(now, sessionId, user.userId)
     .run();
 
   return c.json({ success: true });
@@ -158,7 +174,7 @@ export async function handleUpdateSession(c: AuthenticatedContext) {
   const { title, is_pinned } = await c.req.json<{ title?: string; is_pinned?: number }>();
 
   const session = await c.env.DB
-    .prepare("SELECT * FROM sessions WHERE id = ? AND user_id = ?")
+    .prepare("SELECT * FROM sessions WHERE id = ? AND user_id = ? AND status = 1")
     .bind(sessionId, user.userId)
     .first();
 
@@ -207,7 +223,7 @@ export async function handleCreateMessage(c: AuthenticatedContext) {
   }>();
 
   const session = await c.env.DB
-    .prepare("SELECT * FROM sessions WHERE id = ? AND user_id = ?")
+    .prepare("SELECT * FROM sessions WHERE id = ? AND user_id = ? AND status = 1")
     .bind(sessionId, user.userId)
     .first();
 
