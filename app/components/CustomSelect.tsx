@@ -115,12 +115,12 @@ export function CustomSelect({
               opt.disabled
                 ? "opacity-40 cursor-not-allowed"
                 : value === opt.value
-                  ? "text-primary font-semibold underline underline-offset-4 decoration-2 cursor-pointer"
+                  ? "text-primary font-semibold cursor-pointer"
                   : "hover:bg-white/20 cursor-pointer"
             }`}
           >
             <span className={opt.disabled ? "opacity-60" : ""}>{opt.icon}</span>
-            <span className="flex-1 whitespace-nowrap">{opt.label}</span>
+            <span className={`flex-1 whitespace-nowrap ${value === opt.value ? "underline underline-offset-4 decoration-2" : ""}`}>{opt.label}</span>
             <span className="flex items-center gap-2 shrink-0">
               {opt.badge}
               {opt.disabled

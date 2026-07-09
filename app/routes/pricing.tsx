@@ -465,10 +465,10 @@ export default function PricingPage() {
                     </ul>
                   </div>
 
-                  {/* Unlimited Generations Section */}
+                  {/* Access to 10+ models Section */}
                   <div className="border-t border-[#161a23] pt-6">
                     <h4 className="text-xs font-black text-gray-300 uppercase tracking-wider mb-4">
-                      Unlimited Generations
+                      Access to 10+ models
                     </h4>
                     <ul className="space-y-3">
                       {modelsList.map((modelItem, idx) => (

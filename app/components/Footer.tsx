@@ -45,11 +45,6 @@ export default function Footer() {
                   {t.nav.pricing}
                 </Link>
               </li>
-              <li>
-                <a href="/blog" className="footer-link">
-                  {t.nav.blog}
-                </a>
-              </li>
             </ul>
           </div>
 
@@ -64,11 +59,6 @@ export default function Footer() {
                   className="footer-link"
                 >
                   GitHub
-                </a>
-              </li>
-              <li>
-                <a href="/blog" className="footer-link">
-                  Blog
                 </a>
               </li>
               <li>
@@ -101,7 +91,7 @@ export default function Footer() {
 
         <div className="footer-social">
           <a
-            href="https://x.com/@ledboot_"
+            href="#"
             target="_blank"
             rel="noopener noreferrer"
             className="footer-social-link"
@@ -110,7 +100,7 @@ export default function Footer() {
             <XIcon className="size-5" />
           </a>
           <a
-            href="https://youtube.com/@tuziyo"
+            href="#"
             target="_blank"
             rel="noopener noreferrer"
             className="footer-social-link"
@@ -119,7 +109,7 @@ export default function Footer() {
             <YoutubeIcon className="size-5" />
           </a>
           <a
-            href="https://github.com/ledboot/tuziyo"
+            href="#"
             target="_blank"
             rel="noopener noreferrer"
             className="footer-social-link"
