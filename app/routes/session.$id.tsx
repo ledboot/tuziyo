@@ -159,7 +159,7 @@ export default function SessionDetailPage() {
       }
     }
 
-    intervalId = setInterval(checkStatus, 1500)
+    intervalId = setInterval(checkStatus, 3000)
     void checkStatus()
 
     return () => {
