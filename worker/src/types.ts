@@ -17,6 +17,7 @@ export interface Env {
   FRONTEND_URL: string
   ARK_API_KEY: string
   EVOLINK_API_KEY: string
+  EVOLINK_CALLBACK_URL: string
 }
 
 export interface UserPayload {

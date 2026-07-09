@@ -8,6 +8,7 @@ import {
   handleGetFavorites,
   getModels,
   handleSetImageFavorite,
+  handleEvoLinkCallback,
 } from "./routes/image"
 import { getAiToolkitShowcase } from "./routes/showcase"
 import { handleGoogleCallback, handleLogout } from "./routes/auth"
@@ -69,6 +70,7 @@ app.get("/api/ai-toolkit/showcase", async c => {
 
 app.post("/api/stripe/webhook", handleStripeWebhook)
 app.get("/api/stripe/products", handleGetProducts)
+app.post("/evolink/callback", handleEvoLinkCallback)
 
 // authenticated routes
 

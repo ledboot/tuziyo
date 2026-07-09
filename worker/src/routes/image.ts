@@ -595,9 +595,9 @@ export async function handleGenerate(c: AuthenticatedContext) {
   // Generate task ID and insert task as pending
   const taskId = uuidv4()
   await c.env.DB.prepare(
-    `INSERT INTO generation_tasks (id, user_id, session_id, model, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', ?, ?)`
+    `INSERT INTO generation_tasks (id, user_id, session_id, model, status, input, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`
   )
-    .bind(taskId, user.userId, sessionId, input.model, now, now)
+    .bind(taskId, user.userId, sessionId, input.model, JSON.stringify(input), now, now)
     .run()
 
   // Run the background generation process
@@ -619,34 +619,27 @@ export async function handleGenerate(c: AuthenticatedContext) {
   })
 }
 
-async function generateViaEvoLink(
-  c: AuthenticatedContext,
-  dbTaskId: string,
-  apiKey: string,
-  input: GenerateInput
-): Promise<string> {
-  const evolinkModelName = EVOLINK_MODEL_MAP[input.model] || "doubao-seedream-4.0"
-  console.log("Calling EvoLink (Primary) for model", evolinkModelName)
-
+function buildEvoLinkPayload(
+  evolinkModelName: string,
+  input: GenerateInput,
+  callbackUrl?: string
+): Record<string, any> {
   const payload: any = {
     model: evolinkModelName,
     prompt: input.prompt,
     n: 1,
   }
 
+  if (callbackUrl) {
+    payload.callback_url = callbackUrl
+  }
+
   if (evolinkModelName === "gpt-image-1.5" || evolinkModelName === "gpt-image-2") {
-    let size = input.size || "1024x1024"
-    if (evolinkModelName === "gpt-image-2") {
-      size = input.size || "1:1"
-      if (input.resolution) {
-        payload.resolution = input.resolution
-      }
+    if (input.resolution) {
+      payload.resolution = input.resolution
     }
-    payload.size = size
-    payload.quality = input.quality === "high" ? "hd" : "standard"
-  } else {
-    payload.size = input.aspect_ratio
-    payload.quality = input.resolution
+    payload.size = input.size
+    payload.quality = input.quality
   }
 
   if (evolinkModelName === "doubao-seedream-5.0-lite") {
@@ -654,14 +647,27 @@ async function generateViaEvoLink(
     const allowedFormats = ["png", "jpeg"]
     const outputFormat = allowedFormats.includes(format || "") ? format : "png"
 
-    const modelParams: any = {
+    payload.model_params = {
       output_format: outputFormat,
     }
-
-    payload.model_params = modelParams
   }
 
-  console.log("generateViaEvoLink payload", JSON.stringify(payload))
+  return payload
+}
+
+async function generateViaEvoLink(
+  c: AuthenticatedContext,
+  dbTaskId: string,
+  apiKey: string,
+  input: GenerateInput
+): Promise<string> {
+  const evolinkModelName = EVOLINK_MODEL_MAP[input.model]
+  if (!evolinkModelName) {
+    throw new Error(`Unknown model: ${input.model}`)
+  }
+
+  const payload = buildEvoLinkPayload(evolinkModelName, input, c.env.EVOLINK_CALLBACK_URL)
+  console.log("[EvoLink] Calling with model", evolinkModelName, "payload", JSON.stringify(payload))
 
   const res = await fetch("https://api.evolink.ai/v1/images/generations", {
     method: "POST",
@@ -690,52 +696,8 @@ async function generateViaEvoLink(
     .bind(taskId, Math.floor(Date.now() / 1000), dbTaskId)
     .run()
 
-  console.log(`EvoLink task created: ${taskId}. Starting status polling...`)
-
-  let status = "pending"
-  let attempts = 0
-  const maxAttempts = 20 // 40 seconds max
-
-  while (status !== "completed" && status !== "failed" && attempts < maxAttempts) {
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    attempts++
-
-    console.log(`Polling EvoLink task ${taskId}, attempt ${attempts}...`)
-    const statusRes = await fetch(`https://api.evolink.ai/v1/tasks/${taskId}`, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    })
-
-    if (!statusRes.ok) {
-      if (statusRes.status === 400) {
-        const errJson = (await statusRes.json()) as any
-        throw new Error(
-          `EvoLink task invalid (400): ${errJson.error?.message || "Invalid task ID"}`
-        )
-      }
-      const errTxt = await statusRes.text()
-      console.warn(`EvoLink task polling warning (HTTP ${statusRes.status}): ${errTxt}`)
-      continue
-    }
-
-    const statusJson = (await statusRes.json()) as any
-    status = statusJson.status
-    console.log(`EvoLink task ${taskId} status: ${status}`)
-
-    if (status === "completed") {
-      const imageUrl = statusJson.results?.[0]
-      if (!imageUrl) {
-        throw new Error("EvoLink task completed but results array is empty")
-      }
-      return imageUrl
-    }
-
-    if (status === "failed") {
-      throw new Error(`EvoLink task failed: ${statusJson.error?.message || "unknown task failure"}`)
-    }
-  }
-
-  throw new Error("EvoLink task polling timed out")
+  console.log(`EvoLink task created: ${taskId}. Task submitted successfully.`)
+  return taskId
 }
 
 async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promise<string> {
@@ -823,6 +785,126 @@ async function generateBytedanceImage(
   }
 }
 
+async function completeGenerationTask(
+  env: Env,
+  taskId: string,
+  userId: string,
+  sessionId: string,
+  input: GenerateInput,
+  imageUrl: string,
+  finalProvider: string
+) {
+  const db = env.DB
+  const now = Math.floor(Date.now() / 1000)
+
+  // Deduct credits
+  const deductResult = await deductCredits(db, userId, input.model)
+  if (!deductResult.success) {
+    throw new Error(deductResult.error || "Failed to deduct credits")
+  }
+
+  // Download the image
+  const imageResponse = await fetch(imageUrl)
+  if (!imageResponse.ok) {
+    throw new Error(`Failed to fetch generated image: ${imageResponse.statusText}`)
+  }
+  const imageBuffer = await imageResponse.arrayBuffer()
+
+  // Upload to R2
+  const extension =
+    imageUrl.split("?")[0].split(".").pop()?.toLowerCase() || input.output_format || "png"
+  const key = createGeneratedImageKey(userId, extension)
+  const fullImageUrl = await createPresignedGetUrl(env, key)
+  if (!fullImageUrl) {
+    throw new Error("Failed to generate pre-signed URL")
+  }
+
+  await env.R2.put(key, imageBuffer, {
+    httpMetadata: { contentType: getImageContentTypeFromKey(key) || "image/png" },
+  })
+
+  // Update Session title (if it was "New Session" or "New Chat" or "新对话")
+  const session = await db
+    .prepare("SELECT title FROM sessions WHERE id = ? AND user_id = ? AND status = 1")
+    .bind(sessionId, userId)
+    .first()
+
+  if (session) {
+    const sessionTitle = (session as { title: string }).title
+    if (
+      sessionTitle === "New Session" ||
+      sessionTitle === "New Chat" ||
+      sessionTitle === "新对话" ||
+      sessionTitle === "新会话"
+    ) {
+      const title = input.prompt.slice(0, 100).trim() || "New Session"
+      await db
+        .prepare("UPDATE sessions SET title = ?, updated_at = ? WHERE id = ? AND status = 1")
+        .bind(title, now, sessionId)
+        .run()
+    }
+  }
+
+  // Insert Message
+  const messageId = uuidv4()
+  const toDbValue = (v: unknown) => (v === undefined ? null : v)
+  const googleSearchVal = input.google_search === "true" || input.google_search === true ? 1 : 0
+  const imageSearchVal = input.image_search === "true" || input.image_search === true ? 1 : 0
+
+  await db
+    .prepare(
+      `
+      INSERT INTO messages (id, session_id, user_id, role, provider, model, prompt, aspect_ratio, resolution, google_search, image_search, image_size, quality, style, negative_prompt, output_format, num_images, image_url, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `
+    )
+    .bind(
+      messageId,
+      sessionId,
+      userId,
+      "user",
+      finalProvider,
+      input.model,
+      input.prompt,
+      toDbValue(input.aspect_ratio),
+      toDbValue(input.resolution),
+      googleSearchVal,
+      imageSearchVal,
+      toDbValue(input.size),
+      toDbValue(input.quality),
+      toDbValue(input.style),
+      toDbValue(input.negative_prompt),
+      toDbValue(input.output_format),
+      toDbValue(input.num_images),
+      key,
+      now
+    )
+    .run()
+
+  // Update session updated_at
+  await db
+    .prepare("UPDATE sessions SET updated_at = ? WHERE id = ? AND status = 1")
+    .bind(now, sessionId)
+    .run()
+
+  // Save task status to completed
+  const taskResult = JSON.stringify({
+    success: true,
+    key,
+    originUrl: imageUrl,
+    r2Url: fullImageUrl,
+    sessionId,
+    messageId,
+  })
+
+  await db
+    .prepare(
+      "UPDATE generation_tasks SET status = 'completed', result = ?, provider = ?, updated_at = ? WHERE id = ?"
+    )
+    .bind(taskResult, finalProvider, now, taskId)
+    .run()
+}
+
 async function runBackgroundGeneration(
   c: AuthenticatedContext,
   taskId: string,
@@ -864,12 +946,12 @@ async function runBackgroundGeneration(
         throw new Error("EVOLINK_API_KEY is not configured for GPT image generation.")
       }
       try {
-        const imageUrl = await generateViaEvoLink(c, taskId, evolinkKey, input)
+        const providerTaskId = await generateViaEvoLink(c, taskId, evolinkKey, input)
         finalProvider = PROVIDERS.EVOLINK
         result = {
           state: "Completed",
           result: {
-            image: imageUrl,
+            image: providerTaskId,
           },
         }
       } catch (err: any) {
@@ -885,6 +967,16 @@ async function runBackgroundGeneration(
 
     console.log("bg generate result", JSON.stringify(result))
 
+    // Early exit for EvoLink tasks (handled via webhook callback)
+    if (finalProvider === PROVIDERS.EVOLINK) {
+      await db
+        .prepare("UPDATE generation_tasks SET provider = ?, updated_at = ? WHERE id = ?")
+        .bind(finalProvider, now, taskId)
+        .run()
+      console.log(`[Background] EvoLink task submitted successfully. Exiting, waiting for callback...`)
+      return
+    }
+
     if (result.state !== "Completed") {
       throw new Error("AI generation failed or not completed")
     }
@@ -894,112 +986,7 @@ async function runBackgroundGeneration(
       throw new Error("no image returned from AI")
     }
 
-    // Deduct credits
-    const deductResult = await deductCredits(db, userId, input.model)
-    if (!deductResult.success) {
-      throw new Error(deductResult.error || "Failed to deduct credits")
-    }
-
-    // Download the image
-    const imageResponse = await fetch(imageUrl)
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to fetch generated image: ${imageResponse.statusText}`)
-    }
-    const imageBuffer = await imageResponse.arrayBuffer()
-
-    // Upload to R2
-    const extension =
-      imageUrl.split("?")[0].split(".").pop()?.toLowerCase() || input.output_format || "png"
-    const key = createGeneratedImageKey(userId, extension)
-    const fullImageUrl = await createPresignedGetUrl(c.env, key)
-    if (!fullImageUrl) {
-      throw new Error("Failed to generate pre-signed URL")
-    }
-
-    await c.env.R2.put(key, imageBuffer, {
-      httpMetadata: { contentType: getImageContentTypeFromKey(key) || "image/png" },
-    })
-
-    // Update Session title (if it was "New Session" or "New Chat" or "新对话")
-    const session = await db
-      .prepare("SELECT title FROM sessions WHERE id = ? AND user_id = ? AND status = 1")
-      .bind(sessionId, userId)
-      .first()
-
-    if (session) {
-      const sessionTitle = (session as { title: string }).title
-      if (
-        sessionTitle === "New Session" ||
-        sessionTitle === "New Chat" ||
-        sessionTitle === "新对话" ||
-        sessionTitle === "新会话"
-      ) {
-        const title = input.prompt.slice(0, 100).trim() || "New Session"
-        await db
-          .prepare("UPDATE sessions SET title = ?, updated_at = ? WHERE id = ? AND status = 1")
-          .bind(title, now, sessionId)
-          .run()
-      }
-    }
-
-    // Insert Message
-    const messageId = uuidv4()
-    const toDbValue = (v: unknown) => (v === undefined ? null : v)
-    const googleSearchVal = input.google_search === "true" || input.google_search === true ? 1 : 0
-    const imageSearchVal = input.image_search === "true" || input.image_search === true ? 1 : 0
-
-    await db
-      .prepare(
-        `
-        INSERT INTO messages (id, session_id, user_id, role, provider, model, prompt, aspect_ratio, resolution, google_search, image_search, image_size, quality, style, negative_prompt, output_format, num_images, image_url, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `
-      )
-      .bind(
-        messageId,
-        sessionId,
-        userId,
-        "user",
-        input.provider || null,
-        input.model,
-        input.prompt,
-        toDbValue(input.aspect_ratio),
-        toDbValue(input.resolution),
-        googleSearchVal,
-        imageSearchVal,
-        toDbValue(input.size),
-        toDbValue(input.quality),
-        toDbValue(input.style),
-        toDbValue(input.negative_prompt),
-        toDbValue(input.output_format),
-        toDbValue(input.num_images),
-        key,
-        now
-      )
-      .run()
-
-    // Update session updated_at
-    await db
-      .prepare("UPDATE sessions SET updated_at = ? WHERE id = ? AND status = 1")
-      .bind(now, sessionId)
-      .run()
-
-    // Save task status to completed
-    const taskResult = JSON.stringify({
-      success: true,
-      key,
-      originUrl: imageUrl,
-      r2Url: fullImageUrl,
-      sessionId,
-      messageId,
-    })
-
-    await db
-      .prepare(
-        "UPDATE generation_tasks SET status = 'completed', result = ?, provider = ?, updated_at = ? WHERE id = ?"
-      )
-      .bind(taskResult, finalProvider, now, taskId)
-      .run()
+    await completeGenerationTask(c.env, taskId, userId, sessionId, input, imageUrl, finalProvider)
   } catch (error: any) {
     console.error("Background generation task error:", error)
     const errorMessage = error instanceof Error ? error.message : String(error)
@@ -1012,6 +999,125 @@ async function runBackgroundGeneration(
       .bind(errorMessage, now, taskId)
       .run()
   }
+}
+
+export async function handleEvoLinkCallback(c: Context<{ Bindings: Env }>) {
+  const db = c.env.DB
+  let payload: any
+  try {
+    payload = await c.req.json()
+  } catch (err) {
+    return c.json({ error: "Invalid JSON body" }, 400)
+  }
+
+  console.log("[EvoLink Callback] Received payload:", JSON.stringify(payload))
+
+  // Only process if the object is an image generation task
+  if (payload.object !== "image.generation.task") {
+    console.log(`[EvoLink Callback] Ignored non-image task type: ${payload.object}`)
+    return c.json({ success: true, message: `Ignored non-image task type: ${payload.object}` })
+  }
+
+  const providerTaskId = payload.id
+  if (!providerTaskId) {
+    return c.json({ error: "Missing task ID (id)" }, 400)
+  }
+
+  // 1. Query the task from generation_tasks by provider_task_id
+  const task = await db
+    .prepare("SELECT * FROM generation_tasks WHERE provider_task_id = ?")
+    .bind(providerTaskId)
+    .first()
+
+  if (!task) {
+    console.warn(`[EvoLink Callback] No task found in DB for provider_task_id: ${providerTaskId}`)
+    return c.json({ error: "Task not found" }, 404)
+  }
+
+  const {
+    id: taskId,
+    user_id: userId,
+    session_id: sessionId,
+    model,
+    status: dbStatus,
+    input: inputStr,
+  } = task as {
+    id: string
+    user_id: string
+    session_id: string
+    model: string
+    status: string
+    input: string | null
+  }
+
+  if (dbStatus === "completed" || dbStatus === "failed") {
+    return c.json({ success: true, message: "Task already processed" })
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+
+  if (payload.status === "failed") {
+    const errorMsg = payload.error?.message || "EvoLink task failed"
+    await db
+      .prepare(
+        "UPDATE generation_tasks SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
+      )
+      .bind(errorMsg, now, taskId)
+      .run()
+
+    return c.json({ success: true })
+  }
+
+  if (payload.status === "completed") {
+    const imageUrl = payload.results?.[0]
+    if (!imageUrl) {
+      const errorMsg = "EvoLink task completed but results array is empty"
+      await db
+        .prepare(
+          "UPDATE generation_tasks SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
+        )
+        .bind(errorMsg, now, taskId)
+        .run()
+      return c.json({ error: errorMsg }, 400)
+    }
+
+    if (!inputStr) {
+      const errorMsg = "Missing task input payload in database"
+      await db
+        .prepare(
+          "UPDATE generation_tasks SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
+        )
+        .bind(errorMsg, now, taskId)
+        .run()
+      return c.json({ error: errorMsg }, 500)
+    }
+
+    try {
+      const input = JSON.parse(inputStr) as GenerateInput
+      await completeGenerationTask(
+        c.env,
+        taskId,
+        userId,
+        sessionId,
+        input,
+        imageUrl,
+        PROVIDERS.EVOLINK
+      )
+      return c.json({ success: true })
+    } catch (err: any) {
+      console.error("[EvoLink Callback] Failed to complete task:", err)
+      const errMsg = err instanceof Error ? err.message : String(err)
+      await db
+        .prepare(
+          "UPDATE generation_tasks SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
+        )
+        .bind(errMsg, now, taskId)
+        .run()
+      return c.json({ error: errMsg }, 500)
+    }
+  }
+
+  return c.json({ error: `Unhandled task status: ${payload.status}` }, 400)
 }
 
 export async function handleGetTaskStatus(c: AuthenticatedContext) {

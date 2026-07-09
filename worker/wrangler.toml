@@ -9,6 +9,7 @@ crons = ["0 0 * * *", "10 0 * * *"]
 R2_PUBLIC_BASE_URL = "https://s3.tuziyo.com"
 R2_ACCOUNT_ID = "2b00eb739bd84104c948e47541a47b2a"
 R2_BUCKET_NAME = "tuziyo"  # R2 存储桶名称
+EVOLINK_CALLBACK_URL = "https://api.tuziyo.com/evolink/callback"
 
 [ai]
 binding = "AI"

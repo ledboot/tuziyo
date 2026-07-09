@@ -152,8 +152,8 @@ export const MODEL_OPTIONS_CONFIG: Record<string, Record<string, ModelOption>> =
     size: {
       name: "Size",
       type: ModelOptionType.SELECT,
-      values: ["1:1", "2:3", "3:2", "1024x1024", "1024x1536", "1536x1024"],
-      defaultValue: "1024x1024",
+      values: ["1:1", "2:3", "3:2"],
+      defaultValue: "1:1",
     },
     quality: {
       name: "Quality",
@@ -268,8 +268,8 @@ export const MODEL_OPTIONS_CONFIG: Record<string, Record<string, ModelOption>> =
       defaultValue: "1K",
     },
   },
-  "recraft/recraftv4":{},
-  "recraft/recraftv4-pro":{},
+  "recraft/recraftv4": {},
+  "recraft/recraftv4-pro": {},
 }
 
 export function validateModelOptions(
