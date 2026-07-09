@@ -3,16 +3,14 @@ import {
   Check,
   X,
   Loader2,
-  Zap,
-  ChevronDown,
-  Info,
-  Shield,
   HelpCircle,
   Plus,
   Minus,
 } from "lucide-react"
 import { useUserStore } from "~/stores/userStore"
 import { api } from "~/lib/api"
+import { useI18n } from "~/lib/i18n"
+import { toast } from "sonner"
 
 interface Product {
   product_id: string
@@ -156,6 +154,7 @@ export default function PricingPage() {
     Array<{ name: string; supported: boolean; label?: string }>
   > | null>(null)
   const { user, token } = useUserStore()
+  const { lang } = useI18n()
 
   useEffect(() => {
     api.stripe
@@ -184,6 +183,16 @@ export default function PricingPage() {
     }
 
     if (!token) {
+      return
+    }
+
+    // Check if the user is already subscribed to any tier
+    const userPlan = (user.userType ?? "free").toLowerCase()
+    if (userPlan === "starter" || userPlan === "professional" || userPlan === "creator") {
+      const msg = lang === "zh"
+        ? "您已拥有激活的订阅。请前往个人中心管理或变更您的方案。"
+        : "You already have an active subscription. Please manage or change your plan in your profile."
+      toast.info(msg)
       return
     }
 
@@ -347,6 +356,8 @@ export default function PricingPage() {
             const styles = getPlanStyles(planKey)
             const additionalFeatures = getAdditionalFeatures(planKey)
             const modelsList = (planModelsConfig && planModelsConfig[planKey]) || []
+            const currentUserPlan = (user?.userType ?? "free").toLowerCase()
+            const isCurrentPlan = currentUserPlan === planKey
 
             const activePrice =
               billingPeriod === "monthly" ? product.prices.monthly : product.prices.yearly
@@ -402,20 +413,29 @@ export default function PricingPage() {
                   </div>
 
                   {/* Subscription Action Button */}
-                  <button
-                    className={`btn btn-block py-3.5 rounded-2xl font-extrabold text-sm transition-all duration-300 transform active:scale-95 ${styles.btnClass}`}
-                    onClick={() => handleSubscribe(activePrice.id)}
-                    disabled={loadingPlan === activePrice.id}
-                  >
-                    {loadingPlan === activePrice.id ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="size-4.5 animate-spin" />
-                        Processing...
-                      </span>
-                    ) : (
-                      "Get Started"
-                    )}
-                  </button>
+                  {isCurrentPlan ? (
+                    <button
+                      className="btn btn-block py-3.5 rounded-2xl font-extrabold text-sm border-none bg-slate-800 text-slate-500 cursor-not-allowed opacity-60"
+                      disabled={true}
+                    >
+                      {lang === "zh" ? "当前方案" : "Current Plan"}
+                    </button>
+                  ) : (
+                    <button
+                      className={`btn btn-block py-3.5 rounded-2xl font-extrabold text-sm transition-all duration-300 transform active:scale-95 ${styles.btnClass}`}
+                      onClick={() => handleSubscribe(activePrice.id)}
+                      disabled={loadingPlan === activePrice.id}
+                    >
+                      {loadingPlan === activePrice.id ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="size-4.5 animate-spin" />
+                          Processing...
+                        </span>
+                      ) : (
+                        "Get Started"
+                      )}
+                    </button>
+                  )}
 
                   {/* Credits Counter */}
                   <div className="mt-8 mb-8 flex items-center gap-2">
