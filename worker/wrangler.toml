@@ -25,3 +25,11 @@ preview_bucket_name="tuziyo"
 binding = "DB"
 database_name = "tuziyo-db"
 database_id = "87c3889f-0a77-4252-8cd5-f59dbc523d0f"
+
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
