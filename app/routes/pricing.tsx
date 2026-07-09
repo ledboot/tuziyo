@@ -233,6 +233,7 @@ export default function PricingPage() {
   const getAdditionalFeatures = (planKey: "starter" | "professional" | "creator") => {
     if (planKey === "starter") {
       return [
+        "1 concurrent generation task",
         "Up to ~500 standard Image Generations/month",
         "General Commercial Terms",
         "Image Generation Visibility: Public",
@@ -240,6 +241,7 @@ export default function PricingPage() {
       ]
     } else if (planKey === "professional") {
       return [
+        "2 concurrent generation tasks",
         "Up to ~1,500 standard Image Generations/month",
         "General Commercial Terms",
         "Image Generation Visibility: Private",
@@ -247,6 +249,7 @@ export default function PricingPage() {
       ]
     } else {
       return [
+        "4 concurrent generation tasks",
         "Up to ~5,000 standard Image Generations/month",
         "All styles and models",
         "General Commercial Terms",

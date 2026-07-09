@@ -37,7 +37,7 @@ export type AuthenticatedContext = Context<{
   Variables: AppVariables
 }>
 
-export type UserType = "free" | "starter" | "professional" | "enterprise"
+export type UserType = "free" | "starter" | "professional" | "creator"
 
 export const IMAGE_MODEL_IDS = [
   "bytedance/seedream-4.0",

@@ -496,8 +496,34 @@ export async function handleGenerate(c: AuthenticatedContext) {
   let planKey: "starter" | "professional" | "creator" = "starter"
   if (userType === "professional") {
     planKey = "professional"
-  } else if (userType === "creator" || userType === "enterprise") {
+  } else if (userType === "creator") {
     planKey = "creator"
+  }
+
+  // Validate concurrent generation task limit
+  const concurrentLimits: Record<string, number> = {
+    free: 1,
+    starter: 1,
+    professional: 2,
+    creator: 4,
+  }
+  const limit = concurrentLimits[userType] ?? 1
+
+  const activeTasks = await c.env.DB.prepare(
+    "SELECT COUNT(*) AS count FROM generation_tasks WHERE user_id = ? AND status IN ('pending', 'processing')"
+  )
+    .bind(user.userId)
+    .first<{ count: number }>()
+
+  const activeCount = activeTasks?.count ?? 0
+
+  if (activeCount >= limit) {
+    return c.json(
+      {
+        error: `You have reached the maximum number of concurrent generation tasks (${limit} task${limit > 1 ? "s" : ""}) allowed on your ${userType} plan. Please wait for current tasks to complete.`,
+      },
+      429
+    )
   }
 
   const allowedModelsConfig = PLAN_MODELS_CONFIG[planKey] || []
