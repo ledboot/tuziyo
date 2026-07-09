@@ -70,7 +70,7 @@ app.get("/api/ai-toolkit/showcase", async c => {
 
 app.post("/api/stripe/webhook", handleStripeWebhook)
 app.get("/api/stripe/products", handleGetProducts)
-app.post("/evolink/callback", handleEvoLinkCallback)
+app.post("/api/evolink/callback", handleEvoLinkCallback)
 
 // authenticated routes
 
