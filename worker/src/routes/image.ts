@@ -36,6 +36,8 @@ const EVOLINK_MODEL_MAP: Record<string, string> = {
   "bytedance/seedream-4.0": "doubao-seedream-4.0",
   "bytedance/seedream-4.5": "doubao-seedream-4.5",
   "bytedance/seedream-5-lite": "doubao-seedream-5.0-lite",
+  "openai/gpt-image-1.5": "gpt-image-1.5",
+  "openai/gpt-image-2": "gpt-image-2",
 }
 
 export interface GenerateInput {
@@ -179,7 +181,6 @@ export function buildAiInput(input: GenerateInput, referenceImages: PreparedRefe
       aiInput = { prompt }
       if (size) aiInput.size = size
       if (quality) aiInput.quality = quality
-      if (style) aiInput.style = style
       break
     }
 
@@ -187,9 +188,8 @@ export function buildAiInput(input: GenerateInput, referenceImages: PreparedRefe
       aiInput = { prompt }
       if (size) aiInput.size = size
       if (quality) aiInput.quality = quality
-      if (style) aiInput.style = style
       if (background) aiInput.background = background
-      if (output_format) aiInput.output_format = output_format
+      if (resolution) aiInput.resolution = resolution
       break
     }
 
@@ -631,9 +631,22 @@ async function generateViaEvoLink(
   const payload: any = {
     model: evolinkModelName,
     prompt: input.prompt,
-    size: input.aspect_ratio,
-    quality: input.resolution,
     n: 1,
+  }
+
+  if (evolinkModelName === "gpt-image-1.5" || evolinkModelName === "gpt-image-2") {
+    let size = input.size || "1024x1024"
+    if (evolinkModelName === "gpt-image-2") {
+      size = input.size || "1:1"
+      if (input.resolution) {
+        payload.resolution = input.resolution
+      }
+    }
+    payload.size = size
+    payload.quality = input.quality === "high" ? "hd" : "standard"
+  } else {
+    payload.size = input.aspect_ratio
+    payload.quality = input.resolution
   }
 
   if (evolinkModelName === "doubao-seedream-5.0-lite") {
@@ -832,6 +845,7 @@ async function runBackgroundGeneration(
     console.log("aiInput model in bg", input.model, JSON.stringify(aiInput))
 
     const isBytedance = input.model.startsWith("bytedance/")
+    const isGptImage = input.model.startsWith("openai/gpt-image")
     let result: any
     let finalProvider: string = PROVIDERS.CLOUDFLARE
 
@@ -843,6 +857,23 @@ async function runBackgroundGeneration(
         result: {
           image: resData.imageUrl,
         },
+      }
+    } else if (isGptImage) {
+      const evolinkKey = c.env.EVOLINK_API_KEY
+      if (!evolinkKey) {
+        throw new Error("EVOLINK_API_KEY is not configured for GPT image generation.")
+      }
+      try {
+        const imageUrl = await generateViaEvoLink(c, taskId, evolinkKey, input)
+        finalProvider = PROVIDERS.EVOLINK
+        result = {
+          state: "Completed",
+          result: {
+            image: imageUrl,
+          },
+        }
+      } catch (err: any) {
+        throw new Error(`EvoLink GPT image generation failed: ${err.message}`)
       }
     } else {
       // Call Cloudflare AI
