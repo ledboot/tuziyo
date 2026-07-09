@@ -589,7 +589,12 @@ export async function handleGenerate(c: AuthenticatedContext) {
   })
 }
 
-async function generateViaEvoLink(apiKey: string, input: GenerateInput): Promise<string> {
+async function generateViaEvoLink(
+  c: AuthenticatedContext,
+  dbTaskId: string,
+  apiKey: string,
+  input: GenerateInput
+): Promise<string> {
   const evolinkModelName = EVOLINK_MODEL_MAP[input.model] || "doubao-seedream-4.0"
   console.log("Calling EvoLink (Primary) for model", evolinkModelName)
 
@@ -634,6 +639,13 @@ async function generateViaEvoLink(apiKey: string, input: GenerateInput): Promise
   if (!taskId) {
     throw new Error("EvoLink response did not contain a task ID")
   }
+
+  // Record the provider task ID in the database immediately
+  await c.env.DB.prepare(
+    "UPDATE generation_tasks SET provider_task_id = ?, updated_at = ? WHERE id = ?"
+  )
+    .bind(taskId, Math.floor(Date.now() / 1000), dbTaskId)
+    .run()
 
   console.log(`EvoLink task created: ${taskId}. Starting status polling...`)
 
@@ -691,8 +703,7 @@ async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promis
     model: byteplusModelName,
     prompt: input.prompt,
     response_format: "url",
-    size: input.aspect_ratio,
-    quality: input.resolution,
+    size: input.resolution,
     stream: false,
     watermark: false,
   }
@@ -704,6 +715,7 @@ async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promis
 
     payload.output_format = outputFormat
   }
+  console.log("BytePlus Ark API request payload", JSON.stringify(payload))
 
   const res = await fetch("https://ark.ap-southeast.bytepluses.com/api/v3/images/generations", {
     method: "POST",
@@ -731,6 +743,7 @@ async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promis
 
 async function generateBytedanceImage(
   c: AuthenticatedContext,
+  dbTaskId: string,
   input: GenerateInput
 ): Promise<{ imageUrl: string; provider: string }> {
   let lastError: any = null
@@ -739,7 +752,7 @@ async function generateBytedanceImage(
   const evolinkKey = c.env.EVOLINK_API_KEY
   if (evolinkKey) {
     try {
-      const imageUrl = await generateViaEvoLink(evolinkKey, input)
+      const imageUrl = await generateViaEvoLink(c, dbTaskId, evolinkKey, input)
       return { imageUrl, provider: PROVIDERS.EVOLINK }
     } catch (err: any) {
       console.error("EvoLink primary channel failed:", err.message)
@@ -793,7 +806,7 @@ async function runBackgroundGeneration(
     let finalProvider: string = PROVIDERS.CLOUDFLARE
 
     if (isBytedance) {
-      const resData = await generateBytedanceImage(c, input)
+      const resData = await generateBytedanceImage(c, taskId, input)
       finalProvider = resData.provider
       result = {
         state: "Completed",

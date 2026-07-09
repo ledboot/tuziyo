@@ -72,7 +72,6 @@ export default function AIToolkitPage() {
     }[]
   >([])
   const [showSidebar, setShowSidebar] = useState(false)
-  const [isNewSession, setIsNewSession] = useState(false)
   const editInputRef = useRef<HTMLInputElement>(null)
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null)
@@ -187,7 +186,6 @@ export default function AIToolkitPage() {
   }, [user, token])
 
   const handleCreateSession = () => {
-    setIsNewSession(true)
     setCurrentSession(null)
   }
 
@@ -202,7 +200,6 @@ export default function AIToolkitPage() {
       setSessionHistory(prev => prev.filter(s => s.id !== sessionId))
       if (currentSession?.id === sessionId) {
         setCurrentSession(null)
-        setIsNewSession(false)
       }
     } catch (error) {
       console.error("Failed to delete session:", error)
@@ -242,12 +239,7 @@ export default function AIToolkitPage() {
         />
       )}
 
-      <main className={`ai-toolkit-stage ${user ? "ai-toolkit-stage--with-sidebar" : ""}`}>
-        <div className={`ai-toolkit-hero-copy ${isNewSession ? "is-visible" : ""}`}>
-          <h1>What will you create today?</h1>
-          <p>Describe the image you want, then tune the model details below.</p>
-        </div>
-      </main>
+      <main className={`ai-toolkit-stage ${user ? "ai-toolkit-stage--with-sidebar" : ""}`} />
 
       <div
         className={`ai-toolkit-prompt-dock ${user ? "ai-toolkit-prompt-dock--with-sidebar" : ""} ${isPromptVisible ? "is-visible" : ""}`}
@@ -266,11 +258,9 @@ export default function AIToolkitPage() {
               // Now we just wait on this page while generating, UI handles spinner
             }}
             onGenerateSuccess={(sessionId) => {
-              setIsNewSession(false)
               navigate(`/session/${sessionId}`)
             }}
             onGeneratePending={(sessionId, taskId, prompt) => {
-              setIsNewSession(false)
               navigate(`/session/${sessionId}?taskId=${taskId}`, {
                 state: { prompt },
               })

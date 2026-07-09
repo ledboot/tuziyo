@@ -116,6 +116,7 @@ export interface Translations {
     aspectRatio: string
     quality: string
     numberOfImages: string
+    newSession: string
   }
   inpainting: {
     title: string
@@ -424,6 +425,7 @@ export const translations: Record<Language, Translations> = {
       aspectRatio: "Aspect Ratio",
       quality: "Quality",
       numberOfImages: "Number of Images",
+      newSession: "New Session",
     },
     inpainting: {
       title: "AI Image Inpainting",
@@ -593,6 +595,7 @@ export const translations: Record<Language, Translations> = {
       aspectRatio: "宽高比",
       quality: "质量",
       numberOfImages: "图片数量",
+      newSession: "新建会话",
     },
     inpainting: {
       title: "AI 图像修复",
@@ -755,6 +758,7 @@ export const translations: Record<Language, Translations> = {
       aspectRatio: "Format",
       quality: "Qualité",
       numberOfImages: "Nombre d'images",
+      newSession: "Nouvelle session",
     },
     inpainting: {
       title: "Inpainting IA",
@@ -924,6 +928,7 @@ export const translations: Record<Language, Translations> = {
       aspectRatio: "アスペクト比",
       quality: "品質",
       numberOfImages: "画像数",
+      newSession: "新規セッション",
     },
     inpainting: {
       title: "AI 画像修復",
@@ -1094,6 +1099,7 @@ export const translations: Record<Language, Translations> = {
       aspectRatio: "종횡비",
       quality: "품질",
       numberOfImages: "이미지 수",
+      newSession: "새 세션",
     },
     inpainting: {
       title: "AI 이미지 복원",
@@ -1264,6 +1270,7 @@ export const translations: Record<Language, Translations> = {
       aspectRatio: "Соотношение",
       quality: "Качество",
       numberOfImages: "Кол-во изображений",
+      newSession: "Новая сессия",
     },
     inpainting: {
       title: "AI Восстановление",
@@ -1434,6 +1441,7 @@ export const translations: Record<Language, Translations> = {
       aspectRatio: "Formato",
       quality: "Qualità",
       numberOfImages: "Numero di immagini",
+      newSession: "Nuova sessione",
     },
     inpainting: {
       title: "Restauro Immagini IA",

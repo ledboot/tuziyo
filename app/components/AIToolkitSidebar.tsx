@@ -2,6 +2,7 @@ import React from "react"
 import { SquarePen, Trash2, Pencil, Pin } from "lucide-react"
 import { api } from "~/lib/api"
 import { toast } from "sonner"
+import { useI18n } from "~/lib/i18n"
 
 interface Session {
   id: string
@@ -41,6 +42,8 @@ export function AIToolkitSidebar({
   handleSelectSession,
   editInputRef,
 }: AIToolkitSidebarProps) {
+  const { t } = useI18n()
+
   return (
     <div
       className={`ai-toolkit-sidebar ${showSidebar ? "ai-toolkit-sidebar--expanded" : ""}`}
@@ -66,7 +69,7 @@ export function AIToolkitSidebar({
                 showSidebar ? "max-w-[100px] opacity-100" : "max-w-0 opacity-0"
               }`}
             >
-              新建会话
+              {t.aiToolkit.newSession}
             </span>
           </button>
         </div>
