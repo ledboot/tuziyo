@@ -1,3 +1,6 @@
+import { createPresignedGetUrl } from "../utils"
+import type { Env } from "../types"
+
 export interface AiToolkitShowcaseItem {
   id: string
   src: string
@@ -83,6 +86,17 @@ function expandShowcaseItems(items: AiToolkitShowcaseItem[], repeatCount: number
   )
 }
 
-export function getAiToolkitShowcase() {
-  return expandShowcaseItems(AI_TOOLKIT_SHOWCASE_ITEMS, 8)
+export async function getAiToolkitShowcase(env: Env) {
+  const signedItems = await Promise.all(
+    AI_TOOLKIT_SHOWCASE_ITEMS.map(async (item, index) => {
+      const filename = SHOWCASE_IMAGES[index].filename
+      const key = `showcase/${filename}`
+      const signedUrl = await createPresignedGetUrl(env, key)
+      return {
+        ...item,
+        src: signedUrl || item.src,
+      }
+    })
+  )
+  return expandShowcaseItems(signedItems, 8)
 }

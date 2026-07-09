@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import type { AuthenticatedContext, Env } from "../types";
-import { getR2PublicUrl } from "../utils";
+import { createPresignedGetUrl } from "../utils";
 
 interface SessionListRecord {
   id: string;
@@ -32,9 +32,9 @@ interface SessionMessageRecord {
   is_favorite?: number;
 }
 
-function toPublicImageUrl(env: Env, imageUrl: string | null) {
+async function toPublicImageUrl(env: Env, imageUrl: string | null) {
   if (!imageUrl) return null;
-  return getR2PublicUrl(env, imageUrl) ?? null;
+  return (await createPresignedGetUrl(env, imageUrl)) ?? null;
 }
 
 export async function handleGetSessions(c: AuthenticatedContext) {
@@ -57,10 +57,12 @@ export async function handleGetSessions(c: AuthenticatedContext) {
     .bind(user.userId)
     .all();
 
-  const results = (sessions.results as unknown as SessionListRecord[]).map(session => ({
-    ...session,
-    preview_image: toPublicImageUrl(c.env, session.preview_image),
-  }));
+  const results = await Promise.all(
+    (sessions.results as unknown as SessionListRecord[]).map(async session => ({
+      ...session,
+      preview_image: await toPublicImageUrl(c.env, session.preview_image),
+    }))
+  );
 
   return c.json({ sessions: results });
 }
@@ -121,10 +123,12 @@ export async function handleGetSession(c: AuthenticatedContext) {
     .bind(user.userId, sessionId)
     .all();
 
-  const results = (messages.results as unknown as SessionMessageRecord[]).map(message => ({
-    ...message,
-    url: toPublicImageUrl(c.env, message.image_url),
-  }));
+  const results = await Promise.all(
+    (messages.results as unknown as SessionMessageRecord[]).map(async message => ({
+      ...message,
+      url: await toPublicImageUrl(c.env, message.image_url),
+    }))
+  );
 
   const pendingTasksResult = await c.env.DB
     .prepare(

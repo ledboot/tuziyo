@@ -8,6 +8,7 @@ import { REFERENCE_IMAGE_MAX_BYTES, REFERENCE_IMAGE_UPLOAD_EXPIRES_SECONDS } fro
 import {
   createReferenceImageKey,
   getR2PublicUrl,
+  createPresignedGetUrl,
   isAllowedReferenceImageContentType,
   normalizeContentType,
 } from "../utils"
@@ -68,7 +69,7 @@ export async function handleCreateReferenceImageUpload(c: AuthenticatedContext) 
     return c.json({
       key,
       uploadUrl,
-      publicUrl: getR2PublicUrl(c.env, key),
+      publicUrl: await createPresignedGetUrl(c.env, key),
       expiresIn: REFERENCE_IMAGE_UPLOAD_EXPIRES_SECONDS,
       headers: {
         "Content-Type": contentType,

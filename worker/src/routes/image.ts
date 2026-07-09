@@ -15,10 +15,12 @@ import { deductCredits, getUserCredits } from "./credits"
 import { MODEL_OPTIONS_CONFIG, validateModelOptions } from "../modelOptions"
 import {
   arrayBufferToDataUrl,
+  createReferenceImageKey,
   createGeneratedImageKey,
   getGeneratedImagePrefix,
   getImageContentTypeFromKey,
   getR2PublicUrl,
+  createPresignedGetUrl,
   getReferenceImagePrefix,
   isAllowedReferenceImageContentType,
   normalizeContentType,
@@ -111,9 +113,9 @@ function getRequestedFavorite(body: FavoriteRequestBody) {
   return body.favorited ?? body.favorite ?? body.is_favorite
 }
 
-function toPublicImageUrl(env: Env, imageUrl: string | null) {
+async function toPublicImageUrl(env: Env, imageUrl: string | null) {
   if (!imageUrl) return null
-  return getR2PublicUrl(env, imageUrl) ?? null
+  return (await createPresignedGetUrl(env, imageUrl)) ?? null
 }
 
 export function buildAiInput(input: GenerateInput, referenceImages: PreparedReferenceImage[] = []) {
@@ -309,7 +311,7 @@ async function prepareReferenceImages(
       dataUrl = arrayBufferToDataUrl(await objectBody.arrayBuffer(), contentType)
     }
 
-    const url = getR2PublicUrl(c.env, key)
+    const url = await createPresignedGetUrl(c.env, key)
     if (modelConfig.referenceImageFormat === ReferenceImageFormat.URL && !url) {
       return { error: "R2_PUBLIC_BASE_URL is required for URL reference images" }
     }
@@ -383,10 +385,12 @@ export async function handleGetFavorites(c: AuthenticatedContext) {
     .bind(user.userId, user.userId)
     .first<{ total: number }>()
 
-  const results = (favorites.results as unknown as FavoriteImageRecord[]).map(favorite => ({
-    ...favorite,
-    url: toPublicImageUrl(c.env, favorite.image_url),
-  }))
+  const results = await Promise.all(
+    (favorites.results as unknown as FavoriteImageRecord[]).map(async favorite => ({
+      ...favorite,
+      url: await toPublicImageUrl(c.env, favorite.image_url),
+    }))
+  )
 
   return c.json({
     favorites: results,
@@ -850,9 +854,9 @@ async function runBackgroundGeneration(
     const extension =
       imageUrl.split("?")[0].split(".").pop()?.toLowerCase() || input.output_format || "png"
     const key = createGeneratedImageKey(userId, extension)
-    const fullImageUrl = getR2PublicUrl(c.env, key)
+    const fullImageUrl = await createPresignedGetUrl(c.env, key)
     if (!fullImageUrl) {
-      throw new Error("R2_PUBLIC_BASE_URL is required")
+      throw new Error("Failed to generate pre-signed URL")
     }
 
     await c.env.R2.put(key, imageBuffer, {
@@ -1002,6 +1006,9 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
   }
 
   const parsedResult = taskRecord.result ? JSON.parse(taskRecord.result) : null
+  if (parsedResult && parsedResult.key) {
+    parsedResult.r2Url = await createPresignedGetUrl(c.env, parsedResult.key)
+  }
 
   return c.json({
     success: true,

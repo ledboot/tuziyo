@@ -62,8 +62,9 @@ app.get("/api/models", c => {
   })
 })
 
-app.get("/api/ai-toolkit/showcase", c => {
-  return c.json({ items: getAiToolkitShowcase() })
+app.get("/api/ai-toolkit/showcase", async c => {
+  const items = await getAiToolkitShowcase(c.env)
+  return c.json({ items })
 })
 
 app.post("/api/stripe/webhook", handleStripeWebhook)

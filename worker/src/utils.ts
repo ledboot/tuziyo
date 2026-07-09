@@ -1,3 +1,4 @@
+import { AwsClient } from "aws4fetch"
 import type { Env } from "./types"
 
 const REFERENCE_IMAGE_CONTENT_TYPES: Record<string, string> = {
@@ -51,6 +52,47 @@ export function getR2PublicUrl(env: Env, key: string) {
   const baseUrl = env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, "")
   if (!baseUrl) return undefined
   return `${baseUrl}/${key.replace(/^\/+/, "")}`
+}
+
+export async function createPresignedGetUrl(
+  env: Env,
+  key: string,
+  expiresInSeconds = 3600
+): Promise<string | undefined> {
+  if (!key) return undefined
+  if (/^https?:\/\//i.test(key)) return key
+
+  const missingConfig = [
+    ["R2_ACCOUNT_ID", env.R2_ACCOUNT_ID],
+    ["R2_BUCKET_NAME", env.R2_BUCKET_NAME],
+    ["R2_ACCESS_KEY_ID", env.R2_ACCESS_KEY_ID],
+    ["R2_SECRET_ACCESS_KEY", env.R2_SECRET_ACCESS_KEY],
+  ]
+    .filter(([, value]) => !value)
+    .map(([name]) => name)
+
+  if (missingConfig.length > 0) {
+    return getR2PublicUrl(env, key)
+  }
+
+  const client = new AwsClient({
+    accessKeyId: env.R2_ACCESS_KEY_ID,
+    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+  })
+
+  const url = new URL(
+    `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BUCKET_NAME}/${key}`
+  )
+  url.searchParams.set("X-Amz-Expires", String(expiresInSeconds))
+
+  const signedRequest = await client.sign(url.toString(), {
+    method: "GET",
+    aws: {
+      signQuery: true,
+    },
+  })
+
+  return signedRequest.url
 }
 
 export function createReferenceImageKey(userId: string, contentType: string) {
