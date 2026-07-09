@@ -162,7 +162,7 @@ export default function ImageDetailModal({
           {imageUrl ? (
             <img
               src={imageUrl}
-              alt={image.prompt}
+              alt="Generated image"
               className="w-full h-full object-contain drop-shadow-2xl"
             />
           ) : (
