@@ -10,6 +10,7 @@ export const ModelOptionSchema = z.object({
   type: ModelOptionTypeSchema,
   values: z.array(z.string()).default([]),
   defaultValue: z.string().optional(),
+  valueCredits: z.record(z.number()).optional(),
 })
 
 export const ModelSchema = z.object({

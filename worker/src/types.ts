@@ -80,6 +80,7 @@ export interface ModelOption {
   type: ModelOptionType
   values: string[]
   defaultValue?: string
+  valueCredits?: Record<string, number>
 }
 
 export enum ModelOptionType {

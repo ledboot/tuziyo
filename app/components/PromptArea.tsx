@@ -107,6 +107,36 @@ function buildOptionGroups(
   })
 }
 
+function calculateRequiredCredits(
+  model: Model | undefined,
+  normalizedOptions: Record<string, string>,
+  referenceImageCount: number
+): number {
+  if (!model) return 0
+  const baseCredits = model.credits || 0
+  let singleImageCredits = baseCredits
+
+  if (model.options) {
+    for (const [key, option] of Object.entries(model.options)) {
+      const selectedValue = normalizedOptions[key]
+      if (selectedValue && option.valueCredits) {
+        const premium = option.valueCredits[selectedValue]
+        if (typeof premium === "number") {
+          singleImageCredits += premium
+        }
+      }
+    }
+  }
+
+
+  const numImages = Math.max(1, Number(normalizedOptions["num_images"]) || 1)
+  let totalCredits = singleImageCredits * numImages
+
+  totalCredits += referenceImageCount * 5
+
+  return totalCredits
+}
+
 export default function PromptArea({
   models,
   selectedModel,
@@ -170,14 +200,14 @@ export default function PromptArea({
   const isModelDataPending = isModelsLoading || models.length === 0
 
   const selectedModelInfo = models.find(m => m.id === selectedModel)
-  const requiredCredits = selectedModelInfo?.credits || 0
+  const normalizedModelOptions = normalizeModelOptions(selectedModel, modelOptions)
+  const requiredCredits = calculateRequiredCredits(selectedModelInfo, normalizedModelOptions, uploadedImages.length)
   const availableCredits = user?.credits ?? 0
   const hasInsufficientCredits = Boolean(user && availableCredits < requiredCredits)
   const creditEstimateText =
     requiredCredits > 0
       ? `Cost ≈ ${requiredCredits.toLocaleString("en-US")} credits`
       : "Cost ≈ 0 credits"
-  const normalizedModelOptions = normalizeModelOptions(selectedModel, modelOptions)
   const optionGroups = buildOptionGroups(modelOptionConfig, normalizedModelOptions, onOptionsChange)
   const negativePromptConfig = modelOptionConfig.negative_prompt
   const supportsNegativePrompt = negativePromptConfig?.type === "textarea"

@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid"
 import type { AuthenticatedContext } from "../types"
 import { MODEL_CREDITS as CREDIT_MAP } from "../types"
+import { MODEL_OPTIONS_CONFIG } from "../modelOptions"
 
 export interface CreditInfo {
   balance: number
@@ -203,16 +204,44 @@ export async function grantSubscriptionCredits(
   await db.batch([insertTransaction, updateCredits])
 }
 
+export function calculateRequiredCredits(model: string, input: any): number {
+  const baseCredits = CREDIT_MAP[model] || 0
+  if (!baseCredits) return 0
+
+  let singleImageCredits = baseCredits
+
+  // 1. Dynamic premium additions based on selected option valueCredits from MODEL_OPTIONS_CONFIG
+  const optionsConfig = MODEL_OPTIONS_CONFIG[model]
+  if (optionsConfig) {
+    for (const [key, option] of Object.entries(optionsConfig)) {
+      const selectedValue = input[key]
+      if (selectedValue && option.valueCredits) {
+        const premium = option.valueCredits[String(selectedValue)]
+        if (typeof premium === "number") {
+          singleImageCredits += premium
+        }
+      }
+    }
+  }
+
+  // 2. Calculate total for all images
+  const numImages = Math.max(1, Number(input.num_images) || 1)
+  let totalCredits = singleImageCredits * numImages
+
+  // 4. Add reference images premium
+  // "一张参考图需要credit=5，添加2张参考图 credit=5*2"
+  const referenceImageCount = input.reference_images?.length || 0
+  totalCredits += referenceImageCount * 5
+
+  return totalCredits
+}
+
 export async function deductCredits(
   db: D1Database,
   userId: string,
-  model: string
+  model: string,
+  creditsPerImage: number
 ): Promise<{ success: boolean; error?: string }> {
-  const creditsPerImage = CREDIT_MAP[model]
-  if (!creditsPerImage) {
-    return { success: false, error: `Unknown model: ${model}` }
-  }
-
   const userCredits = await getUserCredits(db, userId)
   if (userCredits.balance < creditsPerImage) {
     return { success: false, error: "Insufficient credits" }

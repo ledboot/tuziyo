@@ -11,7 +11,7 @@ import {
   MODEL_CREDITS,
   PLAN_MODELS_CONFIG,
 } from "../types"
-import { deductCredits, getUserCredits } from "./credits"
+import { deductCredits, getUserCredits, calculateRequiredCredits } from "./credits"
 import { MODEL_OPTIONS_CONFIG, validateModelOptions } from "../modelOptions"
 import {
   arrayBufferToDataUrl,
@@ -553,7 +553,7 @@ export async function handleGenerate(c: AuthenticatedContext) {
   }
 
   // Pre-check credits balance
-  const creditsPerImage = MODEL_CREDITS[input.model]
+  const creditsPerImage = calculateRequiredCredits(input.model, input)
   if (!creditsPerImage) {
     return c.json({ error: `Unknown model: ${input.model}` }, 400)
   }
@@ -798,7 +798,8 @@ async function completeGenerationTask(
   const now = Math.floor(Date.now() / 1000)
 
   // Deduct credits
-  const deductResult = await deductCredits(db, userId, input.model)
+  const creditsPerImage = calculateRequiredCredits(input.model, input)
+  const deductResult = await deductCredits(db, userId, input.model, creditsPerImage)
   if (!deductResult.success) {
     throw new Error(deductResult.error || "Failed to deduct credits")
   }
@@ -1146,27 +1147,6 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
     created_at: number
   }
 
-  // Self-healing timeout check: If the task has been stuck in 'pending' or 'processing' for more than 90 seconds,
-  // it likely crashed, timed out, or was terminated by Cloudflare Workers.
-  const now = Math.floor(Date.now() / 1000)
-  if (
-    (taskRecord.status === "pending" || taskRecord.status === "processing") &&
-    now - taskRecord.created_at > 90
-  ) {
-    const timeoutMsg = "Generation timed out (backend process terminated)"
-    await c.env.DB.prepare(
-      "UPDATE generation_tasks SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
-    )
-      .bind(timeoutMsg, now, taskId)
-      .run()
-
-    return c.json({
-      success: true,
-      status: "failed",
-      result: null,
-      error: timeoutMsg,
-    })
-  }
 
   const parsedResult = taskRecord.result ? JSON.parse(taskRecord.result) : null
   if (parsedResult && parsedResult.key) {

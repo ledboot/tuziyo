@@ -13,6 +13,10 @@ export const MODEL_OPTIONS_CONFIG: Record<string, Record<string, ModelOption>> =
       type: ModelOptionType.SELECT,
       values: ["1K", "2K", "4K"],
       defaultValue: "2K",
+      valueCredits: {
+        "2K": 4,
+        "4K": 15,
+      },
     },
     output_format: {
       name: "Output Format",
@@ -33,6 +37,10 @@ export const MODEL_OPTIONS_CONFIG: Record<string, Record<string, ModelOption>> =
       type: ModelOptionType.SELECT,
       values: ["1K", "2K", "4K"],
       defaultValue: "2K",
+      valueCredits: {
+        "2K": 4,
+        "4K": 15,
+      },
     },
     output_format: {
       name: "Output Format",
@@ -53,6 +61,10 @@ export const MODEL_OPTIONS_CONFIG: Record<string, Record<string, ModelOption>> =
       type: ModelOptionType.SELECT,
       values: ["1K", "2K", "4K"],
       defaultValue: "2K",
+      valueCredits: {
+        "2K": 4,
+        "4K": 15,
+      },
     },
     output_format: {
       name: "Output Format",
@@ -106,6 +118,10 @@ export const MODEL_OPTIONS_CONFIG: Record<string, Record<string, ModelOption>> =
       type: ModelOptionType.SELECT,
       values: ["1K", "2K", "4K"],
       defaultValue: "1K",
+      valueCredits: {
+        "2K": 4,
+        "4K": 15,
+      },
     },
   },
   "bytedance/seedream-4.5": {
@@ -120,6 +136,9 @@ export const MODEL_OPTIONS_CONFIG: Record<string, Record<string, ModelOption>> =
       type: ModelOptionType.SELECT,
       values: ["2K", "4K"],
       defaultValue: "2K",
+      valueCredits: {
+        "4K": 15,
+      },
     },
   },
   "bytedance/seedream-5-lite": {
@@ -134,6 +153,9 @@ export const MODEL_OPTIONS_CONFIG: Record<string, Record<string, ModelOption>> =
       type: ModelOptionType.SELECT,
       values: ["2K", "3K"],
       defaultValue: "2K",
+      valueCredits: {
+        "3K": 8,
+      },
     },
     num_images: {
       name: "Number of Images",
@@ -160,6 +182,10 @@ export const MODEL_OPTIONS_CONFIG: Record<string, Record<string, ModelOption>> =
       type: ModelOptionType.SELECT,
       values: ["low", "medium", "high"],
       defaultValue: "medium",
+      valueCredits: {
+        "medium": 3,
+        "high": 10,
+      },
     },
   },
   "openai/gpt-image-2": {
@@ -190,12 +216,20 @@ export const MODEL_OPTIONS_CONFIG: Record<string, Record<string, ModelOption>> =
       type: ModelOptionType.SELECT,
       values: ["low", "medium", "high"],
       defaultValue: "medium",
+      valueCredits: {
+        "medium": 3,
+        "high": 10,
+      },
     },
     resolution: {
       name: "Resolution",
       type: ModelOptionType.SELECT,
       values: ["1K", "2K", "4K"],
       defaultValue: "2K",
+      valueCredits: {
+        "2K": 4,
+        "4K": 15,
+      },
     },
   },
   "xai/grok-imagine-image-quality": {
@@ -225,12 +259,19 @@ export const MODEL_OPTIONS_CONFIG: Record<string, Record<string, ModelOption>> =
       type: ModelOptionType.SELECT,
       values: ["low", "medium", "high"],
       defaultValue: "medium",
+      valueCredits: {
+        "medium": 3,
+        "high": 10,
+      },
     },
     resolution: {
       name: "Resolution",
       type: ModelOptionType.SELECT,
       values: ["1K", "2K"],
       defaultValue: "1K",
+      valueCredits: {
+        "2K": 4,
+      },
     },
   },
   "xai/grok-imagine-image": {
@@ -260,12 +301,19 @@ export const MODEL_OPTIONS_CONFIG: Record<string, Record<string, ModelOption>> =
       type: ModelOptionType.SELECT,
       values: ["low", "medium", "high"],
       defaultValue: "medium",
+      valueCredits: {
+        "medium": 3,
+        "high": 10,
+      },
     },
     resolution: {
       name: "Resolution",
       type: ModelOptionType.SELECT,
       values: ["1K", "2K"],
       defaultValue: "1K",
+      valueCredits: {
+        "2K": 4,
+      },
     },
   },
   "recraft/recraftv4": {},
