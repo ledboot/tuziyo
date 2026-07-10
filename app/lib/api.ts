@@ -260,10 +260,31 @@ export const api = {
           google_search: number | null
           image_search: number | null
           created_at: number
+          outputs: Array<{
+            id: string
+            message_id: string
+            output_index: number
+            status: "pending" | "completed" | "failed" | "deleted"
+            image_url: string | null
+            url: string | null
+            content_type: "image" | "video" | "audio"
+            width: number | null
+            height: number | null
+            file_size: number | null
+            error: string | null
+            created_at: number
+            updated_at: number
+            is_favorite?: number
+            legacy?: boolean
+          }>
         }>
         pendingTasks?: Array<{
           id: string
+          message_id: string | null
           status: string
+          requested_count: number
+          completed_count: number
+          failed_count: number
         }>
       }>(`/api/sessions/${id}`),
     delete: (id: string) => request(`/api/sessions/${id}`, { method: "DELETE" }),
@@ -293,13 +314,17 @@ export const api = {
       reference_images?: string[]
       [key: string]: unknown
     }) =>
-      request<{ success: boolean; taskId?: string; sessionId?: string; error?: string }>(
-        "/api/generate",
-        {
-          method: "POST",
-          body: JSON.stringify(params),
-        }
-      ),
+      request<{
+        success: boolean
+        taskId?: string
+        sessionId?: string
+        messageId?: string
+        requestedCount?: number
+        error?: string
+      }>("/api/generate", {
+        method: "POST",
+        body: JSON.stringify(params),
+      }),
     getTaskStatus: (taskId: string) =>
       request<{
         success: boolean
@@ -311,7 +336,28 @@ export const api = {
           imageUrl?: string
           sessionId?: string
           messageId?: string
+          outputs?: Array<{
+            id: string
+            index: number
+            key: string
+            url: string
+          }>
         }
+        outputs?: Array<{
+          id: string
+          message_id: string
+          output_index: number
+          status: "pending" | "completed" | "failed" | "deleted"
+          image_url: string | null
+          url: string | null
+          content_type: "image" | "video" | "audio"
+          width: number | null
+          height: number | null
+          file_size: number | null
+          error: string | null
+          created_at: number
+          updated_at: number
+        }>
         error?: string
       }>(`/api/generate/task/${taskId}`),
   },
@@ -363,6 +409,8 @@ export const api = {
           favorite_id: string
           favorite_created_at: number
           id: string
+          message_id: string
+          output_id: string | null
           role: string
           provider: string | null
           model: string

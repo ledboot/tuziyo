@@ -4,35 +4,22 @@ import { useNavigate } from "react-router"
 import { toast } from "sonner"
 import { useGenerateStore } from "~/stores/generateStore"
 import { api } from "~/lib/api"
-
-interface Message {
-  id: string
-  role: string
-  provider: string | null
-  model: string
-  prompt: string
-  image_url: string | null
-  aspect_ratio: string | null
-  resolution: string | null
-  image_size: string | null
-  quality: string | null
-  style: string | null
-  negative_prompt: string | null
-  output_format: string | null
-  num_images: number | null
-  url: string | null
-  google_search?: number | null
-  image_search?: number | null
-  created_at: number
-  is_favorite?: number | boolean
-}
+import ImageThumbnailStrip from "~/components/ImageThumbnailStrip"
+import {
+  getActiveOutput,
+  getVisibleOutputs,
+  withActiveOutput,
+  type GeneratedImageMessage,
+} from "~/types/generatedImage"
 
 interface ImageDetailModalProps {
-  image: Message | null
+  image: GeneratedImageMessage | null
+  initialOutputId?: string | null
   sessionTitle: string
   onClose: () => void
-  onRecreate?: (image: Message) => void
-  onEdit?: (image: Message) => void
+  onRecreate?: (image: GeneratedImageMessage) => void
+  onEdit?: (image: GeneratedImageMessage) => void
+  onOutputChange?: (outputId: string) => void
   onFavoriteToggle?: (imageId: string, isFavorited: boolean) => void
 }
 
@@ -56,27 +43,41 @@ function getModelName(modelId: string): string {
 
 export default function ImageDetailModal({
   image,
+  initialOutputId,
   sessionTitle,
   onClose,
   onRecreate,
   onEdit,
+  onOutputChange,
   onFavoriteToggle,
 }: ImageDetailModalProps) {
   const navigate = useNavigate()
-  const setRegenerateData = useGenerateStore((state) => state.setRegenerateData)
+  const setRegenerateData = useGenerateStore(state => state.setRegenerateData)
 
   const [isFavorited, setIsFavorited] = useState(false)
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false)
+  const [activeOutputId, setActiveOutputId] = useState<string | null>(initialOutputId ?? null)
+
+  const outputs = image ? getVisibleOutputs(image) : []
+  const activeOutput = image ? getActiveOutput(image, activeOutputId) : null
+  const activeImage = image && activeOutput ? withActiveOutput(image, activeOutput) : image
 
   useEffect(() => {
-    if (image) {
-      setIsFavorited(Boolean(image.is_favorite))
-    }
-  }, [image])
+    setActiveOutputId(initialOutputId ?? null)
+  }, [image?.id, initialOutputId])
+
+  useEffect(() => {
+    setIsFavorited(Boolean(activeOutput?.is_favorite))
+  }, [activeOutput?.id, activeOutput?.is_favorite])
 
   if (!image) return null
 
-  const imageUrl = image.url ?? null
+  const imageUrl = activeOutput?.url ?? null
+
+  const handleSelectOutput = (outputId: string) => {
+    setActiveOutputId(outputId)
+    onOutputChange?.(outputId)
+  }
 
   const handleRegenerate = () => {
     if (onRecreate) {
@@ -104,8 +105,8 @@ export default function ImageDetailModal({
   }
 
   const handleEdit = () => {
-    if (!onEdit) return
-    onEdit(image)
+    if (!onEdit || !activeImage) return
+    onEdit(activeImage)
     onClose()
   }
 
@@ -135,16 +136,16 @@ export default function ImageDetailModal({
   }
 
   const handleToggleFavorite = async () => {
-    if (isTogglingFavorite) return
+    if (isTogglingFavorite || !activeOutput) return
     setIsTogglingFavorite(true)
 
     const nextFavorited = !isFavorited
     setIsFavorited(nextFavorited)
 
     try {
-      await api.images.favorite(image.id, nextFavorited)
+      await api.images.favorite(activeOutput.id, nextFavorited)
       toast.success(nextFavorited ? "Added to favorites" : "Removed from favorites")
-      onFavoriteToggle?.(image.id, nextFavorited)
+      onFavoriteToggle?.(activeOutput.id, nextFavorited)
     } catch (error) {
       setIsFavorited(!nextFavorited)
       toast.error(error instanceof Error ? error.message : "Failed to update favorite")
@@ -156,40 +157,52 @@ export default function ImageDetailModal({
   return (
     <div className="modal modal-open">
       <div className="modal-box max-w-[95vw] w-[1400px] h-[90vh] flex flex-col md:flex-row p-0 overflow-hidden bg-[#0c0c0c] liquid-glass border border-white/10 rounded-2xl shadow-2xl">
-        
         {/* Left Image Area */}
-        <div className="flex-1 flex items-center justify-center bg-black/40 relative p-4 md:p-6">
-          {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt="Generated image"
-              className="w-full h-full object-contain drop-shadow-2xl"
-            />
-          ) : (
-            <div className="text-base-content/60">No image available</div>
-          )}
+        <div className="flex min-h-0 flex-1 flex-col bg-black/40 p-4 md:p-6">
+          <div className="relative flex min-h-0 flex-1 items-center justify-center">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt="Generated image"
+                className="size-full object-contain drop-shadow-2xl"
+              />
+            ) : activeOutput?.status === "failed" ? (
+              <div className="text-sm text-red-300/70">This image could not be generated.</div>
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-base-content/60">
+                <span className="loading loading-spinner loading-md text-white/40" />
+                <span className="text-sm">Generating image…</span>
+              </div>
+            )}
+          </div>
+
+          <ImageThumbnailStrip
+            outputs={outputs}
+            activeOutputId={activeOutput?.id ?? null}
+            onSelect={handleSelectOutput}
+            className="mt-4 shrink-0 justify-start border-t border-white/10 pt-4 md:justify-center"
+          />
         </div>
 
         {/* Right Sidebar Area */}
         <div className="w-full md:w-[420px] flex flex-col p-6 bg-black/60 border-l border-white/10 z-10 relative">
-          
           {/* Top Actions */}
           <div className="flex items-center justify-between mb-8">
-            <button 
-              onClick={handleDownload} 
-              disabled={!imageUrl} 
+            <button
+              onClick={handleDownload}
+              disabled={!imageUrl}
               className="btn btn-sm h-9 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 px-4 font-normal"
             >
               <Download className="size-4 mr-1.5" />
               Download
             </button>
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={handleToggleFavorite}
                 disabled={isTogglingFavorite}
                 className={`btn btn-sm btn-circle border text-white ${
-                  isFavorited 
-                    ? "bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30 text-yellow-400" 
+                  isFavorited
+                    ? "bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30 text-yellow-400"
                     : "btn-ghost border-white/20 hover:bg-white/10"
                 }`}
                 title={isFavorited ? "Remove from favorites" : "Add to favorites"}
@@ -203,7 +216,10 @@ export default function ImageDetailModal({
                 <Trash2 className="size-4" />
               </button>
               <div className="w-px h-5 bg-white/20 mx-1" />
-              <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost text-white hover:bg-white/10">
+              <button
+                onClick={onClose}
+                className="btn btn-sm btn-circle btn-ghost text-white hover:bg-white/10"
+              >
                 <X className="size-5" />
               </button>
             </div>
@@ -211,7 +227,6 @@ export default function ImageDetailModal({
 
           {/* Detail Content */}
           <div className="flex-1 min-h-0 overflow-hidden pr-2">
-            
             {/* Prompt */}
             <div className="mb-10">
               <h3 className="text-white font-bold mb-3 text-sm">Prompt</h3>
@@ -220,10 +235,10 @@ export default function ImageDetailModal({
                 className="group block w-full max-h-[min(18rem,32vh)] overflow-y-auto pr-2 text-left cursor-pointer [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]"
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => {
+                onKeyDown={e => {
                   if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleCopyPrompt();
+                    e.preventDefault()
+                    handleCopyPrompt()
                   }
                 }}
                 aria-label="Copy prompt"
@@ -232,7 +247,7 @@ export default function ImageDetailModal({
                   {image.prompt}
                 </p>
               </div>
-              
+
               {image.negative_prompt && (
                 <div className="mt-6">
                   <h3 className="text-white font-bold mb-3 text-sm">Negative Prompt</h3>
@@ -253,45 +268,53 @@ export default function ImageDetailModal({
                   <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Model</div>
                   <div className="text-sm text-white break-all">{getModelName(image.model)}</div>
                 </div>
-                
+
                 {image.aspect_ratio && (
                   <div>
-                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Aspect ratio</div>
+                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">
+                      Aspect ratio
+                    </div>
                     <div className="text-sm text-white flex items-center gap-1.5">
                       <div className="w-4 h-3 border border-white/40 rounded-[2px] shrink-0"></div>
                       {image.aspect_ratio}
                     </div>
                   </div>
                 )}
-                
+
                 {image.quality && (
                   <div>
-                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Quality</div>
+                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">
+                      Quality
+                    </div>
                     <div className="text-sm text-white">{image.quality}</div>
                   </div>
                 )}
-                
+
                 {image.output_format && (
                   <div>
-                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">File type</div>
+                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">
+                      File type
+                    </div>
                     <div className="text-sm text-white uppercase">{image.output_format}</div>
                   </div>
                 )}
 
                 {(image.resolution || image.image_size) && (
                   <div>
-                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Resolution</div>
+                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">
+                      Resolution
+                    </div>
                     <div className="text-sm text-white">{image.resolution || image.image_size}</div>
                   </div>
                 )}
-                
+
                 <div className="col-span-2">
-                  <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Date created</div>
-                  <div className="text-sm text-white">
-                    {formatTimestamp(image.created_at)}
+                  <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">
+                    Date created
                   </div>
+                  <div className="text-sm text-white">{formatTimestamp(image.created_at)}</div>
                 </div>
-                
+
                 {image.style && (
                   <div>
                     <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Style</div>
@@ -303,16 +326,22 @@ export default function ImageDetailModal({
           </div>
 
           <div className="pt-6 grid grid-cols-2 gap-3 mt-auto border-t border-white/5">
-            <button onClick={handleEdit} disabled={!onEdit || !imageUrl} className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal">
+            <button
+              onClick={handleEdit}
+              disabled={!onEdit || !imageUrl}
+              className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal"
+            >
               <Pencil className="size-4 mr-1.5" />
               Edit
             </button>
-            <button onClick={handleRegenerate} className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal">
+            <button
+              onClick={handleRegenerate}
+              className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal"
+            >
               <RotateCcw className="size-4 mr-1.5" />
               Recreate
             </button>
           </div>
-          
         </div>
       </div>
       <div className="modal-backdrop bg-black/80 backdrop-blur-md" onClick={onClose} />

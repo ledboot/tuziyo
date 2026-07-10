@@ -324,7 +324,7 @@ describe("credit grants", () => {
     await addCredits(d1, "paid_and_deduct", 200, "purchase", "Purchased credits")
     await grantSubscriptionCredits(d1, "paid_and_deduct", 5, now, now + 30 * day, "Subscription grant")
 
-    const result = await deductCredits(d1, "paid_and_deduct", 0, "openai/gpt-image-1.5")
+    const result = await deductCredits(d1, "paid_and_deduct", "openai/gpt-image-1.5", 5)
     const credits = await getUserCredits(d1, "paid_and_deduct")
 
     expect(result.success).toBe(true)

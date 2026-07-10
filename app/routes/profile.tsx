@@ -124,7 +124,7 @@ const PROFILE_PAGE_SHELL =
   "mt-[4.5rem] min-h-[calc(100vh-4.5rem)] max-[719px]:mt-[4.15rem] max-[719px]:min-h-[calc(100vh-4.15rem)] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-base-200 via-base-100 to-base-100"
 
 function toFavoriteDetailImage(item: FavoriteItem): FavoriteDetailImage {
-  return {
+  const message: FavoriteDetailImage = {
     id: item.id,
     role: "assistant",
     provider: null,
@@ -143,7 +143,30 @@ function toFavoriteDetailImage(item: FavoriteItem): FavoriteDetailImage {
     google_search: null,
     image_search: null,
     created_at: item.createdAt,
+    outputs: [],
   }
+
+  message.outputs = [
+    {
+      id: item.id,
+      message_id: item.id,
+      output_index: 0,
+      status: "completed",
+      image_url: item.url,
+      url: item.url,
+      content_type: "image",
+      width: null,
+      height: null,
+      file_size: null,
+      error: null,
+      created_at: item.createdAt,
+      updated_at: item.createdAt,
+      is_favorite: 1,
+      legacy: true,
+    },
+  ]
+
+  return message
 }
 
 export default function ProfilePage() {
@@ -202,6 +225,25 @@ export default function ProfilePage() {
           const items = data.favorites.map(fav => ({
             ...fav,
             is_favorite: 1,
+            outputs: [
+              {
+                id: fav.id,
+                message_id: fav.message_id,
+                output_index: 0,
+                status: "completed" as const,
+                image_url: fav.image_url,
+                url: fav.url,
+                content_type: "image",
+                width: null,
+                height: null,
+                file_size: null,
+                error: null,
+                created_at: fav.created_at,
+                updated_at: fav.created_at,
+                is_favorite: 1,
+                legacy: !fav.output_id,
+              },
+            ],
           }))
           setFavorites(items as FavoriteDetailImage[])
         }

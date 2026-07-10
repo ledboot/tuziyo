@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useNavigate, useLocation } from "react-router"
-import { Search } from "lucide-react"
 import { toast } from "sonner"
 import { api } from "~/lib/api"
 import { useUserStore } from "~/stores/userStore"
@@ -8,29 +7,12 @@ import { useModelStore } from "~/stores/modelStore"
 import ImageDetailModal from "~/components/ImageDetailModal"
 import PromptArea, { type UploadedImage } from "~/components/PromptArea"
 import { AIToolkitSidebar } from "~/components/AIToolkitSidebar"
+import MessageImageCard from "~/components/MessageImageCard"
+import type { GeneratedImageMessage, GeneratedImageOutput } from "~/types/generatedImage"
 
 type ModelId = string
 
-interface Message {
-  id: string
-  role: string
-  provider: string | null
-  model: string
-  prompt: string
-  image_url: string | null
-  aspect_ratio: string | null
-  resolution: string | null
-  image_size: string | null
-  quality: string | null
-  style: string | null
-  negative_prompt: string | null
-  output_format: string | null
-  num_images: number | null
-  url: string | null
-  google_search?: number | null
-  image_search?: number | null
-  created_at: number
-}
+type Message = GeneratedImageMessage
 
 interface Session {
   id: string
@@ -51,7 +33,11 @@ export default function SessionDetailPage() {
   const [session, setSession] = useState<Session | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedImage, setSelectedImage] = useState<Message | null>(null)
+  const [selectedImage, setSelectedImage] = useState<{
+    message: Message
+    outputId: string
+  } | null>(null)
+  const [activeOutputIds, setActiveOutputIds] = useState<Record<string, string>>({})
   const [recreatePrompt, setRecreatePrompt] = useState(generationState?.prompt ?? "")
   const [recreateNegativePrompt, setRecreateNegativePrompt] = useState<string | undefined>()
   const [recreateVersion, setRecreateVersion] = useState(0)
@@ -77,7 +63,8 @@ export default function SessionDetailPage() {
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
   const [pollingTaskId, setPollingTaskId] = useState<string | null>(null)
 
-  const selectedModel = userSelectedModel || (models.length > 0 ? models[0].id : "google/nano-banana-2")
+  const selectedModel =
+    userSelectedModel || (models.length > 0 ? models[0].id : "google/nano-banana-2")
   const modelOptions = userModelOptions || {}
 
   const handleSetModelOptions = (
@@ -93,10 +80,7 @@ export default function SessionDetailPage() {
   const fetchSessionData = async () => {
     if (!id || !user || !token) return
     try {
-      const [sessionData, listData] = await Promise.all([
-        api.sessions.get(id),
-        api.sessions.list(),
-      ])
+      const [sessionData, listData] = await Promise.all([api.sessions.get(id), api.sessions.list()])
       setSession(sessionData.session)
       setMessages(sessionData.messages as Message[])
       setAllSessions(listData.sessions as unknown as Session[])
@@ -237,6 +221,43 @@ export default function SessionDetailPage() {
     setRecreateVersion(version => version + 1)
   }
 
+  const handleSelectOutput = (messageId: string, outputId: string) => {
+    setActiveOutputIds(previous => ({ ...previous, [messageId]: outputId }))
+  }
+
+  const handleOpenImage = (message: Message, outputId: string) => {
+    handleSelectOutput(message.id, outputId)
+    setSelectedImage({ message, outputId })
+  }
+
+  const handleDetailOutputChange = (outputId: string) => {
+    if (!selectedImage) return
+    handleSelectOutput(selectedImage.message.id, outputId)
+    setSelectedImage(previous => (previous ? { ...previous, outputId } : previous))
+  }
+
+  const handleFavoriteToggle = (outputId: string, isFavorited: boolean) => {
+    const updateOutputs = (outputs: GeneratedImageOutput[]) =>
+      outputs.map(output =>
+        output.id === outputId ? { ...output, is_favorite: isFavorited ? 1 : 0 } : output
+      )
+
+    setMessages(previous =>
+      previous.map(message => ({ ...message, outputs: updateOutputs(message.outputs) }))
+    )
+    setSelectedImage(previous =>
+      previous
+        ? {
+            ...previous,
+            message: {
+              ...previous.message,
+              outputs: updateOutputs(previous.message.outputs),
+            },
+          }
+        : previous
+    )
+  }
+
   // Adapt allSessions → the shape AIToolkitSidebar expects
   const sidebarSessions = allSessions.map(s => ({
     id: s.id,
@@ -248,17 +269,19 @@ export default function SessionDetailPage() {
 
   const currentSidebarSession = session
     ? {
-      id: session.id,
-      title: session.title,
-      lastModified: session.updated_at,
-      preview_image: session.preview_image ?? undefined,
-    }
+        id: session.id,
+        title: session.title,
+        lastModified: session.updated_at,
+        preview_image: session.preview_image ?? undefined,
+      }
     : null
 
   const handleCreateSession = () => navigate("/ai-toolkit")
   const handleSelectSession = (sid: string) => navigate(`/session/${sid}`)
 
-  const images = messages.filter(m => m.image_url)
+  const images = messages.filter(message =>
+    message.outputs.some(output => output.status !== "deleted")
+  )
 
   if (loading) {
     return (
@@ -293,14 +316,19 @@ export default function SessionDetailPage() {
         setEditingSessionId={setEditingSessionId}
         setSessionHistory={(updater: any) => {
           setAllSessions(prev => {
-            const next = typeof updater === "function" ? updater(
-              prev.map(s => ({ ...s, pinned: Boolean(s.is_pinned) }))
-            ) : updater
+            const next =
+              typeof updater === "function"
+                ? updater(prev.map(s => ({ ...s, pinned: Boolean(s.is_pinned) })))
+                : updater
             // merge updated fields back into allSessions shape
             return prev.map(s => {
               const updated = next.find((n: any) => n.id === s.id)
               if (!updated) return s
-              return { ...s, title: updated.title ?? s.title, is_pinned: updated.is_pinned ?? (updated.pinned ? 1 : 0) }
+              return {
+                ...s,
+                title: updated.title ?? s.title,
+                is_pinned: updated.is_pinned ?? (updated.pinned ? 1 : 0),
+              }
             })
           })
         }}
@@ -326,68 +354,30 @@ export default function SessionDetailPage() {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {images.map(image => {
-                const imageUrl = image.url
-
                 return (
-                  <div
+                  <MessageImageCard
                     key={image.id}
-                    className="group relative aspect-square cursor-pointer overflow-hidden rounded-xl bg-black/40 border border-white/20 hover:border-white/40 transition-colors duration-300 ring-1 ring-white/5"
-                    onClick={() => setSelectedImage(image)}
-                  >
-                    {imageUrl ? (
-                      <img
-                        src={imageUrl}
-                        alt={image.prompt}
-                        className="size-full object-cover transition-transform duration-300 group-hover:scale-110"
-                      />
-                    ) : (
-                      <div className="size-full flex items-center justify-center">
-                        <span className="text-base-content/40">No image</span>
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40 backdrop-blur-md rounded-full p-3 border border-white/20">
-                        <Search className="size-6 text-white" />
-                      </div>
-                    </div>
-                  </div>
+                    message={image}
+                    activeOutputId={activeOutputIds[image.id]}
+                    onSelectOutput={handleSelectOutput}
+                    onOpen={handleOpenImage}
+                  />
                 )
               })}
-
-              {/* Skeleton for pending generation */}
-              {isGenerating && (
-                <div className="relative aspect-square rounded-xl bg-black/40 border border-white/20 overflow-hidden">
-                  <div className="skeleton size-full opacity-20" />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 text-center">
-                    <div className="loading loading-spinner loading-md text-white/40" />
-                    {pendingPrompt && (
-                      <p className="text-xs text-white/40 line-clamp-2 px-2 italic">
-                        "{pendingPrompt}"
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
 
         <ImageDetailModal
-          image={selectedImage}
+          image={selectedImage?.message ?? null}
+          initialOutputId={selectedImage?.outputId ?? null}
           sessionTitle={session.title}
           onClose={() => setSelectedImage(null)}
           onRecreate={handleRecreate}
           onEdit={handleEdit}
-          onFavoriteToggle={(imageId, isFavorited) => {
-            setMessages(prev =>
-              prev.map(m => (m.id === imageId ? { ...m, is_favorite: isFavorited ? 1 : 0 } : m))
-            )
-            setSelectedImage(prev =>
-              prev && prev.id === imageId ? { ...prev, is_favorite: isFavorited ? 1 : 0 } : prev
-            )
-          }}
+          onOutputChange={handleDetailOutputChange}
+          onFavoriteToggle={handleFavoriteToggle}
         />
-
       </div>
 
       <div
@@ -426,6 +416,7 @@ export default function SessionDetailPage() {
                 setPendingPrompt(prompt)
                 setPollingTaskId(taskId)
                 setIsGenerating(true)
+                void fetchSessionData()
               }
             }}
           />

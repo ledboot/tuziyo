@@ -25,7 +25,14 @@ import {
   isAllowedReferenceImageContentType,
   normalizeContentType,
 } from "../utils"
-import { REFERENCE_IMAGE_MAX_BYTES, PROVIDERS } from "../const"
+import {
+  EVOLINK_TASK_OBJECTS,
+  MIME_TYPES,
+  PROVIDERS,
+  REFERENCE_IMAGE_MAX_BYTES,
+  getEvoLinkTaskMimeType,
+  type MimeType,
+} from "../const"
 const BYTEPLUS_MODEL_MAP: Record<string, string> = {
   "bytedance/seedream-4.0": "seedream-4-0-250828",
   "bytedance/seedream-4.5": "seedream-4-5-251128",
@@ -66,8 +73,10 @@ type AuthenticatedContext = Context<{
 
 interface ImageRecord {
   id: string
+  message_id: string
   session_id: string
   image_url: string
+  is_legacy: number
 }
 
 interface FavoriteImageRecord {
@@ -103,6 +112,48 @@ interface FavoriteRequestBody {
 
 function getCurrentTimestamp() {
   return Math.floor(Date.now() / 1000)
+}
+
+function getRequestedImageCount(input: GenerateInput) {
+  const parsed = Number(input.num_images)
+  if (!Number.isFinite(parsed)) return 1
+  return Math.min(Math.max(Math.trunc(parsed), 1), 15)
+}
+
+const MEDIA_EXTENSIONS: Record<MimeType, readonly string[]> = {
+  [MIME_TYPES.IMAGE]: ["png", "jpg", "jpeg", "webp"],
+  [MIME_TYPES.VIDEO]: ["mp4", "webm", "mov"],
+  [MIME_TYPES.AUDIO]: ["mp3", "wav", "m4a", "aac", "ogg", "flac"],
+}
+
+const DEFAULT_MEDIA_EXTENSION: Record<MimeType, string> = {
+  [MIME_TYPES.IMAGE]: "png",
+  [MIME_TYPES.VIDEO]: "mp4",
+  [MIME_TYPES.AUDIO]: "mp3",
+}
+
+const DEFAULT_MEDIA_CONTENT_TYPE: Record<MimeType, string> = {
+  [MIME_TYPES.IMAGE]: "image/png",
+  [MIME_TYPES.VIDEO]: "video/mp4",
+  [MIME_TYPES.AUDIO]: "audio/mpeg",
+}
+
+function getGeneratedMediaExtension(
+  originUrl: string,
+  outputFormat: string | undefined,
+  mimeType: MimeType
+) {
+  const urlExtension = originUrl.split("?")[0].split(".").pop()?.toLowerCase()
+  if (urlExtension && MEDIA_EXTENSIONS[mimeType].includes(urlExtension)) {
+    return urlExtension
+  }
+
+  const normalizedOutputFormat = outputFormat?.toLowerCase()
+  if (normalizedOutputFormat && MEDIA_EXTENSIONS[mimeType].includes(normalizedOutputFormat)) {
+    return normalizedOutputFormat
+  }
+
+  return DEFAULT_MEDIA_EXTENSION[mimeType]
 }
 
 function getBoundedInt(value: string | null, fallback: number, min: number, max: number) {
@@ -233,9 +284,24 @@ function applyReferenceImages(
 }
 
 async function getUserImage(c: AuthenticatedContext, imageId: string, userId: string) {
+  const output = await c.env.DB.prepare(
+    `
+      SELECT mo.id, mo.message_id, m.session_id, mo.image_url, 0 AS is_legacy
+      FROM message_outputs mo
+      INNER JOIN messages m ON m.id = mo.message_id AND m.status = 1
+      INNER JOIN sessions s ON s.id = m.session_id AND s.status = 1
+      WHERE mo.id = ? AND s.user_id = ? AND mo.status = 'completed' AND mo.image_url IS NOT NULL
+      LIMIT 1
+    `
+  )
+    .bind(imageId, userId)
+    .first<ImageRecord>()
+
+  if (output) return output
+
   return c.env.DB.prepare(
     `
-      SELECT m.id, m.session_id, m.image_url
+      SELECT m.id, m.id AS message_id, m.session_id, m.image_url, 1 AS is_legacy
       FROM messages m
       INNER JOIN sessions s ON s.id = m.session_id AND s.status = 1
       WHERE m.id = ? AND s.user_id = ? AND m.status = 1 AND m.image_url IS NOT NULL
@@ -343,14 +409,16 @@ export async function handleGetFavorites(c: AuthenticatedContext) {
         f.id AS favorite_id,
         f.content_type,
         f.created_at AS favorite_created_at,
-        m.id,
+        COALESCE(mo.id, m.id) AS id,
+        m.id AS message_id,
+        mo.id AS output_id,
         m.session_id,
         s.title AS session_title,
         m.role,
         m.provider,
         m.model,
         m.prompt,
-        m.image_url,
+        COALESCE(mo.image_url, m.image_url) AS image_url,
         m.aspect_ratio,
         m.resolution,
         m.image_size,
@@ -364,8 +432,10 @@ export async function handleGetFavorites(c: AuthenticatedContext) {
         m.created_at
       FROM content_favorites f
       INNER JOIN messages m ON m.id = f.message_id
+      LEFT JOIN message_outputs mo ON mo.id = f.output_id AND mo.status = 'completed'
       INNER JOIN sessions s ON s.id = m.session_id AND s.status = 1
-      WHERE f.user_id = ? AND f.content_type = 'image' AND s.user_id = ? AND m.status = 1 AND m.image_url IS NOT NULL
+      WHERE f.user_id = ? AND f.content_type = 'image' AND s.user_id = ? AND m.status = 1
+        AND COALESCE(mo.image_url, m.image_url) IS NOT NULL
       ORDER BY f.created_at DESC
       LIMIT ? OFFSET ?
     `
@@ -378,8 +448,10 @@ export async function handleGetFavorites(c: AuthenticatedContext) {
       SELECT COUNT(*) AS total
       FROM content_favorites f
       INNER JOIN messages m ON m.id = f.message_id
+      LEFT JOIN message_outputs mo ON mo.id = f.output_id AND mo.status = 'completed'
       INNER JOIN sessions s ON s.id = m.session_id AND s.status = 1
-      WHERE f.user_id = ? AND f.content_type = 'image' AND s.user_id = ? AND m.status = 1 AND m.image_url IS NOT NULL
+      WHERE f.user_id = ? AND f.content_type = 'image' AND s.user_id = ? AND m.status = 1
+        AND COALESCE(mo.image_url, m.image_url) IS NOT NULL
     `
   )
     .bind(user.userId, user.userId)
@@ -422,19 +494,31 @@ export async function handleSetImageFavorite(c: AuthenticatedContext) {
   }
 
   if (favorited) {
-    await c.env.DB.prepare(
-      `
-        INSERT OR IGNORE INTO content_favorites (id, user_id, content_type, message_id, created_at)
-        VALUES (?, ?, 'image', ?, ?)
-      `
-    )
-      .bind(uuidv4(), user.userId, image.id, getCurrentTimestamp())
-      .run()
+    if (image.is_legacy) {
+      await c.env.DB.prepare(
+        `
+          INSERT OR IGNORE INTO content_favorites (id, user_id, content_type, message_id, output_id, created_at)
+          VALUES (?, ?, 'image', ?, NULL, ?)
+        `
+      )
+        .bind(uuidv4(), user.userId, image.message_id, getCurrentTimestamp())
+        .run()
+    } else {
+      await c.env.DB.prepare(
+        `
+          INSERT OR IGNORE INTO content_favorites (id, user_id, content_type, message_id, output_id, created_at)
+          VALUES (?, ?, 'image', ?, ?, ?)
+        `
+      )
+        .bind(uuidv4(), user.userId, image.message_id, image.id, getCurrentTimestamp())
+        .run()
+    }
   } else {
-    await c.env.DB.prepare(
-      "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND message_id = ?"
-    )
-      .bind(user.userId, image.id)
+    const deleteSql = image.is_legacy
+      ? "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND message_id = ? AND output_id IS NULL"
+      : "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND output_id = ?"
+    await c.env.DB.prepare(deleteSql)
+      .bind(user.userId, image.is_legacy ? image.message_id : image.id)
       .run()
   }
 
@@ -459,15 +543,38 @@ export async function handleDeleteImage(c: AuthenticatedContext) {
   }
 
   const now = getCurrentTimestamp()
-  await c.env.DB.batch([
-    c.env.DB.prepare(
-      "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND message_id = ?"
-    ).bind(user.userId, image.id),
-    c.env.DB.prepare("UPDATE messages SET status = 2 WHERE id = ?").bind(image.id),
-    c.env.DB.prepare(
-      "UPDATE sessions SET updated_at = ? WHERE id = ? AND user_id = ? AND status = 1"
-    ).bind(now, image.session_id, user.userId),
-  ])
+  if (image.is_legacy) {
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND message_id = ? AND output_id IS NULL"
+      ).bind(user.userId, image.message_id),
+      c.env.DB.prepare("UPDATE messages SET status = 2 WHERE id = ?").bind(image.message_id),
+      c.env.DB.prepare(
+        "UPDATE sessions SET updated_at = ? WHERE id = ? AND user_id = ? AND status = 1"
+      ).bind(now, image.session_id, user.userId),
+    ])
+  } else {
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND output_id = ?"
+      ).bind(user.userId, image.id),
+      c.env.DB.prepare(
+        "UPDATE message_outputs SET status = 'deleted', deleted_at = ?, updated_at = ? WHERE id = ?"
+      ).bind(now, now, image.id),
+      c.env.DB.prepare(
+        `
+          UPDATE messages
+          SET status = 2
+          WHERE id = ? AND NOT EXISTS (
+            SELECT 1 FROM message_outputs WHERE message_id = ? AND status != 'deleted'
+          )
+        `
+      ).bind(image.message_id, image.message_id),
+      c.env.DB.prepare(
+        "UPDATE sessions SET updated_at = ? WHERE id = ? AND user_id = ? AND status = 1"
+      ).bind(now, image.session_id, user.userId),
+    ])
+  }
 
   return c.json({
     success: true,
@@ -594,11 +701,74 @@ export async function handleGenerate(c: AuthenticatedContext) {
 
   // Generate task ID and insert task as pending
   const taskId = uuidv4()
-  await c.env.DB.prepare(
-    `INSERT INTO generation_tasks (id, user_id, session_id, model, status, input, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`
-  )
-    .bind(taskId, user.userId, sessionId, input.model, JSON.stringify(input), now, now)
-    .run()
+  const messageId = uuidv4()
+  const requestedCount = getRequestedImageCount(input)
+  input.num_images = requestedCount
+  const toDbValue = (value: unknown) => (value === undefined ? null : value)
+  const googleSearchVal = input.google_search === "true" || input.google_search === true ? 1 : 0
+  const imageSearchVal = input.image_search === "true" || input.image_search === true ? 1 : 0
+
+  const statements = [
+    c.env.DB.prepare(
+      `
+        INSERT INTO messages (
+          id, session_id, user_id, role, provider, model, prompt, aspect_ratio, resolution,
+          google_search, image_search, image_size, quality, style, negative_prompt,
+          output_format, num_images, image_url, created_at
+        )
+        VALUES (?, ?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+      `
+    ).bind(
+      messageId,
+      sessionId,
+      user.userId,
+      input.provider || "pending",
+      input.model,
+      input.prompt,
+      toDbValue(input.aspect_ratio),
+      toDbValue(input.resolution),
+      googleSearchVal,
+      imageSearchVal,
+      toDbValue(input.size),
+      toDbValue(input.quality),
+      toDbValue(input.style),
+      toDbValue(input.negative_prompt),
+      toDbValue(input.output_format),
+      requestedCount,
+      now
+    ),
+    c.env.DB.prepare(
+      `
+        INSERT INTO generation_tasks (
+          id, user_id, session_id, message_id, model, status, requested_count,
+          completed_count, failed_count, input, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, 'pending', ?, 0, 0, ?, ?, ?)
+      `
+    ).bind(
+      taskId,
+      user.userId,
+      sessionId,
+      messageId,
+      input.model,
+      requestedCount,
+      JSON.stringify(input),
+      now,
+      now
+    ),
+    ...Array.from({ length: requestedCount }, (_, outputIndex) =>
+      c.env.DB.prepare(
+        `
+          INSERT INTO message_outputs (
+            id, message_id, output_index, status, content_type, created_at, updated_at
+          )
+          VALUES (?, ?, ?, 'pending', ?, ?, ?)
+        `
+      ).bind(uuidv4(), messageId, outputIndex, MIME_TYPES.IMAGE, now, now)
+    ),
+  ]
+
+  await c.env.DB.batch(statements)
 
   // Run the background generation process
   c.executionCtx.waitUntil(
@@ -607,6 +777,7 @@ export async function handleGenerate(c: AuthenticatedContext) {
       taskId,
       user.userId,
       sessionId,
+      messageId,
       input,
       referenceImageResult.images || []
     )
@@ -616,6 +787,8 @@ export async function handleGenerate(c: AuthenticatedContext) {
     success: true,
     taskId,
     sessionId,
+    messageId,
+    requestedCount,
   })
 }
 
@@ -627,7 +800,7 @@ function buildEvoLinkPayload(
   const payload: any = {
     model: evolinkModelName,
     prompt: input.prompt,
-    n: 1,
+    n: getRequestedImageCount(input),
   }
 
   if (callbackUrl) {
@@ -700,7 +873,7 @@ async function generateViaEvoLink(
   return taskId
 }
 
-async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promise<string> {
+async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promise<string[]> {
   const byteplusModelName = BYTEPLUS_MODEL_MAP[input.model] || "seedream-4-0-250828"
   console.log("Calling BytePlus Ark API (Backup) with model", byteplusModelName)
 
@@ -719,6 +892,8 @@ async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promis
     const outputFormat = allowedFormats.includes(format || "") ? format : "png"
 
     payload.output_format = outputFormat
+    payload.max_images = getRequestedImageCount(input)
+    payload.sequential_image_generation = "auto"
   }
   console.log("BytePlus Ark API request payload", JSON.stringify(payload))
 
@@ -739,26 +914,30 @@ async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promis
   const json = (await res.json()) as any
   console.log("BytePlus Ark API response", JSON.stringify(json))
 
-  const imageUrl = json.data?.[0]?.url
-  if (!imageUrl) {
+  const imageUrls = Array.isArray(json.data)
+    ? json.data
+        .map((item: { url?: unknown }) => item?.url)
+        .filter((url: unknown): url is string => typeof url === "string" && url.length > 0)
+    : []
+  if (imageUrls.length === 0) {
     throw new Error("No image URL returned from BytePlus API")
   }
-  return imageUrl
+  return imageUrls
 }
 
 async function generateBytedanceImage(
   c: AuthenticatedContext,
   dbTaskId: string,
   input: GenerateInput
-): Promise<{ imageUrl: string; provider: string }> {
+): Promise<{ imageUrls: string[]; provider: string }> {
   let lastError: any = null
 
   // 1. Try EvoLink (Primary)
   const evolinkKey = c.env.EVOLINK_API_KEY
   if (evolinkKey) {
     try {
-      const imageUrl = await generateViaEvoLink(c, dbTaskId, evolinkKey, input)
-      return { imageUrl, provider: PROVIDERS.EVOLINK }
+      const providerTaskId = await generateViaEvoLink(c, dbTaskId, evolinkKey, input)
+      return { imageUrls: [providerTaskId], provider: PROVIDERS.EVOLINK }
     } catch (err: any) {
       console.error("EvoLink primary channel failed:", err.message)
       lastError = err
@@ -776,8 +955,8 @@ async function generateBytedanceImage(
   }
 
   try {
-    const imageUrl = await generateViaBytePlus(arkKey, input)
-    return { imageUrl, provider: PROVIDERS.BYTEPLUS }
+    const imageUrls = await generateViaBytePlus(arkKey, input)
+    return { imageUrls, provider: PROVIDERS.BYTEPLUS }
   } catch (err: any) {
     throw new Error(
       `BytePlus backup failed: ${err.message}. (Previous EvoLink error: ${lastError?.message || "none"})`
@@ -785,44 +964,151 @@ async function generateBytedanceImage(
   }
 }
 
+async function markGenerationTaskFailed(
+  db: D1Database,
+  taskId: string,
+  messageId: string | null,
+  errorMessage: string,
+  now = getCurrentTimestamp()
+) {
+  const statements = [
+    db
+      .prepare(
+        `
+        UPDATE generation_tasks
+        SET status = 'failed', error = ?, failed_count = requested_count - completed_count, updated_at = ?
+        WHERE id = ?
+      `
+      )
+      .bind(errorMessage, now, taskId),
+  ]
+
+  if (messageId) {
+    statements.push(
+      db
+        .prepare(
+          `
+          UPDATE message_outputs
+          SET status = 'failed', error = ?, updated_at = ?
+          WHERE message_id = ? AND status = 'pending'
+        `
+        )
+        .bind(errorMessage, now, messageId)
+    )
+  }
+
+  await db.batch(statements)
+}
+
 async function completeGenerationTask(
   env: Env,
   taskId: string,
   userId: string,
   sessionId: string,
+  messageId: string,
   input: GenerateInput,
-  imageUrl: string,
-  finalProvider: string
+  imageUrls: string[],
+  finalProvider: string,
+  mimeType: MimeType
 ) {
   const db = env.DB
   const now = Math.floor(Date.now() / 1000)
+  const requestedCount = getRequestedImageCount(input)
+  const normalizedImageUrls = imageUrls
+    .filter((url): url is string => typeof url === "string" && url.length > 0)
+    .slice(0, requestedCount)
 
-  // Deduct credits
-  const creditsPerImage = calculateRequiredCredits(input.model, input)
-  const deductResult = await deductCredits(db, userId, input.model, creditsPerImage)
+  const outputRows = await db
+    .prepare(
+      "SELECT id, output_index FROM message_outputs WHERE message_id = ? AND status != 'deleted' ORDER BY output_index ASC"
+    )
+    .bind(messageId)
+    .all<{ id: string; output_index: number }>()
+
+  const outputsByIndex = new Map(
+    (outputRows.results || []).map(output => [output.output_index, output])
+  )
+  const completedOutputs: Array<{
+    id: string
+    index: number
+    key: string
+    url: string
+  }> = []
+  let failedCount = 0
+
+  for (let outputIndex = 0; outputIndex < requestedCount; outputIndex++) {
+    const output = outputsByIndex.get(outputIndex)
+    if (!output) continue
+
+    const originUrl = normalizedImageUrls[outputIndex]
+    if (!originUrl) {
+      failedCount++
+      await db
+        .prepare(
+          "UPDATE message_outputs SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
+        )
+        .bind("The provider did not return this image", now, output.id)
+        .run()
+      continue
+    }
+
+    try {
+      const imageResponse = await fetch(originUrl)
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to fetch generated image: ${imageResponse.statusText}`)
+      }
+
+      const imageBuffer = await imageResponse.arrayBuffer()
+      const extension = getGeneratedMediaExtension(originUrl, input.output_format, mimeType)
+      const key = createGeneratedImageKey(userId, extension)
+      const contentType =
+        normalizeContentType(imageResponse.headers.get("content-type") || "") ||
+        getImageContentTypeFromKey(key) ||
+        DEFAULT_MEDIA_CONTENT_TYPE[mimeType]
+
+      await env.R2.put(key, imageBuffer, {
+        httpMetadata: { contentType },
+      })
+
+      const fullImageUrl = await createPresignedGetUrl(env, key)
+      if (!fullImageUrl) {
+        throw new Error("Failed to generate pre-signed URL")
+      }
+
+      await db
+        .prepare(
+          `
+            UPDATE message_outputs
+            SET status = 'completed', image_url = ?, content_type = ?, file_size = ?, error = NULL, updated_at = ?
+            WHERE id = ?
+          `
+        )
+        .bind(key, mimeType, imageBuffer.byteLength, now, output.id)
+        .run()
+
+      completedOutputs.push({ id: output.id, index: outputIndex, key, url: fullImageUrl })
+    } catch (error) {
+      failedCount++
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      await db
+        .prepare(
+          "UPDATE message_outputs SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
+        )
+        .bind(errorMessage, now, output.id)
+        .run()
+    }
+  }
+
+  if (completedOutputs.length === 0) {
+    throw new Error("No generated images could be saved")
+  }
+
+  const chargedInput: GenerateInput = { ...input, num_images: completedOutputs.length }
+  const requiredCredits = calculateRequiredCredits(input.model, chargedInput)
+  const deductResult = await deductCredits(db, userId, input.model, requiredCredits)
   if (!deductResult.success) {
     throw new Error(deductResult.error || "Failed to deduct credits")
   }
-
-  // Download the image
-  const imageResponse = await fetch(imageUrl)
-  if (!imageResponse.ok) {
-    throw new Error(`Failed to fetch generated image: ${imageResponse.statusText}`)
-  }
-  const imageBuffer = await imageResponse.arrayBuffer()
-
-  // Upload to R2
-  const extension =
-    imageUrl.split("?")[0].split(".").pop()?.toLowerCase() || input.output_format || "png"
-  const key = createGeneratedImageKey(userId, extension)
-  const fullImageUrl = await createPresignedGetUrl(env, key)
-  if (!fullImageUrl) {
-    throw new Error("Failed to generate pre-signed URL")
-  }
-
-  await env.R2.put(key, imageBuffer, {
-    httpMetadata: { contentType: getImageContentTypeFromKey(key) || "image/png" },
-  })
 
   // Update Session title (if it was "New Session" or "New Chat" or "新对话")
   const session = await db
@@ -846,40 +1132,15 @@ async function completeGenerationTask(
     }
   }
 
-  // Insert Message
-  const messageId = uuidv4()
-  const toDbValue = (v: unknown) => (v === undefined ? null : v)
-  const googleSearchVal = input.google_search === "true" || input.google_search === true ? 1 : 0
-  const imageSearchVal = input.image_search === "true" || input.image_search === true ? 1 : 0
-
   await db
     .prepare(
       `
-      INSERT INTO messages (id, session_id, user_id, role, provider, model, prompt, aspect_ratio, resolution, google_search, image_search, image_size, quality, style, negative_prompt, output_format, num_images, image_url, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `
+        UPDATE messages
+        SET provider = ?, image_url = ?
+        WHERE id = ? AND user_id = ?
+      `
     )
-    .bind(
-      messageId,
-      sessionId,
-      userId,
-      "user",
-      finalProvider,
-      input.model,
-      input.prompt,
-      toDbValue(input.aspect_ratio),
-      toDbValue(input.resolution),
-      googleSearchVal,
-      imageSearchVal,
-      toDbValue(input.size),
-      toDbValue(input.quality),
-      toDbValue(input.style),
-      toDbValue(input.negative_prompt),
-      toDbValue(input.output_format),
-      toDbValue(input.num_images),
-      key,
-      now
-    )
+    .bind(finalProvider, completedOutputs[0].key, messageId, userId)
     .run()
 
   // Update session updated_at
@@ -891,18 +1152,20 @@ async function completeGenerationTask(
   // Save task status to completed
   const taskResult = JSON.stringify({
     success: true,
-    key,
-    originUrl: imageUrl,
-    r2Url: fullImageUrl,
     sessionId,
     messageId,
+    outputs: completedOutputs,
   })
 
   await db
     .prepare(
-      "UPDATE generation_tasks SET status = 'completed', result = ?, provider = ?, updated_at = ? WHERE id = ?"
+      `
+        UPDATE generation_tasks
+        SET status = 'completed', result = ?, provider = ?, completed_count = ?, failed_count = ?, updated_at = ?
+        WHERE id = ?
+      `
     )
-    .bind(taskResult, finalProvider, now, taskId)
+    .bind(taskResult, finalProvider, completedOutputs.length, failedCount, now, taskId)
     .run()
 }
 
@@ -911,6 +1174,7 @@ async function runBackgroundGeneration(
   taskId: string,
   userId: string,
   sessionId: string,
+  messageId: string,
   input: GenerateInput,
   referenceImages: PreparedReferenceImage[]
 ) {
@@ -938,7 +1202,7 @@ async function runBackgroundGeneration(
       result = {
         state: "Completed",
         result: {
-          image: resData.imageUrl,
+          images: resData.imageUrls,
         },
       }
     } else if (isGptImage) {
@@ -974,7 +1238,9 @@ async function runBackgroundGeneration(
         .prepare("UPDATE generation_tasks SET provider = ?, updated_at = ? WHERE id = ?")
         .bind(finalProvider, now, taskId)
         .run()
-      console.log(`[Background] EvoLink task submitted successfully. Exiting, waiting for callback...`)
+      console.log(
+        `[Background] EvoLink task submitted successfully. Exiting, waiting for callback...`
+      )
       return
     }
 
@@ -982,23 +1248,33 @@ async function runBackgroundGeneration(
       throw new Error("AI generation failed or not completed")
     }
 
-    const imageUrl = (result.result as any).image || (result.result as any).images?.[0]
-    if (!imageUrl) {
+    const resultPayload = result.result as any
+    const imageUrls = Array.isArray(resultPayload?.images)
+      ? resultPayload.images
+      : resultPayload?.image
+        ? [resultPayload.image]
+        : []
+    if (imageUrls.length === 0) {
       throw new Error("no image returned from AI")
     }
 
-    await completeGenerationTask(c.env, taskId, userId, sessionId, input, imageUrl, finalProvider)
+    await completeGenerationTask(
+      c.env,
+      taskId,
+      userId,
+      sessionId,
+      messageId,
+      input,
+      imageUrls,
+      finalProvider,
+      MIME_TYPES.IMAGE
+    )
   } catch (error: any) {
     console.error("Background generation task error:", error)
     const errorMessage = error instanceof Error ? error.message : String(error)
 
     // Save task status to failed
-    await db
-      .prepare(
-        "UPDATE generation_tasks SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
-      )
-      .bind(errorMessage, now, taskId)
-      .run()
+    await markGenerationTaskFailed(db, taskId, messageId, errorMessage, now)
   }
 }
 
@@ -1013,10 +1289,14 @@ export async function handleEvoLinkCallback(c: Context<{ Bindings: Env }>) {
 
   console.log("[EvoLink Callback] Received payload:", JSON.stringify(payload))
 
-  // Only process if the object is an image generation task
-  if (payload.object !== "image.generation.task") {
-    console.log(`[EvoLink Callback] Ignored non-image task type: ${payload.object}`)
-    return c.json({ success: true, message: `Ignored non-image task type: ${payload.object}` })
+  const mimeType = getEvoLinkTaskMimeType(payload.object)
+  if (!mimeType) {
+    const supportedObjects = Object.values(EVOLINK_TASK_OBJECTS).join(", ")
+    console.log(`[EvoLink Callback] Ignored unsupported task type: ${payload.object}`)
+    return c.json({
+      success: true,
+      message: `Ignored unsupported task type: ${payload.object}. Supported types: ${supportedObjects}`,
+    })
   }
 
   const providerTaskId = payload.id
@@ -1039,6 +1319,7 @@ export async function handleEvoLinkCallback(c: Context<{ Bindings: Env }>) {
     id: taskId,
     user_id: userId,
     session_id: sessionId,
+    message_id: messageId,
     model,
     status: dbStatus,
     input: inputStr,
@@ -1046,6 +1327,7 @@ export async function handleEvoLinkCallback(c: Context<{ Bindings: Env }>) {
     id: string
     user_id: string
     session_id: string
+    message_id: string | null
     model: string
     status: string
     input: string | null
@@ -1059,37 +1341,24 @@ export async function handleEvoLinkCallback(c: Context<{ Bindings: Env }>) {
 
   if (payload.status === "failed") {
     const errorMsg = payload.error?.message || "EvoLink task failed"
-    await db
-      .prepare(
-        "UPDATE generation_tasks SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
-      )
-      .bind(errorMsg, now, taskId)
-      .run()
+    await markGenerationTaskFailed(db, taskId, messageId, errorMsg, now)
 
     return c.json({ success: true })
   }
 
   if (payload.status === "completed") {
-    const imageUrl = payload.results?.[0]
-    if (!imageUrl) {
+    const imageUrls = Array.isArray(payload.results)
+      ? payload.results.filter((url: unknown): url is string => typeof url === "string")
+      : []
+    if (imageUrls.length === 0) {
       const errorMsg = "EvoLink task completed but results array is empty"
-      await db
-        .prepare(
-          "UPDATE generation_tasks SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
-        )
-        .bind(errorMsg, now, taskId)
-        .run()
+      await markGenerationTaskFailed(db, taskId, messageId, errorMsg, now)
       return c.json({ error: errorMsg }, 400)
     }
 
-    if (!inputStr) {
-      const errorMsg = "Missing task input payload in database"
-      await db
-        .prepare(
-          "UPDATE generation_tasks SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
-        )
-        .bind(errorMsg, now, taskId)
-        .run()
+    if (!inputStr || !messageId) {
+      const errorMsg = "Missing task input or message reference in database"
+      await markGenerationTaskFailed(db, taskId, messageId, errorMsg, now)
       return c.json({ error: errorMsg }, 500)
     }
 
@@ -1100,20 +1369,17 @@ export async function handleEvoLinkCallback(c: Context<{ Bindings: Env }>) {
         taskId,
         userId,
         sessionId,
+        messageId,
         input,
-        imageUrl,
-        PROVIDERS.EVOLINK
+        imageUrls,
+        PROVIDERS.EVOLINK,
+        mimeType
       )
       return c.json({ success: true })
     } catch (err: any) {
       console.error("[EvoLink Callback] Failed to complete task:", err)
       const errMsg = err instanceof Error ? err.message : String(err)
-      await db
-        .prepare(
-          "UPDATE generation_tasks SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
-        )
-        .bind(errMsg, now, taskId)
-        .run()
+      await markGenerationTaskFailed(db, taskId, messageId, errMsg, now)
       return c.json({ error: errMsg }, 500)
     }
   }
@@ -1141,22 +1407,53 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
   }
 
   const taskRecord = task as {
+    message_id: string | null
     status: string
     result: string | null
     error: string | null
     created_at: number
   }
 
-
   const parsedResult = taskRecord.result ? JSON.parse(taskRecord.result) : null
-  if (parsedResult && parsedResult.key) {
-    parsedResult.r2Url = await createPresignedGetUrl(c.env, parsedResult.key)
-  }
+  const outputRows = taskRecord.message_id
+    ? await c.env.DB.prepare(
+        `
+            SELECT id, message_id, output_index, status, image_url, content_type, width, height,
+              file_size, error, created_at, updated_at
+            FROM message_outputs
+            WHERE message_id = ? AND status != 'deleted'
+            ORDER BY output_index ASC
+          `
+      )
+        .bind(taskRecord.message_id)
+        .all<{
+          id: string
+          message_id: string
+          output_index: number
+          status: string
+          image_url: string | null
+          content_type: MimeType
+          width: number | null
+          height: number | null
+          file_size: number | null
+          error: string | null
+          created_at: number
+          updated_at: number
+        }>()
+    : { results: [] }
+
+  const outputs = await Promise.all(
+    (outputRows.results || []).map(async output => ({
+      ...output,
+      url: await toPublicImageUrl(c.env, output.image_url),
+    }))
+  )
 
   return c.json({
     success: true,
     status: taskRecord.status,
     result: parsedResult,
+    outputs,
     error: taskRecord.error,
   })
 }
@@ -1313,13 +1610,14 @@ export async function handleEvoLinkTaskCheck(env: Env) {
   // Query pending or processing tasks with a provider_task_id created > 10 minutes ago
   const tasksResult = await db
     .prepare(
-      "SELECT id, user_id, session_id, provider_task_id, input FROM generation_tasks WHERE status IN ('pending', 'processing') AND provider_task_id IS NOT NULL AND created_at <= ?"
+      "SELECT id, user_id, session_id, message_id, provider_task_id, input FROM generation_tasks WHERE status IN ('pending', 'processing') AND provider_task_id IS NOT NULL AND created_at <= ?"
     )
     .bind(tenMinutesAgo)
     .all<{
       id: string
       user_id: string
       session_id: string
+      message_id: string | null
       provider_task_id: string
       input: string | null
     }>()
@@ -1338,6 +1636,7 @@ export async function handleEvoLinkTaskCheck(env: Env) {
     const taskId = task.id
     const userId = task.user_id
     const sessionId = task.session_id
+    const messageId = task.message_id
     const inputStr = task.input
 
     if (!inputStr) {
@@ -1353,7 +1652,9 @@ export async function handleEvoLinkTaskCheck(env: Env) {
       })
 
       if (!res.ok) {
-        console.error(`[EvoLink Cron] Failed to fetch task status for ${providerTaskId}: HTTP ${res.status}`)
+        console.error(
+          `[EvoLink Cron] Failed to fetch task status for ${providerTaskId}: HTTP ${res.status}`
+        )
         continue
       }
 
@@ -1361,31 +1662,33 @@ export async function handleEvoLinkTaskCheck(env: Env) {
       console.log(`[EvoLink Cron] Task ${providerTaskId} status is ${payload.status}`)
 
       if (payload.status === "completed") {
-        const imageUrl = payload.results?.[0]
-        if (imageUrl) {
+        const mimeType = getEvoLinkTaskMimeType(payload.object) ?? MIME_TYPES.IMAGE
+        const imageUrls = Array.isArray(payload.results)
+          ? payload.results.filter((url: unknown): url is string => typeof url === "string")
+          : []
+        if (imageUrls.length > 0 && messageId) {
           const input = JSON.parse(inputStr) as GenerateInput
           await completeGenerationTask(
             env,
             taskId,
             userId,
             sessionId,
+            messageId,
             input,
-            imageUrl,
-            PROVIDERS.EVOLINK
+            imageUrls,
+            PROVIDERS.EVOLINK,
+            mimeType
           )
           completedCount++
           console.log(`[EvoLink Cron] Stuck task ${taskId} successfully resolved as completed`)
         } else {
-          console.error(`[EvoLink Cron] Stuck task ${providerTaskId} completed but results array is empty`)
+          console.error(
+            `[EvoLink Cron] Stuck task ${providerTaskId} completed but results array is empty`
+          )
         }
       } else if (payload.status === "failed") {
         const errorMsg = payload.error?.message || "EvoLink task failed"
-        await db
-          .prepare(
-            "UPDATE generation_tasks SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
-          )
-          .bind(errorMsg, Math.floor(Date.now() / 1000), taskId)
-          .run()
+        await markGenerationTaskFailed(db, taskId, messageId, errorMsg)
         failedCount++
         console.log(`[EvoLink Cron] Stuck task ${taskId} marked as failed: ${errorMsg}`)
       }

@@ -64,6 +64,25 @@ CREATE TABLE IF NOT EXISTS messages (
     FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
 );
 
+-- 4.1 消息输出表：一次生成消息可以包含多张图片
+CREATE TABLE IF NOT EXISTS message_outputs (
+    id TEXT PRIMARY KEY,
+    message_id TEXT NOT NULL,
+    output_index INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed', 'failed', 'deleted')),
+    image_url TEXT,
+    content_type TEXT NOT NULL CHECK(content_type IN ('image', 'video', 'audio')),
+    width INTEGER,
+    height INTEGER,
+    file_size INTEGER,
+    error TEXT,
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    deleted_at INTEGER,
+    FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE,
+    UNIQUE(message_id, output_index)
+);
+
 -- 5. 订阅表 (Subscriptions)
 CREATE TABLE IF NOT EXISTS subscriptions (
     id TEXT PRIMARY KEY,
@@ -92,6 +111,8 @@ CREATE INDEX IF NOT EXISTS idx_accounts_provider ON accounts(provider, provider_
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_session_id ON messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_messages_status ON messages(status);
+CREATE INDEX IF NOT EXISTS idx_message_outputs_message_id ON message_outputs(message_id);
+CREATE INDEX IF NOT EXISTS idx_message_outputs_status ON message_outputs(status);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer_id ON subscriptions(stripe_customer_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_subscription_id ON subscriptions(stripe_subscription_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
@@ -139,16 +160,20 @@ CREATE TABLE IF NOT EXISTS content_favorites (
     user_id TEXT NOT NULL,
     content_type TEXT NOT NULL DEFAULT 'image' CHECK(content_type IN ('image', 'video', 'audio')),
     message_id TEXT NOT NULL,
+    output_id TEXT,
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE,
-    UNIQUE(user_id, content_type, message_id)
+    FOREIGN KEY(output_id) REFERENCES message_outputs(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_content_favorites_user_id ON content_favorites(user_id);
 CREATE INDEX IF NOT EXISTS idx_content_favorites_content_type ON content_favorites(content_type);
 CREATE INDEX IF NOT EXISTS idx_content_favorites_message_id ON content_favorites(message_id);
+CREATE INDEX IF NOT EXISTS idx_content_favorites_output_id ON content_favorites(output_id);
 CREATE INDEX IF NOT EXISTS idx_content_favorites_created_at ON content_favorites(created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_content_favorites_legacy_unique ON content_favorites(user_id, content_type, message_id) WHERE output_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_content_favorites_output_unique ON content_favorites(user_id, content_type, output_id) WHERE output_id IS NOT NULL;
 
 -- 9. 异步生成任务表 (Generation Tasks)
 CREATE TABLE IF NOT EXISTS generation_tasks (
@@ -158,17 +183,22 @@ CREATE TABLE IF NOT EXISTS generation_tasks (
     model TEXT,
     provider TEXT,
     provider_task_id TEXT,
+    message_id TEXT,
     status TEXT NOT NULL CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
+    requested_count INTEGER NOT NULL DEFAULT 1,
+    completed_count INTEGER NOT NULL DEFAULT 0,
+    failed_count INTEGER NOT NULL DEFAULT 0,
     input TEXT, -- Serialized GenerateInput JSON string
-    result TEXT, -- JSON string containing output info: {"imageUrl": "...", "messageId": "..."}
+    result TEXT, -- JSON string containing output info
     error TEXT, -- Error message if failed
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE,
+    FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_generation_tasks_user_id ON generation_tasks(user_id);
 CREATE INDEX IF NOT EXISTS idx_generation_tasks_session_id ON generation_tasks(session_id);
+CREATE INDEX IF NOT EXISTS idx_generation_tasks_message_id ON generation_tasks(message_id);
 CREATE INDEX IF NOT EXISTS idx_generation_tasks_status ON generation_tasks(status);
-
