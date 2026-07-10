@@ -89,7 +89,7 @@ export default function Footer() {
           <p>© {new Date().getFullYear()} tuziyo.com. All rights reserved.</p>
         </div>
 
-        <div className="footer-social">
+        {/* <div className="footer-social">
           <a
             href="#"
             target="_blank"
@@ -117,7 +117,7 @@ export default function Footer() {
           >
             <GithubIcon className="size-5" />
           </a>
-        </div>
+        </div> */}
       </div>
     </footer>
   )

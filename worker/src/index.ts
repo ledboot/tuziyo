@@ -9,6 +9,7 @@ import {
   getModels,
   handleSetImageFavorite,
   handleEvoLinkCallback,
+  handleEvoLinkTaskCheck,
 } from "./routes/image"
 import { getAiToolkitShowcase } from "./routes/showcase"
 import { handleGoogleCallback, handleLogout } from "./routes/auth"
@@ -41,6 +42,7 @@ const app = new Hono<{ Bindings: Env }>()
 
 const ANNUAL_SUBSCRIPTION_GRANT_CRON = "0 0 * * *"
 const CREDIT_MAINTENANCE_CRON = "10 0 * * *"
+const EVOLINK_TASK_CHECK_CRON = "* * * * *"
 
 app.use(
   "*",
@@ -119,6 +121,15 @@ export default {
       ctx.waitUntil(
         handleCreditMaintenance(env.DB).then(result => {
           console.log("credit maintenance completed:", result)
+        })
+      )
+      return
+    }
+
+    if (controller.cron === EVOLINK_TASK_CHECK_CRON) {
+      ctx.waitUntil(
+        handleEvoLinkTaskCheck(env).then(result => {
+          console.log("EvoLink task check completed:", result)
         })
       )
       return

@@ -297,13 +297,13 @@ export default function ProfilePage() {
                         </div>
                         <h3 className="text-xl font-bold text-white">Credits Balance</h3>
                       </div>
-                      <Link
+                      {/* <Link
                         to="/pricing"
                         className="btn btn-primary btn-sm text-white rounded-xl px-5 border-none shadow-[0_0_15px_rgba(var(--color-primary),0.3)] hover:shadow-[0_0_25px_rgba(var(--color-primary),0.5)] transition-shadow"
                       >
                         <CreditCard className="size-4 mr-1" />
                         Buy Credits
-                      </Link>
+                      </Link> */}
                     </div>
 
                     <div className="flex-1 flex flex-col justify-center">

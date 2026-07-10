@@ -1304,3 +1304,95 @@ export function getModels(): ModelConfig[] {
     credits: MODEL_CREDITS[model.id] || 0,
   }))
 }
+
+export async function handleEvoLinkTaskCheck(env: Env) {
+  const db = env.DB
+  const now = Math.floor(Date.now() / 1000)
+  const tenMinutesAgo = now - 600
+
+  // Query pending or processing tasks with a provider_task_id created > 10 minutes ago
+  const tasksResult = await db
+    .prepare(
+      "SELECT id, user_id, session_id, provider_task_id, input FROM generation_tasks WHERE status IN ('pending', 'processing') AND provider_task_id IS NOT NULL AND created_at <= ?"
+    )
+    .bind(tenMinutesAgo)
+    .all<{
+      id: string
+      user_id: string
+      session_id: string
+      provider_task_id: string
+      input: string | null
+    }>()
+
+  const tasks = tasksResult.results || []
+  if (tasks.length === 0) {
+    return { checked: 0, completed: 0, failed: 0 }
+  }
+
+  console.log(`[EvoLink Cron] Found ${tasks.length} stuck tasks to check`)
+  let completedCount = 0
+  let failedCount = 0
+
+  for (const task of tasks) {
+    const providerTaskId = task.provider_task_id
+    const taskId = task.id
+    const userId = task.user_id
+    const sessionId = task.session_id
+    const inputStr = task.input
+
+    if (!inputStr) {
+      console.warn(`[EvoLink Cron] Stuck task ${taskId} has no input payload`)
+      continue
+    }
+
+    try {
+      const res = await fetch(`https://api.evolink.ai/v1/tasks/${providerTaskId}`, {
+        headers: {
+          Authorization: `Bearer ${env.EVOLINK_API_KEY}`,
+        },
+      })
+
+      if (!res.ok) {
+        console.error(`[EvoLink Cron] Failed to fetch task status for ${providerTaskId}: HTTP ${res.status}`)
+        continue
+      }
+
+      const payload = (await res.json()) as any
+      console.log(`[EvoLink Cron] Task ${providerTaskId} status is ${payload.status}`)
+
+      if (payload.status === "completed") {
+        const imageUrl = payload.results?.[0]
+        if (imageUrl) {
+          const input = JSON.parse(inputStr) as GenerateInput
+          await completeGenerationTask(
+            env,
+            taskId,
+            userId,
+            sessionId,
+            input,
+            imageUrl,
+            PROVIDERS.EVOLINK
+          )
+          completedCount++
+          console.log(`[EvoLink Cron] Stuck task ${taskId} successfully resolved as completed`)
+        } else {
+          console.error(`[EvoLink Cron] Stuck task ${providerTaskId} completed but results array is empty`)
+        }
+      } else if (payload.status === "failed") {
+        const errorMsg = payload.error?.message || "EvoLink task failed"
+        await db
+          .prepare(
+            "UPDATE generation_tasks SET status = 'failed', error = ?, updated_at = ? WHERE id = ?"
+          )
+          .bind(errorMsg, Math.floor(Date.now() / 1000), taskId)
+          .run()
+        failedCount++
+        console.log(`[EvoLink Cron] Stuck task ${taskId} marked as failed: ${errorMsg}`)
+      }
+    } catch (err) {
+      console.error(`[EvoLink Cron] Failed checking stuck task ${providerTaskId}:`, err)
+    }
+  }
+
+  return { checked: tasks.length, completed: completedCount, failed: failedCount }
+}
