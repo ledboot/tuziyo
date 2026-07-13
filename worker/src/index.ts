@@ -35,7 +35,7 @@ import {
   handleCreateMessage,
 } from "./routes/sessions"
 import { handleCreateReferenceImageUpload } from "./routes/uploads"
-import { PLAN_MODELS_CONFIG } from "./types"
+import { PLAN_MODELS_CONFIG } from "./imageModels"
 import type { AppVariables, Env } from "./types"
 
 const app = new Hono<{ Bindings: Env }>()

@@ -1,18 +1,22 @@
 import type { Context } from "hono"
 import { v4 as uuidv4 } from "uuid"
 import {
-  IMAGE_MODEL_IDS,
   type Env,
-  type IMAGE_MODEL_ID,
   type ModelConfig,
   type UserPayload,
   ReferenceImageFormat,
   type PreparedReferenceImage,
-  MODEL_CREDITS,
-  PLAN_MODELS_CONFIG,
 } from "../types"
 import { deductCredits, getUserCredits, calculateRequiredCredits } from "./credits"
-import { MODEL_OPTIONS_CONFIG, validateModelOptions } from "../modelOptions"
+import {
+  ENABLED_IMAGE_MODEL_IDS,
+  PLAN_MODELS_CONFIG,
+  getEnabledModels,
+  getImageModelPromptMaxLength,
+  getPromptCharacterLength,
+  isImageModelEnabled,
+  validateModelOptions,
+} from "../imageModels"
 import {
   arrayBufferToDataUrl,
   createReferenceImageKey,
@@ -40,9 +44,14 @@ const BYTEPLUS_MODEL_MAP: Record<string, string> = {
 }
 
 const EVOLINK_MODEL_MAP: Record<string, string> = {
+  "google/nano-banana-2-lite": "gemini-3.1-flash-lite-image",
+  "google/nano-banana-2": "gemini-3.1-flash-image-preview",
+  "google/nano-banana-pro": "gemini-3-pro-image-preview",
+  "google/nano-banana": "nano-banana-beta",
   "bytedance/seedream-4.0": "doubao-seedream-4.0",
   "bytedance/seedream-4.5": "doubao-seedream-4.5",
   "bytedance/seedream-5-lite": "doubao-seedream-5.0-lite",
+  "bytedance/seedream-5-pro": "doubao-seedream-5.0-pro",
   "openai/gpt-image-1.5": "gpt-image-1.5",
   "openai/gpt-image-2": "gpt-image-2",
 }
@@ -62,6 +71,7 @@ export interface GenerateInput {
   sessionId?: string
   google_search?: string | boolean
   image_search?: string | boolean
+  thinking_level?: string
   background?: string
   reference_images?: string[]
 }
@@ -115,8 +125,20 @@ function getCurrentTimestamp() {
 }
 
 function getRequestedImageCount(input: GenerateInput) {
+  if (
+    input.model === "bytedance/seedream-5-pro" ||
+    input.model === "google/nano-banana" ||
+    input.model === "google/nano-banana-pro" ||
+    input.model === "google/nano-banana-2" ||
+    input.model === "google/nano-banana-2-lite"
+  ) {
+    return 1
+  }
   const parsed = Number(input.num_images)
   if (!Number.isFinite(parsed)) return 1
+  if (input.model === "openai/gpt-image-2") {
+    return Math.min(Math.max(Math.trunc(parsed), 1), 5)
+  }
   return Math.min(Math.max(Math.trunc(parsed), 1), 15)
 }
 
@@ -219,6 +241,14 @@ export function buildAiInput(input: GenerateInput, referenceImages: PreparedRefe
       break
     }
 
+    case "bytedance/seedream-5-pro": {
+      aiInput = { prompt }
+      if (aspect_ratio) aiInput.size = aspect_ratio
+      if (resolution) aiInput.quality = resolution
+      if (output_format) aiInput.model_params = { output_format }
+      break
+    }
+
     case "bytedance/seedream-4.0": {
       aiInput = { prompt }
       if (aspect_ratio) aiInput.aspect_ratio = aspect_ratio
@@ -260,8 +290,12 @@ function applyReferenceImages(
   if (referenceImages.length === 0) return
 
   switch (model) {
+    case "google/nano-banana":
+    case "google/nano-banana-pro":
     case "google/nano-banana-2":
+    case "google/nano-banana-2-lite":
     case "bytedance/seedream-5-lite":
+    case "bytedance/seedream-5-pro":
       aiInput.image_input = referenceImages
         .map(image => image.url)
         .filter((url): url is string => Boolean(url))
@@ -594,8 +628,19 @@ export async function handleGenerate(c: AuthenticatedContext) {
     return c.json({ error: "prompt is required" }, 400)
   }
 
-  if (!input.model || !IMAGE_MODEL_IDS.includes(input.model as IMAGE_MODEL_ID)) {
-    return c.json({ error: `model must be one of: ${IMAGE_MODEL_IDS.join(", ")}` }, 400)
+  if (!input.model || !isImageModelEnabled(input.model)) {
+    return c.json(
+      { error: `model is unavailable; enabled models: ${ENABLED_IMAGE_MODEL_IDS.join(", ")}` },
+      400
+    )
+  }
+
+  const promptMaxLength = getImageModelPromptMaxLength(input.model)
+  if (promptMaxLength !== null && getPromptCharacterLength(input.prompt) > promptMaxLength) {
+    return c.json(
+      { error: `prompt must not exceed ${promptMaxLength.toLocaleString("en-US")} characters` },
+      400
+    )
   }
 
   // Validate model permissions based on user's subscription plan
@@ -792,15 +837,26 @@ export async function handleGenerate(c: AuthenticatedContext) {
   })
 }
 
-function buildEvoLinkPayload(
+export function buildEvoLinkPayload(
   evolinkModelName: string,
   input: GenerateInput,
-  callbackUrl?: string
+  callbackUrl?: string,
+  referenceImages: PreparedReferenceImage[] = []
 ): Record<string, any> {
   const payload: any = {
     model: evolinkModelName,
     prompt: input.prompt,
-    n: getRequestedImageCount(input),
+  }
+
+  const nanoBananaModels = new Set([
+    "gemini-3.1-flash-lite-image",
+    "gemini-3.1-flash-image-preview",
+    "gemini-3-pro-image-preview",
+    "nano-banana-beta",
+  ])
+
+  if (!nanoBananaModels.has(evolinkModelName)) {
+    payload.n = getRequestedImageCount(input)
   }
 
   if (callbackUrl) {
@@ -825,6 +881,54 @@ function buildEvoLinkPayload(
     }
   }
 
+  if (evolinkModelName === "doubao-seedream-5.0-pro") {
+    const format = input.output_format?.toLowerCase()
+    const outputFormat = format === "png" || format === "jpeg" ? format : "jpeg"
+
+    payload.n = 1
+    payload.size = input.aspect_ratio || "auto"
+    payload.quality = input.resolution || "1K"
+    payload.model_params = { output_format: outputFormat }
+  }
+
+  if (nanoBananaModels.has(evolinkModelName)) {
+    payload.size = input.aspect_ratio || "auto"
+
+    if (evolinkModelName !== "nano-banana-beta") {
+      payload.quality =
+        input.resolution || (evolinkModelName === "gemini-3.1-flash-lite-image" ? "1K" : "2K")
+    }
+
+    const modelParams: Record<string, unknown> = {}
+    if (
+      evolinkModelName === "gemini-3.1-flash-image-preview" ||
+      evolinkModelName === "gemini-3-pro-image-preview"
+    ) {
+      modelParams.web_search = input.google_search === true || input.google_search === "true"
+    }
+    if (evolinkModelName === "gemini-3.1-flash-image-preview") {
+      modelParams.image_search = input.image_search === true || input.image_search === "true"
+    }
+    if (
+      evolinkModelName === "gemini-3.1-flash-lite-image" ||
+      evolinkModelName === "gemini-3.1-flash-image-preview"
+    ) {
+      modelParams.thinking_level = input.thinking_level || "auto"
+    }
+    if (Object.keys(modelParams).length > 0) payload.model_params = modelParams
+  }
+
+  if (
+    evolinkModelName === "doubao-seedream-5.0-lite" ||
+    evolinkModelName === "doubao-seedream-5.0-pro" ||
+    nanoBananaModels.has(evolinkModelName)
+  ) {
+    const imageUrls = referenceImages
+      .map(image => image.url)
+      .filter((url): url is string => Boolean(url))
+    if (imageUrls.length > 0) payload.image_urls = imageUrls
+  }
+
   return payload
 }
 
@@ -832,14 +936,20 @@ async function generateViaEvoLink(
   c: AuthenticatedContext,
   dbTaskId: string,
   apiKey: string,
-  input: GenerateInput
+  input: GenerateInput,
+  referenceImages: PreparedReferenceImage[] = []
 ): Promise<string> {
   const evolinkModelName = EVOLINK_MODEL_MAP[input.model]
   if (!evolinkModelName) {
     throw new Error(`Unknown model: ${input.model}`)
   }
 
-  const payload = buildEvoLinkPayload(evolinkModelName, input, c.env.EVOLINK_CALLBACK_URL)
+  const payload = buildEvoLinkPayload(
+    evolinkModelName,
+    input,
+    c.env.EVOLINK_CALLBACK_URL,
+    referenceImages
+  )
   console.log("[EvoLink] Calling with model", evolinkModelName, "payload", JSON.stringify(payload))
 
   const res = await fetch("https://api.evolink.ai/v1/images/generations", {
@@ -874,7 +984,10 @@ async function generateViaEvoLink(
 }
 
 async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promise<string[]> {
-  const byteplusModelName = BYTEPLUS_MODEL_MAP[input.model] || "seedream-4-0-250828"
+  const byteplusModelName = BYTEPLUS_MODEL_MAP[input.model]
+  if (!byteplusModelName) {
+    throw new Error(`BytePlus fallback does not support model: ${input.model}`)
+  }
   console.log("Calling BytePlus Ark API (Backup) with model", byteplusModelName)
 
   const payload: any = {
@@ -928,7 +1041,8 @@ async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promis
 async function generateBytedanceImage(
   c: AuthenticatedContext,
   dbTaskId: string,
-  input: GenerateInput
+  input: GenerateInput,
+  referenceImages: PreparedReferenceImage[] = []
 ): Promise<{ imageUrls: string[]; provider: string }> {
   let lastError: any = null
 
@@ -936,7 +1050,13 @@ async function generateBytedanceImage(
   const evolinkKey = c.env.EVOLINK_API_KEY
   if (evolinkKey) {
     try {
-      const providerTaskId = await generateViaEvoLink(c, dbTaskId, evolinkKey, input)
+      const providerTaskId = await generateViaEvoLink(
+        c,
+        dbTaskId,
+        evolinkKey,
+        input,
+        referenceImages
+      )
       return { imageUrls: [providerTaskId], provider: PROVIDERS.EVOLINK }
     } catch (err: any) {
       console.error("EvoLink primary channel failed:", err.message)
@@ -1192,12 +1312,12 @@ async function runBackgroundGeneration(
     console.log("aiInput model in bg", input.model, JSON.stringify(aiInput))
 
     const isBytedance = input.model.startsWith("bytedance/")
-    const isGptImage = input.model.startsWith("openai/gpt-image")
+    const isEvoLinkModel = Boolean(EVOLINK_MODEL_MAP[input.model])
     let result: any
     let finalProvider: string = PROVIDERS.CLOUDFLARE
 
     if (isBytedance) {
-      const resData = await generateBytedanceImage(c, taskId, input)
+      const resData = await generateBytedanceImage(c, taskId, input, referenceImages)
       finalProvider = resData.provider
       result = {
         state: "Completed",
@@ -1205,13 +1325,19 @@ async function runBackgroundGeneration(
           images: resData.imageUrls,
         },
       }
-    } else if (isGptImage) {
+    } else if (isEvoLinkModel) {
       const evolinkKey = c.env.EVOLINK_API_KEY
       if (!evolinkKey) {
-        throw new Error("EVOLINK_API_KEY is not configured for GPT image generation.")
+        throw new Error("EVOLINK_API_KEY is not configured for this image model.")
       }
       try {
-        const providerTaskId = await generateViaEvoLink(c, taskId, evolinkKey, input)
+        const providerTaskId = await generateViaEvoLink(
+          c,
+          taskId,
+          evolinkKey,
+          input,
+          referenceImages
+        )
         finalProvider = PROVIDERS.EVOLINK
         result = {
           state: "Completed",
@@ -1220,7 +1346,7 @@ async function runBackgroundGeneration(
           },
         }
       } catch (err: any) {
-        throw new Error(`EvoLink GPT image generation failed: ${err.message}`)
+        throw new Error(`EvoLink image generation failed: ${err.message}`)
       }
     } else {
       // Call Cloudflare AI
@@ -1459,147 +1585,7 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
 }
 
 export function getModels(): ModelConfig[] {
-  const list = [
-    {
-      id: "bytedance/seedream-4.0",
-      name: "Seedream 4.0",
-      provider: "ByteDance",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/bytedance.svg",
-      supportsImage: false,
-      isNew: false,
-      options: MODEL_OPTIONS_CONFIG["bytedance/seedream-4.0"],
-    },
-    {
-      id: "google/nano-banana",
-      name: "Nano Banana",
-      provider: "Google",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg",
-      supportsImage: false,
-      isNew: false,
-      options: MODEL_OPTIONS_CONFIG["google/nano-banana"],
-    },
-    {
-      id: "openai/gpt-image-1.5",
-      name: "GPT Image 1.5",
-      provider: "OpenAI",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/openai.svg",
-      supportsImage: true,
-      referenceImageCount: 1,
-      referenceImageFormat: ReferenceImageFormat.BASE64,
-      isNew: false,
-      options: MODEL_OPTIONS_CONFIG["openai/gpt-image-1.5"],
-    },
-    {
-      id: "bytedance/seedream-4.5",
-      name: "Seedream 4.5",
-      provider: "ByteDance",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/bytedance.svg",
-      supportsImage: false,
-      isNew: false,
-      options: MODEL_OPTIONS_CONFIG["bytedance/seedream-4.5"],
-    },
-    {
-      id: "google/nano-banana-pro",
-      name: "Nano Banana Pro",
-      provider: "Google",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg",
-      supportsImage: false,
-      isNew: false,
-      options: MODEL_OPTIONS_CONFIG["google/nano-banana-pro"],
-    },
-    {
-      id: "xai/grok-imagine-image",
-      name: "Grok Imagine",
-      provider: "xAI",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/xai.svg",
-      supportsImage: false,
-      isNew: false,
-      options: MODEL_OPTIONS_CONFIG["xai/grok-imagine-image"],
-    },
-    {
-      id: "recraft/recraftv4",
-      name: "Recraft V4",
-      provider: "Recraft",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/recraft.svg",
-      supportsImage: false,
-      isNew: false,
-      options: MODEL_OPTIONS_CONFIG["recraft/recraftv4"],
-    },
-    {
-      id: "alibaba/wan-2.6-image",
-      name: "WAN 2.6",
-      provider: "Alibaba",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/alibaba.svg",
-      supportsImage: false,
-      isNew: false,
-      options: MODEL_OPTIONS_CONFIG["alibaba/wan-2.6-image"],
-    },
-    {
-      id: "google/nano-banana-2",
-      name: "Nano Banana 2",
-      provider: "Google",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg",
-      supportsImage: true,
-      referenceImageCount: 3,
-      referenceImageFormat: ReferenceImageFormat.URL,
-      isNew: false,
-      options: MODEL_OPTIONS_CONFIG["google/nano-banana-2"],
-    },
-    {
-      id: "bytedance/seedream-5-lite",
-      name: "Seedream 5 Lite",
-      provider: "ByteDance",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/bytedance.svg",
-      supportsImage: true,
-      referenceImageCount: 14,
-      referenceImageFormat: ReferenceImageFormat.URL,
-      isNew: false,
-      options: MODEL_OPTIONS_CONFIG["bytedance/seedream-5-lite"],
-    },
-    {
-      id: "google/imagen-4",
-      name: "Imagen 4",
-      provider: "Google",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg",
-      supportsImage: false,
-      isNew: false,
-      options: MODEL_OPTIONS_CONFIG["google/imagen-4"],
-    },
-    {
-      id: "openai/gpt-image-2",
-      name: "GPT Image 2",
-      provider: "OpenAI",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/openai.svg",
-      supportsImage: true,
-      referenceImageCount: 16,
-      referenceImageFormat: ReferenceImageFormat.BASE64,
-      isNew: true,
-      options: MODEL_OPTIONS_CONFIG["openai/gpt-image-2"],
-    },
-    {
-      id: "xai/grok-imagine-image-quality",
-      name: "Grok Imagine Quality",
-      provider: "xAI",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/xai.svg",
-      supportsImage: false,
-      isNew: false,
-      options: MODEL_OPTIONS_CONFIG["xai/grok-imagine-image-quality"],
-    },
-    {
-      id: "recraft/recraftv4-pro",
-      name: "Recraft V4 Pro",
-      provider: "Recraft",
-      icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/recraft.svg",
-      supportsImage: false,
-      isNew: true,
-      options: MODEL_OPTIONS_CONFIG["recraft/recraftv4-pro"],
-    },
-  ]
-
-  return list.map(model => ({
-    ...model,
-    credits: MODEL_CREDITS[model.id] || 0,
-  }))
+  return getEnabledModels()
 }
 
 export async function handleEvoLinkTaskCheck(env: Env) {

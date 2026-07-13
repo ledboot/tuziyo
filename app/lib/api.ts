@@ -11,6 +11,8 @@ export interface ApiModel {
   id: string
   name: string
   provider: string
+  promptMaxLength: number
+  sortOrder: number
   icon: string
   supportsImage?: boolean
   referenceImageCount?: number
@@ -311,6 +313,7 @@ export const api = {
       negative_prompt?: string
       google_search?: string | boolean
       image_search?: string | boolean
+      thinking_level?: string
       reference_images?: string[]
       [key: string]: unknown
     }) =>

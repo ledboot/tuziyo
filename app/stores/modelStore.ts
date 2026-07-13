@@ -17,6 +17,8 @@ export const ModelSchema = z.object({
   id: z.string(),
   name: z.string(),
   provider: z.string(),
+  promptMaxLength: z.number().int().positive(),
+  sortOrder: z.number(),
   icon: z.string(),
   supportsImage: z.boolean().optional(),
   referenceImageCount: z.number().optional(),
@@ -56,91 +58,96 @@ function getConfigurableDefault(option: ModelOption): string | null {
   return option.defaultValue ?? option.values[0] ?? (option.type === "checkbox" ? "false" : null)
 }
 
-export const useModelStore = create<ModelState>()(persist((set, get) => ({
-  models: [],
-  modelOptionsConfig: {},
-  isLoading: false,
-  error: null,
+export const useModelStore = create<ModelState>()(
+  persist(
+    (set, get) => ({
+      models: [],
+      modelOptionsConfig: {},
+      isLoading: false,
+      error: null,
 
-  fetchModels: async () => {
-    const state = get()
-    if (
-      state.isLoading ||
-      (state.models.length > 0 && Object.keys(state.modelOptionsConfig).length > 0)
-    ) {
-      return
-    }
+      fetchModels: async () => {
+        const state = get()
+        if (
+          state.isLoading ||
+          (state.models.length > 0 && Object.keys(state.modelOptionsConfig).length > 0)
+        ) {
+          return
+        }
 
-    set({ isLoading: true, error: null })
-    try {
-      const data = await api.models.list()
-      const modelsResult = z.array(ModelSchema).safeParse(data.models)
+        set({ isLoading: true, error: null })
+        try {
+          const data = await api.models.list()
+          const modelsResult = z.array(ModelSchema).safeParse(data.models)
 
-      if (modelsResult.success) {
-        const models = modelsResult.data
-        const modelOptionsConfig = Object.fromEntries(
-          models.map(model => [model.id, model.options ?? {}])
+          if (modelsResult.success) {
+            const models = modelsResult.data
+            const modelOptionsConfig = Object.fromEntries(
+              models.map(model => [model.id, model.options ?? {}])
+            )
+            set({ models, modelOptionsConfig, isLoading: false })
+          } else {
+            set({ error: "Invalid model data", isLoading: false })
+          }
+        } catch (err) {
+          set({
+            error: err instanceof Error ? err.message : "Failed to fetch models",
+            isLoading: false,
+          })
+        }
+      },
+
+      getModelOptionsConfig: modelId => {
+        return get().modelOptionsConfig[modelId] ?? {}
+      },
+
+      getDefaultModelOptions: modelId => {
+        const config = get().getModelOptionsConfig(modelId)
+        return Object.fromEntries(
+          Object.entries(config).flatMap(([key, option]) => {
+            const defaultValue = getConfigurableDefault(option)
+            return defaultValue === null ? [] : [[key, defaultValue]]
+          })
         )
-        set({ models, modelOptionsConfig, isLoading: false })
-      } else {
-        set({ error: "Invalid model data", isLoading: false })
-      }
-    } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : "Failed to fetch models",
-        isLoading: false,
-      })
+      },
+
+      normalizeModelOptions: (modelId, options) => {
+        const config = get().getModelOptionsConfig(modelId)
+        const defaults = get().getDefaultModelOptions(modelId)
+
+        return Object.fromEntries(
+          Object.entries(config).flatMap(([key, option]) => {
+            const defaultValue = defaults[key]
+            if (defaultValue === undefined) return []
+
+            const nextValue = options[key] ?? defaultValue
+            if (option.type === "checkbox") {
+              return [[key, nextValue === "true" ? "true" : "false"]]
+            }
+
+            if (option.values.length > 0 && !option.values.includes(nextValue)) {
+              return [[key, defaultValue]]
+            }
+
+            return [[key, nextValue]]
+          })
+        )
+      },
+
+      userSelectedModel: null,
+      userModelOptions: null,
+      userPrompt: null,
+      setUserSelectedModel: modelId => set({ userSelectedModel: modelId }),
+      setUserModelOptions: options => set({ userModelOptions: options }),
+      setUserPrompt: prompt => set({ userPrompt: prompt }),
+    }),
+    {
+      name: "tuziyo-model-storage",
+      partialize: state => ({
+        userSelectedModel: state.userSelectedModel,
+        userModelOptions: state.userModelOptions,
+        userPrompt: state.userPrompt,
+      }),
     }
-  },
-
-  getModelOptionsConfig: modelId => {
-    return get().modelOptionsConfig[modelId] ?? {}
-  },
-
-  getDefaultModelOptions: modelId => {
-    const config = get().getModelOptionsConfig(modelId)
-    return Object.fromEntries(
-      Object.entries(config).flatMap(([key, option]) => {
-        const defaultValue = getConfigurableDefault(option)
-        return defaultValue === null ? [] : [[key, defaultValue]]
-      })
-    )
-  },
-
-  normalizeModelOptions: (modelId, options) => {
-    const config = get().getModelOptionsConfig(modelId)
-    const defaults = get().getDefaultModelOptions(modelId)
-
-    return Object.fromEntries(
-      Object.entries(config).flatMap(([key, option]) => {
-        const defaultValue = defaults[key]
-        if (defaultValue === undefined) return []
-
-        const nextValue = options[key] ?? defaultValue
-        if (option.type === "checkbox") {
-          return [[key, nextValue === "true" ? "true" : "false"]]
-        }
-
-        if (option.values.length > 0 && !option.values.includes(nextValue)) {
-          return [[key, defaultValue]]
-        }
-
-        return [[key, nextValue]]
-      })
-    )
-  },
-
-  userSelectedModel: null,
-  userModelOptions: null,
-  userPrompt: null,
-  setUserSelectedModel: modelId => set({ userSelectedModel: modelId }),
-  setUserModelOptions: options => set({ userModelOptions: options }),
-  setUserPrompt: prompt => set({ userPrompt: prompt }),
-}), {
-  name: "tuziyo-model-storage",
-  partialize: (state) => ({
-    userSelectedModel: state.userSelectedModel,
-    userModelOptions: state.userModelOptions,
-    userPrompt: state.userPrompt,
-  }),
-}))
+  )
+)

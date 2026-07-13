@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from "uuid"
 import type { AuthenticatedContext } from "../types"
-import { MODEL_CREDITS as CREDIT_MAP } from "../types"
-import { MODEL_OPTIONS_CONFIG } from "../modelOptions"
+import { MODEL_CREDITS as CREDIT_MAP, MODEL_OPTIONS_CONFIG } from "../imageModels"
 
 export interface CreditInfo {
   balance: number

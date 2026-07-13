@@ -36,6 +36,7 @@ function getModelName(modelId: string): string {
     "google/nano-banana-2": "Nano Banana 2",
     "alibaba/wan-2.6-image": "WAN 2.6",
     "bytedance/seedream-5-lite": "Seedream 5",
+    "bytedance/seedream-5-pro": "Seedream 5 Pro",
     "openai/gpt-image-1.5": "GPT Image 1.5",
   }
   return modelNames[modelId] || modelId

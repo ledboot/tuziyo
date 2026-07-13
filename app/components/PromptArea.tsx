@@ -9,7 +9,6 @@ import { useUserStore } from "~/stores/userStore"
 import { useModelStore, type Model, type ModelOptionsConfig } from "~/stores/modelStore"
 import { api, getApiErrorMessage } from "~/lib/api"
 
-
 interface PromptAreaProps {
   models: Model[]
   selectedModel: string
@@ -45,7 +44,7 @@ const OPTION_LABELS: Record<string, string> = {
 
 const REFERENCE_IMAGE_ACCEPT = "image/png,image/jpeg,image/webp"
 const REFERENCE_IMAGE_MAX_BYTES = 10 * 1024 * 1024
-const PROMPT_MAX_LENGTH = 80000
+const DEFAULT_PROMPT_MAX_LENGTH = 80000
 const PROMPT_MIN_WIDTH = 800
 
 const getPromptMaxWidth = () => {
@@ -79,6 +78,15 @@ function areOptionsEqual(a: Record<string, string>, b: Record<string, string>) {
   const aKeys = Object.keys(a)
   const bKeys = Object.keys(b)
   return aKeys.length === bKeys.length && aKeys.every(key => a[key] === b[key])
+}
+
+function getPromptCharacterCount(value: string) {
+  return Array.from(value).length
+}
+
+function clampPrompt(value: string, maxLength: number) {
+  const characters = Array.from(value)
+  return characters.length > maxLength ? characters.slice(0, maxLength).join("") : value
 }
 
 function buildOptionGroups(
@@ -127,7 +135,6 @@ function calculateRequiredCredits(
       }
     }
   }
-
 
   const numImages = Math.max(1, Number(normalizedOptions["num_images"]) || 1)
   let totalCredits = singleImageCredits * numImages
@@ -191,7 +198,8 @@ export default function PromptArea({
     }
   }, [isModelsLoading])
 
-  const shouldHide = !isModelsLoading && (modelError !== null || (hasStartedLoading && models.length === 0))
+  const shouldHide =
+    !isModelsLoading && (modelError !== null || (hasStartedLoading && models.length === 0))
 
   if (shouldHide) {
     return null
@@ -200,8 +208,13 @@ export default function PromptArea({
   const isModelDataPending = isModelsLoading || models.length === 0
 
   const selectedModelInfo = models.find(m => m.id === selectedModel)
+  const promptMaxLength = selectedModelInfo?.promptMaxLength ?? DEFAULT_PROMPT_MAX_LENGTH
   const normalizedModelOptions = normalizeModelOptions(selectedModel, modelOptions)
-  const requiredCredits = calculateRequiredCredits(selectedModelInfo, normalizedModelOptions, uploadedImages.length)
+  const requiredCredits = calculateRequiredCredits(
+    selectedModelInfo,
+    normalizedModelOptions,
+    uploadedImages.length
+  )
   const availableCredits = user?.credits ?? 0
   const hasInsufficientCredits = Boolean(user && availableCredits < requiredCredits)
   const creditEstimateText =
@@ -211,9 +224,10 @@ export default function PromptArea({
   const optionGroups = buildOptionGroups(modelOptionConfig, normalizedModelOptions, onOptionsChange)
   const negativePromptConfig = modelOptionConfig.negative_prompt
   const supportsNegativePrompt = negativePromptConfig?.type === "textarea"
-  const promptCharacterCount = prompt.length
-  const promptCharacterLimitText = PROMPT_MAX_LENGTH.toLocaleString("en-US")
-  const isPromptAtCharacterLimit = promptCharacterCount >= PROMPT_MAX_LENGTH
+  const promptCharacterCount = getPromptCharacterCount(prompt)
+  const promptCharacterLimitText = promptMaxLength.toLocaleString("en-US")
+  const isPromptOverCharacterLimit = promptCharacterCount > promptMaxLength
+  const isPromptAtCharacterLimit = promptCharacterCount >= promptMaxLength
   const isUploadingImages = uploadedImages.some(image => image.status === "uploading")
   const hasFailedUploads = uploadedImages.some(image => image.status === "error")
   const modelSelectOptions: SelectOption[] = models.map(model => {
@@ -398,7 +412,7 @@ export default function PromptArea({
 
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const nextPrompt = e.target.value
-    const clampedPrompt = nextPrompt.length > PROMPT_MAX_LENGTH ? nextPrompt.slice(0, PROMPT_MAX_LENGTH) : nextPrompt
+    const clampedPrompt = clampPrompt(nextPrompt, promptMaxLength)
     setPrompt(clampedPrompt)
     setUserPrompt(clampedPrompt)
   }
@@ -407,6 +421,11 @@ export default function PromptArea({
     if (!prompt.trim() || isGenerating) return
     if (!user) {
       window.dispatchEvent(new CustomEvent("openLoginModal"))
+      return
+    }
+
+    if (isPromptOverCharacterLimit) {
+      toast.error(`Prompt must not exceed ${promptCharacterLimitText} characters for this model.`)
       return
     }
 
@@ -467,7 +486,7 @@ export default function PromptArea({
       if (sessionId) {
         onGenerateStart?.(sessionId, prompt)
       }
-      
+
       const data = await api.generate.create(
         requestBody as Parameters<typeof api.generate.create>[0]
       )
@@ -778,7 +797,6 @@ export default function PromptArea({
                 value={prompt}
                 onChange={handlePromptChange}
                 onKeyDown={handleKeyDown}
-                maxLength={PROMPT_MAX_LENGTH}
                 aria-describedby="prompt-character-limit"
                 placeholder={t.aiToolkit?.promptPlaceholder || "Describe your image..."}
                 className="textarea textarea-ghost pt-3 pl-2 liquid-prompt-textarea w-full text-base focus:outline-none"
@@ -805,7 +823,13 @@ export default function PromptArea({
             }`}
             role={isPromptAtCharacterLimit ? "status" : undefined}
           >
-            <span>{isPromptAtCharacterLimit && `已达到 ${promptCharacterLimitText} 字符上限`}</span>
+            <span>
+              {isPromptOverCharacterLimit
+                ? `已超出 ${promptCharacterLimitText} 字符上限`
+                : isPromptAtCharacterLimit
+                  ? `已达到 ${promptCharacterLimitText} 字符上限`
+                  : ""}
+            </span>
             <span className="liquid-prompt-hint__count">
               {promptCharacterCount.toLocaleString("en-US")} / {promptCharacterLimitText}
             </span>

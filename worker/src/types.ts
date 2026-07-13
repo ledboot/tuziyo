@@ -40,41 +40,6 @@ export type AuthenticatedContext = Context<{
 
 export type UserType = "free" | "starter" | "professional" | "creator"
 
-export const IMAGE_MODEL_IDS = [
-  "bytedance/seedream-4.0",
-  "google/nano-banana",
-  "openai/gpt-image-1.5",
-  "bytedance/seedream-4.5",
-  "google/nano-banana-pro",
-  "xai/grok-imagine-image",
-  "recraft/recraftv4",
-  "alibaba/wan-2.6-image",
-  "google/nano-banana-2",
-  "bytedance/seedream-5-lite",
-  "google/imagen-4",
-  "openai/gpt-image-2",
-  "xai/grok-imagine-image-quality",
-  "recraft/recraftv4-pro",
-] as const
-export type IMAGE_MODEL_ID = (typeof IMAGE_MODEL_IDS)[number]
-
-export const MODEL_CREDITS: Record<string, number> = {
-  "bytedance/seedream-4.0": 2,
-  "google/nano-banana": 2,
-  "openai/gpt-image-1.5": 5,
-  "bytedance/seedream-4.5": 3,
-  "google/nano-banana-pro": 8,
-  "xai/grok-imagine-image": 1,
-  "recraft/recraftv4": 3,
-  "alibaba/wan-2.6-image": 2,
-  "google/nano-banana-2": 4,
-  "bytedance/seedream-5-lite": 2,
-  "google/imagen-4": 3,
-  "openai/gpt-image-2": 5,
-  "xai/grok-imagine-image-quality": 4,
-  "recraft/recraftv4-pro": 15,
-}
-
 export interface ModelOption {
   name: string
   type: ModelOptionType
@@ -98,6 +63,8 @@ export interface ModelConfig {
   id: string
   name: string
   provider: string
+  promptMaxLength: number
+  sortOrder: number
   icon: string
   supportsImage: boolean
   referenceImageCount?: number
@@ -118,55 +85,4 @@ export interface PreparedReferenceImage {
 export interface PlanModelItem {
   name: string
   supported: boolean
-}
-
-export const PLAN_MODELS_CONFIG: Record<string, PlanModelItem[]> = {
-  starter: [
-    { name: "seedream-4.0", supported: true },
-    { name: "nano-banana", supported: true },
-    { name: "gpt-image-1.5", supported: true },
-    { name: "grok-imagine-image", supported: true },
-    { name: "gpt-image-2", supported: true },
-    { name: "seedream-4.5", supported: true },
-    { name: "nano-banana-pro", supported: true },
-    { name: "recraftv4", supported: true },
-    { name: "wan-2.6", supported: true },
-    { name: "nano-banana-2", supported: true },
-    { name: "seedream-5-lite", supported: true },
-    { name: "imagen-4", supported: true },
-    { name: "grok-imagine-image-quality", supported: true },
-    { name: "recraftv4-pro", supported: true },
-  ],
-  professional: [
-    { name: "seedream-4.0", supported: true },
-    { name: "nano-banana", supported: true },
-    { name: "gpt-image-1.5", supported: true },
-    { name: "grok-imagine-image", supported: true },
-    { name: "gpt-image-2", supported: true },
-    { name: "seedream-4.5", supported: true },
-    { name: "nano-banana-pro", supported: true },
-    { name: "recraftv4", supported: true },
-    { name: "wan-2.6", supported: true },
-    { name: "nano-banana-2", supported: true },
-    { name: "seedream-5-lite", supported: true },
-    { name: "imagen-4", supported: true },
-    { name: "grok-imagine-image-quality", supported: true },
-    { name: "recraftv4-pro", supported: true },
-  ],
-  creator: [
-    { name: "seedream-4.0", supported: true },
-    { name: "nano-banana", supported: true },
-    { name: "gpt-image-1.5", supported: true },
-    { name: "grok-imagine-image", supported: true },
-    { name: "gpt-image-2", supported: true },
-    { name: "seedream-4.5", supported: true },
-    { name: "nano-banana-pro", supported: true },
-    { name: "recraftv4", supported: true },
-    { name: "wan-2.6", supported: true },
-    { name: "nano-banana-2", supported: true },
-    { name: "seedream-5-lite", supported: true },
-    { name: "imagen-4", supported: true },
-    { name: "grok-imagine-image-quality", supported: true },
-    { name: "recraftv4-pro", supported: true },
-  ],
 }
