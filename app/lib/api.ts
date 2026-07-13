@@ -249,7 +249,6 @@ export const api = {
           provider: string | null
           model: string
           prompt: string
-          image_url: string | null
           url: string | null
           aspect_ratio: string | null
           resolution: string | null
@@ -267,7 +266,6 @@ export const api = {
             message_id: string
             output_index: number
             status: "pending" | "completed" | "failed" | "deleted"
-            image_url: string | null
             url: string | null
             content_type: "image" | "video" | "audio"
             width: number | null
@@ -351,7 +349,6 @@ export const api = {
           message_id: string
           output_index: number
           status: "pending" | "completed" | "failed" | "deleted"
-          image_url: string | null
           url: string | null
           content_type: "image" | "video" | "audio"
           width: number | null

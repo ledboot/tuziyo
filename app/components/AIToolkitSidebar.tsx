@@ -43,6 +43,10 @@ export function AIToolkitSidebar({
   editInputRef,
 }: AIToolkitSidebarProps) {
   const { t } = useI18n()
+  const handleSessionSelect = (sessionId: string) => {
+    setShowSidebar(false)
+    handleSelectSession(sessionId)
+  }
 
   return (
     <div
@@ -90,7 +94,7 @@ export function AIToolkitSidebar({
                   editInputRef={editInputRef}
                   setEditingSessionId={setEditingSessionId}
                   setSessionHistory={setSessionHistory}
-                  handleSelectSession={handleSelectSession}
+                  handleSelectSession={handleSessionSelect}
                   setDeleteSessionId={setDeleteSessionId}
                   showSidebar={showSidebar}
                 />

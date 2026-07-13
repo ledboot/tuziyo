@@ -162,11 +162,16 @@ export async function handleGetSession(c: AuthenticatedContext) {
     .bind(user.userId, sessionId)
     .all()
 
+  const messageRecords = messages.results as unknown as SessionMessageRecord[]
+  const legacyImageUrls = new Map(messageRecords.map(message => [message.id, message.image_url]))
   const messageResults = await Promise.all(
-    (messages.results as unknown as SessionMessageRecord[]).map(async message => ({
-      ...message,
-      url: await toPublicImageUrl(c.env, message.image_url),
-    }))
+    messageRecords.map(async message => {
+      const { image_url: imageUrl, ...publicMessage } = message
+      return {
+        ...publicMessage,
+        url: await toPublicImageUrl(c.env, imageUrl),
+      }
+    })
   )
 
   const outputs = await c.env.DB.prepare(
@@ -185,10 +190,13 @@ export async function handleGetSession(c: AuthenticatedContext) {
     .all()
 
   const outputResults = await Promise.all(
-    (outputs.results as unknown as SessionMessageOutputRecord[]).map(async output => ({
-      ...output,
-      url: await toPublicImageUrl(c.env, output.image_url),
-    }))
+    (outputs.results as unknown as SessionMessageOutputRecord[]).map(async output => {
+      const { image_url: imageUrl, ...publicOutput } = output
+      return {
+        ...publicOutput,
+        url: await toPublicImageUrl(c.env, imageUrl),
+      }
+    })
   )
 
   const outputsByMessage = new Map<string, typeof outputResults>()
@@ -204,7 +212,7 @@ export async function handleGetSession(c: AuthenticatedContext) {
       return { ...message, outputs: messageOutputs }
     }
 
-    if (message.image_url) {
+    if (legacyImageUrls.get(message.id)) {
       return {
         ...message,
         outputs: [
@@ -213,7 +221,6 @@ export async function handleGetSession(c: AuthenticatedContext) {
             message_id: message.id,
             output_index: 0,
             status: "completed" as const,
-            image_url: message.image_url,
             content_type: MIME_TYPES.IMAGE,
             width: null,
             height: null,

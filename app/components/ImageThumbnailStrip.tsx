@@ -24,9 +24,9 @@ function ImageThumbnail({ output, active, compact, onSelect }: ImageThumbnailPro
     <button
       type="button"
       onClick={handleClick}
-      className={`${sizeClass} relative shrink-0 overflow-hidden rounded-lg border transition-[border-color,opacity,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+      className={`${sizeClass} relative shrink-0 cursor-pointer overflow-hidden rounded-lg border transition-[border-color,opacity,transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-95 motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
         active
-          ? "border-white opacity-100 ring-1 ring-white/30"
+          ? "border-white opacity-100 ring-1 ring-white/30 hover:border-white"
           : "border-white/15 opacity-60 hover:border-white/45 hover:opacity-100"
       }`}
       aria-label={`Show generated image ${output.output_index + 1}`}

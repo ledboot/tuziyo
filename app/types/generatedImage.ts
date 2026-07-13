@@ -5,7 +5,6 @@ export interface GeneratedImageOutput {
   message_id: string
   output_index: number
   status: "pending" | "completed" | "failed" | "deleted"
-  image_url: string | null
   url: string | null
   content_type: OutputMimeType
   width: number | null
@@ -24,7 +23,6 @@ export interface GeneratedImageMessage {
   provider: string | null
   model: string
   prompt: string
-  image_url: string | null
   aspect_ratio: string | null
   resolution: string | null
   image_size: string | null
@@ -62,7 +60,6 @@ export function withActiveOutput(
   return {
     ...message,
     id: output.id,
-    image_url: output.image_url,
     url: output.url,
     is_favorite: output.is_favorite,
   }

@@ -38,7 +38,7 @@ import { handleCreateReferenceImageUpload } from "./routes/uploads"
 import { PLAN_MODELS_CONFIG } from "./imageModels"
 import type { AppVariables, Env } from "./types"
 
-const app = new Hono<{ Bindings: Env }>()
+export const app = new Hono<{ Bindings: Env }>()
 
 const ANNUAL_SUBSCRIPTION_GRANT_CRON = "0 0 * * *"
 const CREDIT_MAINTENANCE_CRON = "10 0 * * *"
@@ -87,6 +87,21 @@ protectedRoutes.get("/api/auth/me", c => {
 
 protectedRoutes.post("/api/generate", handleGenerate)
 protectedRoutes.get("/api/generate/task/:id", handleGetTaskStatus)
+protectedRoutes.post("/api/evolink/tasks/check", async c => {
+  try {
+    const result = await handleEvoLinkTaskCheck(c.env)
+    return c.json({ success: true, result })
+  } catch (error) {
+    console.error("Manual EvoLink task check failed:", error)
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "EvoLink task check failed",
+      },
+      500
+    )
+  }
+})
 protectedRoutes.post("/api/uploads/reference-image/presign", handleCreateReferenceImageUpload)
 protectedRoutes.get("/api/credits", handleGetCredits)
 protectedRoutes.get("/api/transactions", handleGetTransactions)

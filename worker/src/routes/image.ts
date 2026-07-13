@@ -381,9 +381,13 @@ async function prepareReferenceImages(
       return { error: "Invalid reference image" }
     }
 
-    const key = referenceImageKey.replace(/^\/+/, "")
+    let key = referenceImageKey.replace(/^\/+/, "")
     if (!key.startsWith(referencePrefix) && !key.startsWith(generatedPrefix)) {
-      return { error: "Invalid reference image key" }
+      const generatedImage = await getUserImage(c, referenceImageKey, user.userId)
+      if (!generatedImage) {
+        return { error: "Invalid reference image" }
+      }
+      key = generatedImage.image_url
     }
 
     const object = await c.env.R2.head(key)
@@ -1125,7 +1129,6 @@ async function completeGenerationTask(
   taskId: string,
   userId: string,
   sessionId: string,
-  messageId: string,
   input: GenerateInput,
   imageUrls: string[],
   finalProvider: string,
@@ -1133,7 +1136,30 @@ async function completeGenerationTask(
 ) {
   const db = env.DB
   const now = Math.floor(Date.now() / 1000)
-  const requestedCount = getRequestedImageCount(input)
+  const taskTarget = await db
+    .prepare(
+      `
+        SELECT gt.message_id, gt.requested_count
+        FROM generation_tasks gt
+        INNER JOIN messages m ON m.id = gt.message_id
+        WHERE gt.id = ? AND gt.user_id = ? AND gt.session_id = ?
+          AND m.user_id = ? AND m.session_id = ? AND m.status = 1
+      `
+    )
+    .bind(taskId, userId, sessionId, userId, sessionId)
+    .first<{ message_id: string; requested_count: number }>()
+
+  if (!taskTarget?.message_id) {
+    throw new Error("Generation task is missing its original message reference")
+  }
+
+  // generation_tasks.message_id is the only source of truth for completion. The callback must
+  // fill the placeholder message created when the task was submitted, never create a new message.
+  const messageId = taskTarget.message_id
+  const requestedCount = Math.max(
+    1,
+    Number(taskTarget.requested_count) || getRequestedImageCount(input)
+  )
   const normalizedImageUrls = imageUrls
     .filter((url): url is string => typeof url === "string" && url.length > 0)
     .slice(0, requestedCount)
@@ -1389,7 +1415,6 @@ async function runBackgroundGeneration(
       taskId,
       userId,
       sessionId,
-      messageId,
       input,
       imageUrls,
       finalProvider,
@@ -1495,7 +1520,6 @@ export async function handleEvoLinkCallback(c: Context<{ Bindings: Env }>) {
         taskId,
         userId,
         sessionId,
-        messageId,
         input,
         imageUrls,
         PROVIDERS.EVOLINK,
@@ -1569,10 +1593,13 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
     : { results: [] }
 
   const outputs = await Promise.all(
-    (outputRows.results || []).map(async output => ({
-      ...output,
-      url: await toPublicImageUrl(c.env, output.image_url),
-    }))
+    (outputRows.results || []).map(async output => {
+      const { image_url: imageUrl, ...publicOutput } = output
+      return {
+        ...publicOutput,
+        url: await toPublicImageUrl(c.env, imageUrl),
+      }
+    })
   )
 
   return c.json({
@@ -1659,7 +1686,6 @@ export async function handleEvoLinkTaskCheck(env: Env) {
             taskId,
             userId,
             sessionId,
-            messageId,
             input,
             imageUrls,
             PROVIDERS.EVOLINK,

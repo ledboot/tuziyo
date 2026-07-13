@@ -194,7 +194,7 @@ export default function SessionDetailPage() {
   }
 
   const handleEdit = (image: Message) => {
-    if (!image.image_url || !image.url) {
+    if (!image.url) {
       toast.error("Image is not available for editing")
       return
     }
@@ -211,7 +211,7 @@ export default function SessionDetailPage() {
       {
         id: image.id,
         previewUrl: image.url,
-        key: image.image_url,
+        key: image.id,
         status: "uploaded",
       },
     ])
