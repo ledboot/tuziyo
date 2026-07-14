@@ -3,6 +3,7 @@ import { cors } from "hono/cors"
 import { authMiddleware, getUser } from "./middleware/auth"
 import {
   handleDeleteImage,
+  handleGetImageDownloadUrl,
   handleGenerate,
   handleGetTaskStatus,
   handleGetFavorites,
@@ -28,13 +29,13 @@ import {
 import { handleGetTransactions } from "./routes/transactions"
 import {
   handleGetSessions,
-  handleCreateSession,
   handleGetSession,
   handleDeleteSession,
   handleUpdateSession,
   handleCreateMessage,
 } from "./routes/sessions"
 import { handleCreateReferenceImageUpload } from "./routes/uploads"
+import { handleServeMediaVariant } from "./routes/media"
 import { PLAN_MODELS_CONFIG } from "./imageModels"
 import type { AppVariables, Env } from "./types"
 
@@ -69,6 +70,8 @@ app.get("/api/ai-toolkit/showcase", async c => {
   const items = await getAiToolkitShowcase(c.env)
   return c.json({ items })
 })
+
+app.get("/api/media/:type/:variant/*", handleServeMediaVariant)
 
 app.post("/api/stripe/webhook", handleStripeWebhook)
 app.get("/api/stripe/products", handleGetProducts)
@@ -107,9 +110,9 @@ protectedRoutes.get("/api/credits", handleGetCredits)
 protectedRoutes.get("/api/transactions", handleGetTransactions)
 protectedRoutes.get("/api/favorites", handleGetFavorites)
 protectedRoutes.patch("/api/images/:id/favorite", handleSetImageFavorite)
+protectedRoutes.post("/api/images/:id/download-url", handleGetImageDownloadUrl)
 protectedRoutes.delete("/api/images/:id", handleDeleteImage)
 protectedRoutes.get("/api/sessions", handleGetSessions)
-protectedRoutes.post("/api/sessions", handleCreateSession)
 protectedRoutes.get("/api/sessions/:id", handleGetSession)
 protectedRoutes.delete("/api/sessions/:id", handleDeleteSession)
 protectedRoutes.patch("/api/sessions/:id", handleUpdateSession)

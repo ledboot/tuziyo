@@ -163,7 +163,7 @@ export default function PromptArea({
   className = "",
 }: PromptAreaProps) {
   const { t } = useI18n()
-  const { user, token } = useUserStore()
+  const { user } = useUserStore()
 
   const userPrompt = useModelStore(state => state.userPrompt)
   const setUserPrompt = useModelStore(state => state.setUserPrompt)
@@ -455,23 +455,14 @@ export default function PromptArea({
 
     setIsGenerating(true)
     try {
-      let sessionId = currentSessionId
-
-      if (!sessionId && token) {
-        const title = prompt.slice(0, 20).trim() || "New Chat"
-        const sessionData = await api.sessions.create(title)
-        if (sessionData.session) {
-          sessionId = sessionData.session.id
-        }
-      }
-
       const requestBody: Record<string, unknown> = {
         prompt,
         model: selectedModel,
         provider: selectedModelInfo?.provider,
-        sessionId,
         ...normalizedModelOptions,
       }
+
+      if (currentSessionId) requestBody.sessionId = currentSessionId
 
       if (supportsNegativePrompt && negativePrompt) requestBody.negative_prompt = negativePrompt
 
@@ -483,8 +474,8 @@ export default function PromptArea({
         requestBody.reference_images = referenceImages
       }
 
-      if (sessionId) {
-        onGenerateStart?.(sessionId, prompt)
+      if (currentSessionId) {
+        onGenerateStart?.(currentSessionId, prompt)
       }
 
       const data = await api.generate.create(
@@ -496,7 +487,10 @@ export default function PromptArea({
       }
 
       const returnedTaskId = data.taskId
-      const returnedSessionId = data.sessionId || sessionId
+      const returnedSessionId = data.sessionId || currentSessionId
+      if (!returnedSessionId) {
+        throw new Error("Generate API did not return a session ID")
+      }
 
       setPrompt("")
       setUserPrompt("")
@@ -506,9 +500,9 @@ export default function PromptArea({
       setHoveredImage(null)
 
       if (onGeneratePending && returnedTaskId) {
-        onGeneratePending(returnedSessionId!, returnedTaskId, prompt)
+        onGeneratePending(returnedSessionId, returnedTaskId, prompt)
       } else {
-        onGenerateSuccess?.(returnedSessionId!, data)
+        onGenerateSuccess?.(returnedSessionId, data)
       }
     } catch (error) {
       console.error("Generate error:", error)

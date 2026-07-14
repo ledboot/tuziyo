@@ -119,10 +119,37 @@ function SessionItem({
   showSidebar,
 }: any) {
   const [imgError, setImgError] = React.useState(false)
+  const [isPinning, setIsPinning] = React.useState(false)
+  const isPinned = s.pinned ?? Boolean(s.is_pinned)
 
   React.useEffect(() => {
     setImgError(false)
   }, [s.preview_image])
+
+  const handleTogglePin = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    if (isPinning) return
+
+    const nextPinned = !isPinned
+    const updatePinnedState = (pinned: boolean) => {
+      setSessionHistory((previous: any) =>
+        previous.map((item: any) =>
+          item.id === s.id ? { ...item, pinned, is_pinned: pinned ? 1 : 0 } : item
+        )
+      )
+    }
+
+    setIsPinning(true)
+    updatePinnedState(nextPinned)
+    try {
+      await api.sessions.update(s.id, { is_pinned: nextPinned ? 1 : 0 })
+    } catch {
+      updatePinnedState(isPinned)
+      toast.error("Pin update failed, please try again.")
+    } finally {
+      setIsPinning(false)
+    }
+  }
 
   return (
     <div
@@ -213,20 +240,14 @@ function SessionItem({
             <Trash2 className="size-3" />
           </button>
           <button
-            onClick={e => {
-              e.stopPropagation()
-              setSessionHistory((prev: any) =>
-                prev.map((item: any) =>
-                  item.id === s.id ? { ...item, pinned: !item.pinned } : item
-                )
-              )
-            }}
+            onClick={handleTogglePin}
+            disabled={isPinning}
             className={`p-1 hover:bg-white/10 rounded transition-colors cursor-pointer ${
-              s.pinned ? "text-blue-400" : "text-white/30 hover:text-white"
+              isPinned ? "text-blue-400" : "text-white/30 hover:text-white"
             }`}
-            title={s.pinned ? "Unpin" : "Pin"}
+            title={isPinned ? "Unpin" : "Pin"}
           >
-            <Pin className={`size-3 ${s.pinned ? "fill-current" : ""}`} />
+            <Pin className={`size-3 ${isPinned ? "fill-current" : ""}`} />
           </button>
         </div>
       )}

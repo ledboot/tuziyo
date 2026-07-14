@@ -1,7 +1,8 @@
 import { v4 as uuidv4 } from "uuid"
-import type { AuthenticatedContext, Env } from "../types"
-import { createPresignedGetUrl } from "../utils"
+import type { AuthenticatedContext } from "../types"
 import { MIME_TYPES, type MimeType } from "../const"
+import { getGeneratedImagePrefix } from "../utils"
+import { createSignedImageVariantUrl } from "./media"
 
 interface SessionListRecord {
   id: string
@@ -49,11 +50,6 @@ interface SessionMessageOutputRecord {
   is_favorite: number
 }
 
-async function toPublicImageUrl(env: Env, imageUrl: string | null) {
-  if (!imageUrl) return null
-  return (await createPresignedGetUrl(env, imageUrl)) ?? null
-}
-
 export async function handleGetSessions(c: AuthenticatedContext) {
   const user = c.get("user")
   if (!user) {
@@ -92,41 +88,11 @@ export async function handleGetSessions(c: AuthenticatedContext) {
   const results = await Promise.all(
     (sessions.results as unknown as SessionListRecord[]).map(async session => ({
       ...session,
-      preview_image: await toPublicImageUrl(c.env, session.preview_image),
+      preview_image: await createSignedImageVariantUrl(c.env, session.preview_image, "small"),
     }))
   )
 
   return c.json({ sessions: results })
-}
-
-export async function handleCreateSession(c: AuthenticatedContext) {
-  const user = c.get("user")
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401)
-  }
-
-  const { title } = await c.req.json<{ title?: string }>()
-  const now = Math.floor(Date.now() / 1000)
-  const sessionId = uuidv4()
-
-  await c.env.DB.prepare(
-    `
-      INSERT INTO sessions (id, user_id, title, is_pinned, created_at, updated_at)
-      VALUES (?, ?, ?, 0, ?, ?)
-    `
-  )
-    .bind(sessionId, user.userId, title || "New Chat", now, now)
-    .run()
-
-  return c.json({
-    session: {
-      id: sessionId,
-      title: title || "New Chat",
-      is_pinned: 0,
-      created_at: now,
-      updated_at: now,
-    },
-  })
 }
 
 export async function handleGetSession(c: AuthenticatedContext) {
@@ -164,15 +130,10 @@ export async function handleGetSession(c: AuthenticatedContext) {
 
   const messageRecords = messages.results as unknown as SessionMessageRecord[]
   const legacyImageUrls = new Map(messageRecords.map(message => [message.id, message.image_url]))
-  const messageResults = await Promise.all(
-    messageRecords.map(async message => {
-      const { image_url: imageUrl, ...publicMessage } = message
-      return {
-        ...publicMessage,
-        url: await toPublicImageUrl(c.env, imageUrl),
-      }
-    })
-  )
+  const messageResults = messageRecords.map(message => {
+    const { image_url: _imageUrl, ...publicMessage } = message
+    return publicMessage
+  })
 
   const outputs = await c.env.DB.prepare(
     `
@@ -194,7 +155,14 @@ export async function handleGetSession(c: AuthenticatedContext) {
       const { image_url: imageUrl, ...publicOutput } = output
       return {
         ...publicOutput,
-        url: await toPublicImageUrl(c.env, imageUrl),
+        thumbnail_url:
+          output.content_type === MIME_TYPES.IMAGE
+            ? await createSignedImageVariantUrl(c.env, imageUrl, "small")
+            : null,
+        display_url:
+          output.content_type === MIME_TYPES.IMAGE
+            ? await createSignedImageVariantUrl(c.env, imageUrl, "large")
+            : null,
       }
     })
   )
@@ -206,38 +174,42 @@ export async function handleGetSession(c: AuthenticatedContext) {
     outputsByMessage.set(output.message_id, messageOutputs)
   }
 
-  const results = messageResults.map(message => {
-    const messageOutputs = outputsByMessage.get(message.id)
-    if (messageOutputs && messageOutputs.length > 0) {
-      return { ...message, outputs: messageOutputs }
-    }
-
-    if (legacyImageUrls.get(message.id)) {
-      return {
-        ...message,
-        outputs: [
-          {
-            id: message.id,
-            message_id: message.id,
-            output_index: 0,
-            status: "completed" as const,
-            content_type: MIME_TYPES.IMAGE,
-            width: null,
-            height: null,
-            file_size: null,
-            error: null,
-            created_at: message.created_at,
-            updated_at: message.created_at,
-            is_favorite: message.is_favorite ?? 0,
-            url: message.url,
-            legacy: true,
-          },
-        ],
+  const results = await Promise.all(
+    messageResults.map(async message => {
+      const messageOutputs = outputsByMessage.get(message.id)
+      if (messageOutputs && messageOutputs.length > 0) {
+        return { ...message, outputs: messageOutputs }
       }
-    }
 
-    return { ...message, outputs: [] }
-  })
+      const legacyImageKey = legacyImageUrls.get(message.id) ?? null
+      if (legacyImageKey) {
+        return {
+          ...message,
+          outputs: [
+            {
+              id: message.id,
+              message_id: message.id,
+              output_index: 0,
+              status: "completed" as const,
+              content_type: MIME_TYPES.IMAGE,
+              width: null,
+              height: null,
+              file_size: null,
+              error: null,
+              created_at: message.created_at,
+              updated_at: message.created_at,
+              is_favorite: message.is_favorite ?? 0,
+              thumbnail_url: await createSignedImageVariantUrl(c.env, legacyImageKey, "small"),
+              display_url: await createSignedImageVariantUrl(c.env, legacyImageKey, "large"),
+              legacy: true,
+            },
+          ],
+        }
+      }
+
+      return { ...message, outputs: [] }
+    })
+  )
 
   const pendingTasksResult = await c.env.DB.prepare(
     `
@@ -335,6 +307,11 @@ export async function handleCreateMessage(c: AuthenticatedContext) {
     image_url?: string
   }>()
 
+  const normalizedImageKey = image_url?.replace(/^\/+/, "")
+  if (normalizedImageKey && !normalizedImageKey.startsWith(getGeneratedImagePrefix(user.userId))) {
+    return c.json({ error: "Invalid image key" }, 400)
+  }
+
   const session = await c.env.DB.prepare(
     "SELECT * FROM sessions WHERE id = ? AND user_id = ? AND status = 1"
   )
@@ -362,7 +339,7 @@ export async function handleCreateMessage(c: AuthenticatedContext) {
       role === "user" ? "user" : "assistant",
       model,
       prompt,
-      image_url || null,
+      normalizedImageKey || null,
       now
     )
     .run()
@@ -377,8 +354,6 @@ export async function handleCreateMessage(c: AuthenticatedContext) {
       role,
       prompt,
       model,
-      image_url,
-      url: toPublicImageUrl(c.env, image_url || null),
       created_at: now,
     },
   })

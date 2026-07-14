@@ -5,7 +5,8 @@ export interface GeneratedImageOutput {
   message_id: string
   output_index: number
   status: "pending" | "completed" | "failed" | "deleted"
-  url: string | null
+  thumbnail_url: string | null
+  display_url: string | null
   content_type: OutputMimeType
   width: number | null
   height: number | null
@@ -31,7 +32,6 @@ export interface GeneratedImageMessage {
   negative_prompt: string | null
   output_format: string | null
   num_images: number | null
-  url: string | null
   google_search?: number | null
   image_search?: number | null
   created_at: number
@@ -45,22 +45,16 @@ export function getVisibleOutputs(message: GeneratedImageMessage) {
 
 export function getDefaultOutput(message: GeneratedImageMessage) {
   const outputs = getVisibleOutputs(message)
-  return outputs.find(output => output.status === "completed" && output.url) ?? outputs[0] ?? null
+  return (
+    outputs.find(
+      output => output.status === "completed" && (output.display_url || output.thumbnail_url)
+    ) ??
+    outputs[0] ??
+    null
+  )
 }
 
 export function getActiveOutput(message: GeneratedImageMessage, outputId?: string | null) {
   const outputs = getVisibleOutputs(message)
   return outputs.find(output => output.id === outputId) ?? getDefaultOutput(message)
-}
-
-export function withActiveOutput(
-  message: GeneratedImageMessage,
-  output: GeneratedImageOutput
-): GeneratedImageMessage {
-  return {
-    ...message,
-    id: output.id,
-    url: output.url,
-    is_favorite: output.is_favorite,
-  }
 }

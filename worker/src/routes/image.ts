@@ -23,7 +23,6 @@ import {
   createGeneratedImageKey,
   getGeneratedImagePrefix,
   getImageContentTypeFromKey,
-  getR2PublicUrl,
   createPresignedGetUrl,
   getReferenceImagePrefix,
   isAllowedReferenceImageContentType,
@@ -37,6 +36,8 @@ import {
   getEvoLinkTaskMimeType,
   type MimeType,
 } from "../const"
+import { createSignedImageVariantUrl } from "./media"
+
 const BYTEPLUS_MODEL_MAP: Record<string, string> = {
   "bytedance/seedream-4.0": "seedream-4-0-250828",
   "bytedance/seedream-4.5": "seedream-4-5-251128",
@@ -186,11 +187,6 @@ function getBoundedInt(value: string | null, fallback: number, min: number, max:
 
 function getRequestedFavorite(body: FavoriteRequestBody) {
   return body.favorited ?? body.favorite ?? body.is_favorite
-}
-
-async function toPublicImageUrl(env: Env, imageUrl: string | null) {
-  if (!imageUrl) return null
-  return (await createPresignedGetUrl(env, imageUrl)) ?? null
 }
 
 export function buildAiInput(input: GenerateInput, referenceImages: PreparedReferenceImage[] = []) {
@@ -417,7 +413,7 @@ async function prepareReferenceImages(
 
     const url = await createPresignedGetUrl(c.env, key)
     if (modelConfig.referenceImageFormat === ReferenceImageFormat.URL && !url) {
-      return { error: "R2_PUBLIC_BASE_URL is required for URL reference images" }
+      return { error: "Failed to create a signed reference image URL" }
     }
 
     preparedImages.push({
@@ -496,10 +492,14 @@ export async function handleGetFavorites(c: AuthenticatedContext) {
     .first<{ total: number }>()
 
   const results = await Promise.all(
-    (favorites.results as unknown as FavoriteImageRecord[]).map(async favorite => ({
-      ...favorite,
-      url: await toPublicImageUrl(c.env, favorite.image_url),
-    }))
+    (favorites.results as unknown as FavoriteImageRecord[]).map(async favorite => {
+      const { image_url: imageUrl, ...publicFavorite } = favorite
+      return {
+        ...publicFavorite,
+        thumbnail_url: await createSignedImageVariantUrl(c.env, imageUrl, "small"),
+        display_url: await createSignedImageVariantUrl(c.env, imageUrl, "large"),
+      }
+    })
   )
 
   return c.json({
@@ -561,6 +561,35 @@ export async function handleSetImageFavorite(c: AuthenticatedContext) {
   }
 
   return c.json({ success: true, favorited })
+}
+
+export async function handleGetImageDownloadUrl(c: AuthenticatedContext) {
+  const user = c.get("user")
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401)
+  }
+
+  const imageId = c.req.param("id")
+  if (!imageId) {
+    return c.json({ error: "Image id is required" }, 400)
+  }
+
+  const image = await getUserImage(c, imageId, user.userId)
+  if (!image) {
+    return c.json({ error: "Image not found" }, 404)
+  }
+
+  try {
+    const url = await createPresignedGetUrl(c.env, image.image_url)
+    if (!url) {
+      throw new Error("Image does not have an R2 key")
+    }
+    c.header("Cache-Control", "no-store")
+    return c.json({ url, expiresIn: 3600 })
+  } catch (error) {
+    console.error("Failed to create image download URL:", error)
+    return c.json({ error: "Failed to create image download URL" }, 500)
+  }
 }
 
 export async function handleDeleteImage(c: AuthenticatedContext) {
@@ -718,20 +747,13 @@ export async function handleGenerate(c: AuthenticatedContext) {
     return c.json({ error: "Insufficient credits" }, 402)
   }
 
-  // Setup session synchronously if it doesn't exist
+  // Reuse an owned session when provided. New sessions are inserted atomically
+  // with the generation message and task below.
   const now = Math.floor(Date.now() / 1000)
-  let sessionId = input.sessionId
+  const isNewSession = !input.sessionId
+  const sessionId = input.sessionId || uuidv4()
 
-  if (!sessionId) {
-    const title = input.prompt.slice(0, 100).trim() || "New Session"
-    sessionId = uuidv4()
-    await c.env.DB.prepare(
-      `INSERT INTO sessions (id, user_id, title, is_pinned, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)`
-    )
-      .bind(sessionId, user.userId, title, now, now)
-      .run()
-  } else {
-    // Check if session exists
+  if (!isNewSession) {
     const session = await c.env.DB.prepare(
       "SELECT * FROM sessions WHERE id = ? AND user_id = ? AND status = 1"
     )
@@ -758,6 +780,19 @@ export async function handleGenerate(c: AuthenticatedContext) {
   const imageSearchVal = input.image_search === "true" || input.image_search === true ? 1 : 0
 
   const statements = [
+    ...(isNewSession
+      ? [
+          c.env.DB.prepare(
+            `INSERT INTO sessions (id, user_id, title, is_pinned, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)`
+          ).bind(
+            sessionId,
+            user.userId,
+            input.prompt.slice(0, 100).trim() || "New Session",
+            now,
+            now
+          ),
+        ]
+      : []),
     c.env.DB.prepare(
       `
         INSERT INTO messages (
@@ -1178,7 +1213,8 @@ async function completeGenerationTask(
     id: string
     index: number
     key: string
-    url: string
+    width: number | null
+    height: number | null
   }> = []
   let failedCount = 0
 
@@ -1212,27 +1248,40 @@ async function completeGenerationTask(
         getImageContentTypeFromKey(key) ||
         DEFAULT_MEDIA_CONTENT_TYPE[mimeType]
 
+      let width: number | null = null
+      let height: number | null = null
+      if (mimeType === MIME_TYPES.IMAGE) {
+        const imageInfo = await env.IMAGES.info(new Blob([imageBuffer]).stream())
+        if (!("width" in imageInfo) || !("height" in imageInfo)) {
+          throw new Error("Generated image does not expose raster dimensions")
+        }
+        width = imageInfo.width
+        height = imageInfo.height
+      }
+
       await env.R2.put(key, imageBuffer, {
         httpMetadata: { contentType },
       })
-
-      const fullImageUrl = await createPresignedGetUrl(env, key)
-      if (!fullImageUrl) {
-        throw new Error("Failed to generate pre-signed URL")
-      }
 
       await db
         .prepare(
           `
             UPDATE message_outputs
-            SET status = 'completed', image_url = ?, content_type = ?, file_size = ?, error = NULL, updated_at = ?
+            SET status = 'completed', image_url = ?, content_type = ?, width = ?, height = ?,
+              file_size = ?, error = NULL, updated_at = ?
             WHERE id = ?
           `
         )
-        .bind(key, mimeType, imageBuffer.byteLength, now, output.id)
+        .bind(key, mimeType, width, height, imageBuffer.byteLength, now, output.id)
         .run()
 
-      completedOutputs.push({ id: output.id, index: outputIndex, key, url: fullImageUrl })
+      completedOutputs.push({
+        id: output.id,
+        index: outputIndex,
+        key,
+        width,
+        height,
+      })
     } catch (error) {
       failedCount++
       const errorMessage = error instanceof Error ? error.message : String(error)
@@ -1343,6 +1392,7 @@ async function runBackgroundGeneration(
     let finalProvider: string = PROVIDERS.CLOUDFLARE
 
     if (isBytedance) {
+      console.log("generation by bytedance",JSON.stringify(input))
       const resData = await generateBytedanceImage(c, taskId, input, referenceImages)
       finalProvider = resData.provider
       result = {
@@ -1357,6 +1407,7 @@ async function runBackgroundGeneration(
         throw new Error("EVOLINK_API_KEY is not configured for this image model.")
       }
       try {
+        console.log("generation by evolink",JSON.stringify(input))
         const providerTaskId = await generateViaEvoLink(
           c,
           taskId,
@@ -1376,6 +1427,7 @@ async function runBackgroundGeneration(
       }
     } else {
       // Call Cloudflare AI
+      console.log("generation by cloudflare ai",JSON.stringify(input))
       result = (await c.env.AI.run(input.model as any, aiInput, {
         gateway: { id: "image-ai-gateway" },
       })) as any
@@ -1564,7 +1616,33 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
     created_at: number
   }
 
-  const parsedResult = taskRecord.result ? JSON.parse(taskRecord.result) : null
+  const storedResult = taskRecord.result ? JSON.parse(taskRecord.result) : null
+  const parsedResult =
+    storedResult && typeof storedResult === "object"
+      ? (() => {
+          const {
+            url: _url,
+            imageUrl: _imageUrl,
+            outputs: storedOutputs,
+            ...publicResult
+          } = storedResult as Record<string, unknown>
+          return {
+            ...publicResult,
+            ...(Array.isArray(storedOutputs)
+              ? {
+                  outputs: storedOutputs.map(storedOutput => {
+                    if (!storedOutput || typeof storedOutput !== "object") return storedOutput
+                    const { url: _outputUrl, ...publicStoredOutput } = storedOutput as Record<
+                      string,
+                      unknown
+                    >
+                    return publicStoredOutput
+                  }),
+                }
+              : {}),
+          }
+        })()
+      : storedResult
   const outputRows = taskRecord.message_id
     ? await c.env.DB.prepare(
         `
@@ -1597,7 +1675,14 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
       const { image_url: imageUrl, ...publicOutput } = output
       return {
         ...publicOutput,
-        url: await toPublicImageUrl(c.env, imageUrl),
+        thumbnail_url:
+          output.content_type === MIME_TYPES.IMAGE
+            ? await createSignedImageVariantUrl(c.env, imageUrl, "small")
+            : null,
+        display_url:
+          output.content_type === MIME_TYPES.IMAGE
+            ? await createSignedImageVariantUrl(c.env, imageUrl, "large")
+            : null,
       }
     })
   )

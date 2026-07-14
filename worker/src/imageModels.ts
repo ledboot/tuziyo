@@ -166,7 +166,7 @@ export const IMAGE_MODEL_CATALOG: Record<string, ImageModelDefinition> = {
     },
   },
   "xai/grok-imagine-image": {
-    enabled: true,
+    enabled: false,
     sortOrder: 60,
     name: "Grok Imagine",
     promptMaxLength: 80000,
@@ -219,7 +219,7 @@ export const IMAGE_MODEL_CATALOG: Record<string, ImageModelDefinition> = {
     },
   },
   "recraft/recraftv4": {
-    enabled: true,
+    enabled: false,
     sortOrder: 50,
     name: "Recraft V4",
     promptMaxLength: 80000,
@@ -231,7 +231,7 @@ export const IMAGE_MODEL_CATALOG: Record<string, ImageModelDefinition> = {
     options: {},
   },
   "alibaba/wan-2.6-image": {
-    enabled: true,
+    enabled: false,
     sortOrder: 10,
     name: "WAN 2.6",
     promptMaxLength: 80000,
@@ -329,7 +329,7 @@ export const IMAGE_MODEL_CATALOG: Record<string, ImageModelDefinition> = {
     supportsImage: true,
     referenceImageCount: 14,
     referenceImageFormat: ReferenceImageFormat.URL,
-    isNew: true,
+    isNew: false,
     credits: 2,
     options: {
       aspect_ratio: {
@@ -447,7 +447,7 @@ export const IMAGE_MODEL_CATALOG: Record<string, ImageModelDefinition> = {
     },
   },
   "google/imagen-4": {
-    enabled: true,
+    enabled: false,
     sortOrder: 30,
     name: "Imagen 4",
     promptMaxLength: 3000,
@@ -529,7 +529,7 @@ export const IMAGE_MODEL_CATALOG: Record<string, ImageModelDefinition> = {
     },
   },
   "xai/grok-imagine-image-quality": {
-    enabled: true,
+    enabled: false,
     sortOrder: 60,
     name: "Grok Imagine Quality",
     promptMaxLength: 80000,
@@ -582,7 +582,7 @@ export const IMAGE_MODEL_CATALOG: Record<string, ImageModelDefinition> = {
     },
   },
   "recraft/recraftv4-pro": {
-    enabled: true,
+    enabled: false,
     sortOrder: 50,
     name: "Recraft V4 Pro",
     promptMaxLength: 80000,

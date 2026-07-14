@@ -219,20 +219,6 @@ export const api = {
           updated_at: number
         }>
       }>("/api/sessions"),
-    create: (title: string) =>
-      request<{
-        session: {
-          id: string
-          title: string
-          is_pinned: number
-          preview_image: string | null
-          created_at: number
-          updated_at: number
-        }
-      }>("/api/sessions", {
-        method: "POST",
-        body: JSON.stringify({ title }),
-      }),
     get: (id: string) =>
       request<{
         session: {
@@ -249,7 +235,6 @@ export const api = {
           provider: string | null
           model: string
           prompt: string
-          url: string | null
           aspect_ratio: string | null
           resolution: string | null
           image_size: string | null
@@ -266,7 +251,8 @@ export const api = {
             message_id: string
             output_index: number
             status: "pending" | "completed" | "failed" | "deleted"
-            url: string | null
+            thumbnail_url: string | null
+            display_url: string | null
             content_type: "image" | "video" | "audio"
             width: number | null
             height: number | null
@@ -333,15 +319,12 @@ export const api = {
         result?: {
           success: boolean
           key?: string
-          url?: string
-          imageUrl?: string
           sessionId?: string
           messageId?: string
           outputs?: Array<{
             id: string
             index: number
             key: string
-            url: string
           }>
         }
         outputs?: Array<{
@@ -349,7 +332,8 @@ export const api = {
           message_id: string
           output_index: number
           status: "pending" | "completed" | "failed" | "deleted"
-          url: string | null
+          thumbnail_url: string | null
+          display_url: string | null
           content_type: "image" | "video" | "audio"
           width: number | null
           height: number | null
@@ -403,6 +387,10 @@ export const api = {
         method: "PATCH",
         body: JSON.stringify({ favorited }),
       }),
+    getDownloadUrl: (id: string) =>
+      request<{ url: string; expiresIn: number }>(`/api/images/${id}/download-url`, {
+        method: "POST",
+      }),
     getFavorites: () =>
       request<{
         favorites: Array<{
@@ -415,8 +403,8 @@ export const api = {
           provider: string | null
           model: string
           prompt: string
-          image_url: string | null
-          url: string | null
+          thumbnail_url: string | null
+          display_url: string | null
           aspect_ratio: string | null
           resolution: string | null
           image_size: string | null

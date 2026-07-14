@@ -130,7 +130,6 @@ function toFavoriteDetailImage(item: FavoriteItem): FavoriteDetailImage {
     provider: null,
     model: item.type === "video" ? "video" : "openai/gpt-image-1.5",
     prompt: item.title,
-    url: item.url,
     aspect_ratio: null,
     resolution: null,
     image_size: null,
@@ -151,7 +150,8 @@ function toFavoriteDetailImage(item: FavoriteItem): FavoriteDetailImage {
       message_id: item.id,
       output_index: 0,
       status: "completed",
-      url: item.url,
+      thumbnail_url: item.url,
+      display_url: item.url,
       content_type: "image",
       width: null,
       height: null,
@@ -229,7 +229,8 @@ export default function ProfilePage() {
                 message_id: fav.message_id,
                 output_index: 0,
                 status: "completed" as const,
-                url: fav.url,
+                thumbnail_url: fav.thumbnail_url,
+                display_url: fav.display_url,
                 content_type: "image",
                 width: null,
                 height: null,
@@ -535,9 +536,9 @@ export default function ProfilePage() {
                         className="group relative aspect-[3/4] overflow-hidden rounded-2xl bg-white/5 border border-white/10 text-left transition-all hover:border-primary/50 hover:shadow-[0_0_20px_rgba(var(--color-primary),0.2)] focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
                         aria-label={`Open detail`}
                       >
-                        {item.url ? (
+                        {item.outputs[0]?.display_url ? (
                           <img
-                            src={item.url}
+                            src={item.outputs[0].display_url}
                             alt={item.prompt}
                             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />

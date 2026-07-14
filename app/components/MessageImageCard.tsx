@@ -21,10 +21,11 @@ export default function MessageImageCard({
 }: MessageImageCardProps) {
   const outputs = getVisibleOutputs(message)
   const activeOutput = getActiveOutput(message, activeOutputId)
+  const displayUrl = activeOutput?.display_url ?? null
 
   const handleSelectOutput = (outputId: string) => onSelectOutput(message.id, outputId)
   const handleOpen = () => {
-    if (activeOutput?.status === "completed" && activeOutput.url) {
+    if (activeOutput?.status === "completed" && displayUrl) {
       onOpen(message, activeOutput.id)
     }
   }
@@ -34,13 +35,13 @@ export default function MessageImageCard({
       <button
         type="button"
         onClick={handleOpen}
-        disabled={!activeOutput?.url || activeOutput.status !== "completed"}
+        disabled={!displayUrl || activeOutput?.status !== "completed"}
         className="relative min-h-0 flex-1 overflow-hidden text-left disabled:cursor-default"
         aria-label="Open image details"
       >
-        {activeOutput?.status === "completed" && activeOutput.url ? (
+        {activeOutput?.status === "completed" && displayUrl ? (
           <img
-            src={activeOutput.url}
+            src={displayUrl}
             alt={message.prompt}
             className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.025]"
           />

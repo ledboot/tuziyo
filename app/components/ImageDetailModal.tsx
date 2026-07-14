@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { X, RotateCcw, Download, Star, Folder, Trash2, Pencil } from "lucide-react"
+import { X, RotateCcw, Download, Star, Folder, Trash2 } from "lucide-react"
 import { useNavigate } from "react-router"
 import { toast } from "sonner"
 import { useGenerateStore } from "~/stores/generateStore"
@@ -8,7 +8,6 @@ import ImageThumbnailStrip from "~/components/ImageThumbnailStrip"
 import {
   getActiveOutput,
   getVisibleOutputs,
-  withActiveOutput,
   type GeneratedImageMessage,
 } from "~/types/generatedImage"
 
@@ -18,8 +17,6 @@ interface ImageDetailModalProps {
   sessionTitle: string
   onClose: () => void
   onRecreate?: (image: GeneratedImageMessage) => void
-  onEdit?: (image: GeneratedImageMessage) => void
-  onOutputChange?: (outputId: string) => void
   onFavoriteToggle?: (imageId: string, isFavorited: boolean) => void
 }
 
@@ -48,8 +45,6 @@ export default function ImageDetailModal({
   sessionTitle,
   onClose,
   onRecreate,
-  onEdit,
-  onOutputChange,
   onFavoriteToggle,
 }: ImageDetailModalProps) {
   const navigate = useNavigate()
@@ -61,7 +56,6 @@ export default function ImageDetailModal({
 
   const outputs = image ? getVisibleOutputs(image) : []
   const activeOutput = image ? getActiveOutput(image, activeOutputId) : null
-  const activeImage = image && activeOutput ? withActiveOutput(image, activeOutput) : image
 
   useEffect(() => {
     setActiveOutputId(initialOutputId ?? null)
@@ -73,12 +67,9 @@ export default function ImageDetailModal({
 
   if (!image) return null
 
-  const imageUrl = activeOutput?.url ?? null
+  const displayImageUrl = activeOutput?.display_url ?? null
 
-  const handleSelectOutput = (outputId: string) => {
-    setActiveOutputId(outputId)
-    onOutputChange?.(outputId)
-  }
+  const handleSelectOutput = (outputId: string) => setActiveOutputId(outputId)
 
   const handleRegenerate = () => {
     if (onRecreate) {
@@ -105,16 +96,14 @@ export default function ImageDetailModal({
     onClose()
   }
 
-  const handleEdit = () => {
-    if (!onEdit || !activeImage) return
-    onEdit(activeImage)
-    onClose()
-  }
-
   const handleDownload = async () => {
-    if (!imageUrl) return
+    if (!activeOutput) return
     try {
-      const response = await fetch(imageUrl)
+      const { url: downloadUrl } = await api.images.getDownloadUrl(activeOutput.id)
+      const response = await fetch(downloadUrl)
+      if (!response.ok) {
+        throw new Error(`Download failed with status ${response.status}`)
+      }
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -128,6 +117,7 @@ export default function ImageDetailModal({
       URL.revokeObjectURL(url)
     } catch (error) {
       console.error("Download failed:", error)
+      toast.error(error instanceof Error ? error.message : "Download failed")
     }
   }
 
@@ -157,13 +147,13 @@ export default function ImageDetailModal({
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box max-w-[95vw] w-[1400px] h-[90vh] flex flex-col md:flex-row p-0 overflow-hidden bg-[#0c0c0c] liquid-glass border border-white/10 rounded-2xl shadow-2xl">
+      <div className="modal-box max-w-[95vw] w-[1400px] h-[90vh] flex flex-col md:flex-row p-0 overflow-hidden bg-[#0c0c0c] border border-white/10 rounded-2xl shadow-2xl">
         {/* Left Image Area */}
         <div className="flex min-h-0 flex-1 flex-col bg-black/40 p-4 md:p-6">
           <div className="relative flex min-h-0 flex-1 items-center justify-center">
-            {imageUrl ? (
+            {displayImageUrl ? (
               <img
-                src={imageUrl}
+                src={displayImageUrl}
                 alt="Generated image"
                 className="size-full object-contain drop-shadow-2xl"
               />
@@ -181,6 +171,7 @@ export default function ImageDetailModal({
             outputs={outputs}
             activeOutputId={activeOutput?.id ?? null}
             onSelect={handleSelectOutput}
+            hoverShadow={false}
             className="mt-4 shrink-0 justify-start border-t border-white/10 pt-4 md:justify-center"
           />
         </div>
@@ -191,7 +182,7 @@ export default function ImageDetailModal({
           <div className="flex items-center justify-between mb-8">
             <button
               onClick={handleDownload}
-              disabled={!imageUrl}
+              disabled={!activeOutput || activeOutput.status !== "completed"}
               className="btn btn-sm h-9 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 px-4 font-normal"
             >
               <Download className="size-4 mr-1.5" />
@@ -326,18 +317,10 @@ export default function ImageDetailModal({
             </div>
           </div>
 
-          <div className="pt-6 grid grid-cols-2 gap-3 mt-auto border-t border-white/5">
-            <button
-              onClick={handleEdit}
-              disabled={!onEdit || !imageUrl}
-              className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal"
-            >
-              <Pencil className="size-4 mr-1.5" />
-              Edit
-            </button>
+          <div className="pt-6 mt-auto border-t border-white/5">
             <button
               onClick={handleRegenerate}
-              className="btn btn-sm h-10 btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal"
+              className="btn btn-sm h-10 w-full btn-ghost border border-white/20 rounded-full text-white hover:bg-white/10 font-normal"
             >
               <RotateCcw className="size-4 mr-1.5" />
               Recreate
@@ -345,7 +328,7 @@ export default function ImageDetailModal({
           </div>
         </div>
       </div>
-      <div className="modal-backdrop bg-black/80 backdrop-blur-md" onClick={onClose} />
+      <div className="modal-backdrop bg-black/80" onClick={onClose} />
     </div>
   )
 }

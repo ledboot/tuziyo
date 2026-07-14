@@ -47,13 +47,6 @@ export function generateR2Key(userId: string) {
   return `${toSafePathSegment(userId)}/${year}/${month}${day}`
 }
 
-export function getR2PublicUrl(env: Env, key: string) {
-  if (/^https?:\/\//i.test(key)) return key
-  const baseUrl = env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, "")
-  if (!baseUrl) return undefined
-  return `${baseUrl}/${key.replace(/^\/+/, "")}`
-}
-
 export async function createPresignedGetUrl(
   env: Env,
   key: string,
@@ -72,7 +65,7 @@ export async function createPresignedGetUrl(
     .map(([name]) => name)
 
   if (missingConfig.length > 0) {
-    return getR2PublicUrl(env, key)
+    throw new Error(`Missing R2 signing configuration: ${missingConfig.join(", ")}`)
   }
 
   const client = new AwsClient({

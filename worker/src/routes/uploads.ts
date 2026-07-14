@@ -7,7 +7,6 @@ import { REFERENCE_IMAGE_MAX_BYTES, REFERENCE_IMAGE_UPLOAD_EXPIRES_SECONDS } fro
 
 import {
   createReferenceImageKey,
-  getR2PublicUrl,
   createPresignedGetUrl,
   isAllowedReferenceImageContentType,
   normalizeContentType,

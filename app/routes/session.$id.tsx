@@ -14,6 +14,9 @@ type ModelId = string
 
 type Message = GeneratedImageMessage
 
+const TASK_POLL_INTERVAL_MS = 5_000
+const TASK_POLL_TIMEOUT_MS = 5 * 60 * 1_000
+
 interface Session {
   id: string
   title: string
@@ -38,17 +41,20 @@ export default function SessionDetailPage() {
     outputId: string
   } | null>(null)
   const [activeOutputIds, setActiveOutputIds] = useState<Record<string, string>>({})
-  const [recreatePrompt, setRecreatePrompt] = useState(generationState?.prompt ?? "")
+  const [recreatePrompt, setRecreatePrompt] = useState(
+    generationState?.autoGenerate ? (generationState.prompt ?? "") : ""
+  )
   const [recreateNegativePrompt, setRecreateNegativePrompt] = useState<string | undefined>()
   const [recreateVersion, setRecreateVersion] = useState(0)
-  const [editImages, setEditImages] = useState<UploadedImage[]>(generationState?.images ?? [])
-  const [editImagesVersion, setEditImagesVersion] = useState(0)
+  const [editImages] = useState<UploadedImage[]>(generationState?.images ?? [])
+  const [editImagesVersion] = useState(0)
 
   // Sidebar state — required by AIToolkitSidebar
   const [showSidebar, setShowSidebar] = useState(false)
   const [allSessions, setAllSessions] = useState<Session[]>([])
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null)
+  const [isDeletingSession, setIsDeletingSession] = useState(false)
   const editInputRef = useRef<HTMLInputElement>(null)
 
   const {
@@ -118,9 +124,26 @@ export default function SessionDetailPage() {
     if (!pollingTaskId || !id) return
 
     let isSubscribed = true
-    let intervalId: any = null
+    let intervalId: ReturnType<typeof setInterval> | null = null
+    const pollingStartedAt = Date.now()
+
+    const stopPollingAfterTimeout = () => {
+      if (!isSubscribed) return
+
+      isSubscribed = false
+      if (intervalId) clearInterval(intervalId)
+      setIsGenerating(false)
+      setPendingPrompt(null)
+      setPollingTaskId(null)
+      toast.warning("Generation is taking longer than expected. Polling has stopped.")
+    }
 
     const checkStatus = async () => {
+      if (Date.now() - pollingStartedAt >= TASK_POLL_TIMEOUT_MS) {
+        stopPollingAfterTimeout()
+        return
+      }
+
       try {
         const res = await api.generate.getTaskStatus(pollingTaskId)
         if (!isSubscribed) return
@@ -143,12 +166,14 @@ export default function SessionDetailPage() {
       }
     }
 
-    intervalId = setInterval(checkStatus, 5000)
+    intervalId = setInterval(checkStatus, TASK_POLL_INTERVAL_MS)
+    const timeoutId = setTimeout(stopPollingAfterTimeout, TASK_POLL_TIMEOUT_MS)
     void checkStatus()
 
     return () => {
       isSubscribed = false
       if (intervalId) clearInterval(intervalId)
+      clearTimeout(timeoutId)
     }
   }, [pollingTaskId, id])
 
@@ -193,34 +218,6 @@ export default function SessionDetailPage() {
     setRecreateVersion(version => version + 1)
   }
 
-  const handleEdit = (image: Message) => {
-    if (!image.url) {
-      toast.error("Image is not available for editing")
-      return
-    }
-
-    const imageModel = models.find(model => model.id === image.model && model.supportsImage)
-    const fallbackImageModel = models.find(model => model.supportsImage)
-    const nextModel = imageModel?.id ?? fallbackImageModel?.id
-
-    if (nextModel) {
-      setUserSelectedModel(nextModel)
-    }
-
-    setEditImages([
-      {
-        id: image.id,
-        previewUrl: image.url,
-        key: image.id,
-        status: "uploaded",
-      },
-    ])
-    setEditImagesVersion(version => version + 1)
-    setRecreatePrompt("")
-    setRecreateNegativePrompt("")
-    setRecreateVersion(version => version + 1)
-  }
-
   const handleSelectOutput = (messageId: string, outputId: string) => {
     setActiveOutputIds(previous => ({ ...previous, [messageId]: outputId }))
   }
@@ -228,12 +225,6 @@ export default function SessionDetailPage() {
   const handleOpenImage = (message: Message, outputId: string) => {
     handleSelectOutput(message.id, outputId)
     setSelectedImage({ message, outputId })
-  }
-
-  const handleDetailOutputChange = (outputId: string) => {
-    if (!selectedImage) return
-    handleSelectOutput(selectedImage.message.id, outputId)
-    setSelectedImage(previous => (previous ? { ...previous, outputId } : previous))
   }
 
   const handleFavoriteToggle = (outputId: string, isFavorited: boolean) => {
@@ -278,6 +269,26 @@ export default function SessionDetailPage() {
 
   const handleCreateSession = () => navigate("/ai-toolkit")
   const handleSelectSession = (sid: string) => navigate(`/session/${sid}`)
+
+  const handleDeleteSession = async (sessionId: string) => {
+    if (isDeletingSession) return
+
+    setIsDeletingSession(true)
+    try {
+      await api.sessions.delete(sessionId)
+      setAllSessions(previous => previous.filter(item => item.id !== sessionId))
+      setDeleteSessionId(null)
+      toast.success("Session deleted")
+      if (sessionId === id) {
+        navigate("/ai-toolkit", { replace: true })
+      }
+    } catch (error) {
+      console.error("Failed to delete session:", error)
+      toast.error("Failed to delete session")
+    } finally {
+      setIsDeletingSession(false)
+    }
+  }
 
   const images = messages.filter(message =>
     message.outputs.some(output => output.status !== "deleted")
@@ -374,8 +385,6 @@ export default function SessionDetailPage() {
           sessionTitle={session.title}
           onClose={() => setSelectedImage(null)}
           onRecreate={handleRecreate}
-          onEdit={handleEdit}
-          onOutputChange={handleDetailOutputChange}
           onFavoriteToggle={handleFavoriteToggle}
         />
       </div>
@@ -422,6 +431,43 @@ export default function SessionDetailPage() {
           />
         </div>
       </div>
+
+      {deleteSessionId && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="text-lg font-bold">Delete Session</h3>
+            <p className="py-4">
+              Are you sure you want to delete this session? This action cannot be undone.
+            </p>
+            <div className="modal-action">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={isDeletingSession}
+                onClick={() => setDeleteSessionId(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-error"
+                disabled={isDeletingSession}
+                onClick={() => void handleDeleteSession(deleteSessionId)}
+              >
+                {isDeletingSession ? <span className="loading loading-spinner loading-sm" /> : null}
+                Delete
+              </button>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="modal-backdrop"
+            aria-label="Close delete confirmation"
+            disabled={isDeletingSession}
+            onClick={() => setDeleteSessionId(null)}
+          />
+        </div>
+      )}
     </div>
   )
 }
