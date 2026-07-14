@@ -11,6 +11,7 @@ import { useUserStore } from "~/stores/userStore"
 import { api } from "~/lib/api"
 import { useI18n } from "~/lib/i18n"
 import { toast } from "sonner"
+import { createSeoMeta } from "~/lib/seo"
 
 interface Product {
   product_id: string
@@ -89,6 +90,31 @@ const FAQ_ITEMS = [
     a: "All images generated under Starter, Professional, and Creator subscription plans come with full commercial rights. You own the assets you create.",
   },
 ]
+
+export function meta() {
+  const title = "AI Image Generation Pricing & Credits | tuziyo"
+  const description =
+    "Compare tuziyo plans, generation credits, supported AI models, and commercial-use benefits for image and video creation."
+
+  return createSeoMeta({
+    title,
+    description,
+    path: "/pricing",
+    keywords: "tuziyo pricing, ai image generation pricing, ai credits, image generator plans",
+    schema: {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: FAQ_ITEMS.map(({ q, a }) => ({
+        "@type": "Question",
+        name: q,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: a,
+        },
+      })),
+    },
+  })
+}
 
 // 3种等级的模型支持配置
 

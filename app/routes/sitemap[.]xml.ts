@@ -5,11 +5,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   const routes = [
     { path: "/", priority: "1.0", changefreq: "daily" },
+    { path: "/ai-toolkit", priority: "0.9", changefreq: "daily" },
     { path: "/inpainting", priority: "0.8", changefreq: "weekly" },
     { path: "/resize", priority: "0.8", changefreq: "weekly" },
     { path: "/crop", priority: "0.8", changefreq: "weekly" },
     { path: "/convert", priority: "0.8", changefreq: "weekly" },
-    { path: "/blog", priority: "0.9", changefreq: "daily" },
+    { path: "/pricing", priority: "0.7", changefreq: "weekly" },
+    { path: "/blog/", priority: "0.9", changefreq: "daily" },
   ];
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>

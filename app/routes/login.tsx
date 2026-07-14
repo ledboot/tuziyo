@@ -1,6 +1,11 @@
 import { useSearchParams } from "react-router";
 import { useEffect } from "react";
 import { LoginButton } from "~/components/LoginButton";
+import { createNoIndexMeta } from "~/lib/seo";
+
+export function meta() {
+  return createNoIndexMeta("Sign In | tuziyo");
+}
 
 const ERROR_MESSAGES: Record<string, string> = {
   missing_code: "Authorization code missing. Please try again.",

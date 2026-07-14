@@ -3,6 +3,11 @@ import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, ShieldCheck } from "lu
 import { useEffect, useRef, useState } from "react"
 import { LoginButton } from "~/components/LoginButton"
 import { useUserStore } from "~/stores/userStore"
+import { createNoIndexMeta } from "~/lib/seo"
+
+export function meta() {
+  return createNoIndexMeta("Completing Sign In | tuziyo")
+}
 
 const texts = {
   auth_cancelled: "Authorization canceled",

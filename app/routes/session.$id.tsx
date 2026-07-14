@@ -9,6 +9,11 @@ import PromptArea, { type UploadedImage } from "~/components/PromptArea"
 import { AIToolkitSidebar } from "~/components/AIToolkitSidebar"
 import MessageImageCard from "~/components/MessageImageCard"
 import type { GeneratedImageMessage, GeneratedImageOutput } from "~/types/generatedImage"
+import { createNoIndexMeta } from "~/lib/seo"
+
+export function meta() {
+  return createNoIndexMeta("Creative Session | tuziyo")
+}
 
 type ModelId = string
 

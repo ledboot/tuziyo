@@ -18,6 +18,7 @@ import {
 import type { Route } from "./+types/convert";
 import { useI18n } from "~/lib/i18n";
 import { SEOMeta } from "~/components/SeoMeta";
+import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo";
 
 type OutputFormat = "jpeg" | "png" | "webp";
 
@@ -42,52 +43,17 @@ const OUTPUT_FORMATS: { label: string; value: OutputFormat; mime: string }[] = [
 ];
 
 export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Private Batch Image Converter | HEIC to PNG, JPG, WebP" },
-    {
-      name: "description",
-      content:
-        "Convert images between formats instantly. Secure batch processing for HEIC, PNG, and JPEG. Images stay on your device.",
-    },
-    {
-      name: "keywords",
-      content:
-        "tuziyo, heic to jpg converter, batch image converter, webp jpg converter, png converter, jpg converter",
-    },
-    {
-      property: "og:title",
-      content: "Private Batch Image Converter | Free & Secure",
-    },
-    {
-      property: "og:description",
-      content:
-        "Convert images between formats instantly. Secure batch processing without uploads.",
-    },
-    { property: "og:type", content: "website" },
-    { property: "og:url", content: "https://tuziyo.com/convert" },
-    {
-      property: "og:image",
-      content: "https://tuziyo.com/og-convert.png",
-    },
-    { name: "twitter:card", content: "summary_large_image" },
-    { property: "twitter:domain", content: "tuziyo.com" },
-    { property: "twitter:url", content: "https://tuziyo.com/convert" },
-    {
-      name: "twitter:title",
-      content: "Private Batch Image Converter | Free & Secure",
-    },
-    {
-      name: "twitter:description",
-      content:
-        "Convert images between formats instantly. Secure batch processing without uploads.",
-    },
-    {
-      name: "twitter:image",
-      content: "https://tuziyo.com/og-convert.png",
-    },
-    { name: "robots", content: "index, follow" },
-    { name: "author", content: "tuziyo" },
-  ];
+  const title = "Private Batch Image Converter | HEIC to PNG, JPG, WebP";
+  const description =
+    "Convert images between formats instantly. Secure batch processing for HEIC, PNG, and JPEG. Images stay on your device.";
+
+  return createSeoMeta({
+    title,
+    description,
+    path: "/convert",
+    keywords: "tuziyo, heic to jpg converter, batch image converter, webp converter, png converter, jpg converter",
+    schema: createWebApplicationSchema({ name: "tuziyo Batch Image Converter", description, path: "/convert" }),
+  });
 }
 
 export default function ConvertPage() {

@@ -3,37 +3,31 @@ import { ArrowRight, Play } from "lucide-react"
 import type { Route } from "./+types/_index"
 import { translations, useI18n } from "~/lib/i18n"
 import { SEOMeta } from "~/components/SeoMeta"
+import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo"
 
 export function meta({}: Route.MetaArgs) {
   const seo = translations.en.seo
 
-  return [
-    { title: seo.title },
-    {
-      name: "description",
-      content: seo.description,
-    },
-    {
-      name: "keywords",
-      content: seo.keywords,
-    },
-    { property: "og:title", content: seo.title },
-    {
-      property: "og:description",
-      content: seo.description,
-    },
-    { property: "og:type", content: "website" },
-    { property: "og:url", content: "https://tuziyo.com" },
-    { property: "og:image", content: "https://tuziyo.com/og-index.png" },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:title", content: seo.title },
-    {
-      name: "twitter:description",
-      content: seo.description,
-    },
-    { name: "twitter:image", content: "https://tuziyo.com/og-index.png" },
-    { name: "robots", content: "index, follow" },
-  ]
+  return createSeoMeta({
+    title: seo.title,
+    description: seo.description,
+    keywords: seo.keywords,
+    path: "/",
+    schema: [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: "tuziyo",
+        url: "https://tuziyo.com/",
+        description: seo.description,
+      },
+      createWebApplicationSchema({
+        name: "tuziyo AI Image & Video Generation Studio",
+        description: seo.description,
+        path: "/",
+      }),
+    ],
+  })
 }
 
 const showcaseImages = {

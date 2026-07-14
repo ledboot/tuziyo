@@ -14,6 +14,11 @@ import {
 import ImageDetailModal from "~/components/ImageDetailModal"
 import { useUserStore } from "~/stores/userStore"
 import { api } from "~/lib/api"
+import { createNoIndexMeta } from "~/lib/seo"
+
+export function meta() {
+  return createNoIndexMeta("Your Profile | tuziyo")
+}
 
 interface Transaction {
   id: string

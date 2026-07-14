@@ -17,6 +17,7 @@ import {
 import type { Route } from "./+types/crop";
 import { useI18n } from "~/lib/i18n";
 import { SEOMeta } from "~/components/SeoMeta";
+import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo";
 
 type AspectRatio = "free" | "1:1" | "4:3" | "16:9" | "3:2" | "2:3";
 
@@ -45,52 +46,17 @@ const ASPECT_RATIOS: (
 ];
 
 export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Precise Image Cropper | Crop Photos to Fixed Aspect Ratios" },
-    {
-      name: "description",
-      content:
-        "Crop images with pixel-perfect accuracy. Presets for 16:9, 4:3, and 1:1. High-quality lossless rendering in your browser.",
-    },
-    {
-      name: "keywords",
-      content:
-        "tuziyo, free image cropping tool, crop image online free, photo crop online, crop image online, online image crop, image cropping tool",
-    },
-    {
-      property: "og:title",
-      content: "Precise Image Cropper | Free Online Photo Tool",
-    },
-    {
-      property: "og:description",
-      content:
-        "Crop images with pixel-perfect accuracy. High-quality lossless rendering.",
-    },
-    { property: "og:type", content: "website" },
-    { property: "og:url", content: "https://tuziyo.com/crop" },
-    {
-      property: "og:image",
-      content: "https://tuziyo.com/og-crop.png",
-    },
-    { name: "twitter:card", content: "summary_large_image" },
-    { property: "twitter:domain", content: "tuziyo.com" },
-    { property: "twitter:url", content: "https://tuziyo.com/crop" },
-    {
-      name: "twitter:title",
-      content: "Precise Image Cropper | Free Online Photo Tool",
-    },
-    {
-      name: "twitter:description",
-      content:
-        "Crop images with pixel-perfect accuracy. High-quality lossless rendering.",
-    },
-    {
-      name: "twitter:image",
-      content: "https://tuziyo.com/og-crop.png",
-    },
-    { name: "robots", content: "index, follow" },
-    { name: "author", content: "tuziyo" },
-  ];
+  const title = "Precise Image Cropper | Crop Photos to Fixed Aspect Ratios";
+  const description =
+    "Crop images with pixel-perfect accuracy. Presets for 16:9, 4:3, and 1:1. High-quality lossless rendering in your browser.";
+
+  return createSeoMeta({
+    title,
+    description,
+    path: "/crop",
+    keywords: "tuziyo, free image cropping tool, crop image online free, photo crop online, fixed aspect ratio crop",
+    schema: createWebApplicationSchema({ name: "tuziyo Image Cropper", description, path: "/crop" }),
+  });
 }
 
 export default function CropPage() {

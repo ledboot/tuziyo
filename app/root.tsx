@@ -14,6 +14,7 @@ export const links: Route.LinksFunction = () => [
   { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
   { rel: "manifest", href: "/site.webmanifest" },
   { rel: "stylesheet", href: "/fonts/fonts.css" },
+  { rel: "sitemap", type: "application/xml", href: "/sitemap.xml" },
 ]
 
 export function Layout({ children }: { children: React.ReactNode }) {

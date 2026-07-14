@@ -6,6 +6,26 @@ import { useModelStore } from "~/stores/modelStore"
 import { useGenerateStore } from "~/stores/generateStore"
 import { api, type ApiToolkitShowcaseItem } from "~/lib/api"
 import { AIToolkitSidebar } from "~/components/AIToolkitSidebar"
+import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo"
+
+export function meta() {
+  const title = "AI Image Generator & Creative Studio | tuziyo"
+  const description =
+    "Generate and edit images with leading AI models, reference images, reusable sessions, and flexible output controls in one creative studio."
+
+  return createSeoMeta({
+    title,
+    description,
+    path: "/ai-toolkit",
+    keywords: "ai image generator, multi-model ai image studio, text to image, image editing, tuziyo",
+    schema: createWebApplicationSchema({
+      name: "tuziyo AI Toolkit",
+      description,
+      path: "/ai-toolkit",
+      free: false,
+    }),
+  })
+}
 
 type ModelId = string
 

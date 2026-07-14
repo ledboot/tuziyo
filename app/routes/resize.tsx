@@ -17,6 +17,7 @@ import {
 import type { Route } from "./+types/resize";
 import { useI18n } from "~/lib/i18n";
 import { SEOMeta } from "~/components/SeoMeta";
+import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo";
 
 type ResizeMode = "px" | "percentage";
 
@@ -29,15 +30,17 @@ interface ImageItem {
 }
 
 export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Batch Image Resizer | Resize Images by Percentage or Pixels" },
-    {
-      name: "description",
-      content:
-        "Resize multiple images at once with precision. Support for aspect ratio locking and percentage scaling. 100% private and fast.",
-    },
-    { name: "robots", content: "index, follow" },
-  ];
+  const title = "Batch Image Resizer | Resize Images by Percentage or Pixels";
+  const description =
+    "Resize multiple images at once with precision. Support for aspect ratio locking and percentage scaling. 100% private and fast.";
+
+  return createSeoMeta({
+    title,
+    description,
+    path: "/resize",
+    keywords: "tuziyo, bulk image resizer, image resizer online, resize images, percentage image resizer",
+    schema: createWebApplicationSchema({ name: "tuziyo Batch Image Resizer", description, path: "/resize" }),
+  });
 }
 
 export default function ResizePage() {
