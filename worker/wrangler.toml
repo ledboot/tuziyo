@@ -6,9 +6,8 @@ compatibility_date = "2026-07-06"
 crons = ["0 0 * * *", "10 0 * * *", "* * * * *"]
 
 [vars]
-FRONTEND_URL="http://localhost:5173"
-# MEDIA_BASE_URL = "https://api.tuziyo.com"
-MEDIA_BASE_URL = "http://localhost:8787"
+FRONTEND_URL="https://tuziyo.com"
+MEDIA_BASE_URL = "https://api.tuziyo.com"
 R2_ACCOUNT_ID = "2b00eb739bd84104c948e47541a47b2a"
 R2_BUCKET_NAME = "tuziyo"  # R2 存储桶名称
 EVOLINK_CALLBACK_URL = "https://api.tuziyo.com/api/evolink/callback"
