@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import { IMAGE_MODEL_CATALOG } from "../src/imageModels"
-import { buildEvoLinkPayload } from "../src/routes/image"
+import { buildEvoLinkPayload, getStoredImageDimensions } from "../src/routes/image"
 import { calculateRequiredCredits } from "../src/routes/credits"
 
 describe("EvoLink GPT Image 2", () => {
-  test("keeps provider size separate from aspect_ratio", () => {
+  test("stores ratio-like provider sizes as aspect ratios", () => {
     expect(IMAGE_MODEL_CATALOG["openai/gpt-image-2"].options.size).toMatchObject({
       name: "Size",
       defaultValue: "1:1",
@@ -18,6 +18,14 @@ describe("EvoLink GPT Image 2", () => {
         size: "16:9",
       }).size
     ).toBe("16:9")
+    expect(getStoredImageDimensions({ size: "16:9" })).toEqual({
+      aspectRatio: "16:9",
+      imageSize: null,
+    })
+    expect(getStoredImageDimensions({ size: "1024x768" })).toEqual({
+      aspectRatio: null,
+      imageSize: "1024x768",
+    })
   })
 
   test("catalog models expose only their actual size or aspect-ratio option", () => {

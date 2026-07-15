@@ -154,6 +154,19 @@ function getRequestedImageCount(input: GenerateInput) {
   return Math.min(Math.max(Math.trunc(parsed), 1), 15)
 }
 
+export function getStoredImageDimensions(
+  input: Pick<GenerateInput, "aspect_ratio" | "size">
+) {
+  const aspectRatio = typeof input.aspect_ratio === "string" ? input.aspect_ratio.trim() : ""
+  const size = typeof input.size === "string" ? input.size.trim() : ""
+  const sizeIsAspectRatio = /^\d+(?:\.\d+)?:\d+(?:\.\d+)?$/.test(size)
+
+  return {
+    aspectRatio: aspectRatio || (sizeIsAspectRatio ? size : null),
+    imageSize: size && !sizeIsAspectRatio ? size : null,
+  }
+}
+
 const MEDIA_EXTENSIONS: Record<MimeType, readonly string[]> = {
   [MIME_TYPES.IMAGE]: ["png", "jpg", "jpeg", "webp"],
   [MIME_TYPES.VIDEO]: ["mp4", "webm", "mov"],
@@ -771,6 +784,7 @@ export async function handleGenerate(c: AuthenticatedContext) {
   const requestedCount = getRequestedImageCount(input)
   input.num_images = requestedCount
   const toDbValue = (value: unknown) => (value === undefined ? null : value)
+  const storedDimensions = getStoredImageDimensions(input)
   const googleSearchVal = input.google_search === "true" || input.google_search === true ? 1 : 0
   const imageSearchVal = input.image_search === "true" || input.image_search === true ? 1 : 0
 
@@ -804,11 +818,11 @@ export async function handleGenerate(c: AuthenticatedContext) {
       input.provider || "pending",
       input.model,
       input.prompt,
-      toDbValue(input.aspect_ratio),
+      storedDimensions.aspectRatio,
       toDbValue(input.resolution),
       googleSearchVal,
       imageSearchVal,
-      toDbValue(input.size),
+      storedDimensions.imageSize,
       toDbValue(input.quality),
       toDbValue(input.style),
       toDbValue(input.negative_prompt),

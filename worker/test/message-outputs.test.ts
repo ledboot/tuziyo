@@ -47,6 +47,27 @@ describe("message outputs schema", () => {
     expect(messageColumns.map(column => column.name)).not.toContain("image_url")
   })
 
+  test("moves ratio-like image sizes into aspect_ratio", () => {
+    const database = createDatabase()
+    insertMessageFixture(database)
+    database
+      .query("UPDATE messages SET image_size = '16:9' WHERE id = 'message-1'")
+      .run()
+
+    database.exec(
+      readFileSync(
+        join(import.meta.dir, "../../db/migrations/0007_move_ratio_sizes_to_aspect_ratio.sql"),
+        "utf8"
+      )
+    )
+
+    expect(
+      database
+        .query("SELECT aspect_ratio, image_size FROM messages WHERE id = 'message-1'")
+        .get()
+    ).toEqual({ aspect_ratio: "16:9", image_size: null })
+  })
+
   test("stores multiple ordered outputs under one message", () => {
     const database = createDatabase()
     insertMessageFixture(database)
