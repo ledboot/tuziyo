@@ -5,6 +5,7 @@ import type { Route } from "./+types/root"
 import Header from "./components/Header"
 import Footer from "./components/Footer"
 import LoginModal from "./components/LoginModal"
+import { setAnalyticsUser, trackPageView } from "./lib/analytics"
 import "./app.css"
 
 export const links: Route.LinksFunction = () => [
@@ -54,16 +55,34 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
 import { I18nProvider } from "./lib/i18n"
 import { useLocation } from "react-router"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useUserStore } from "./stores/userStore"
 
 export default function App() {
   const location = useLocation()
+  const user = useUserStore(state => state.user)
+  const previousPathRef = useRef<string | null>(null)
 
   useEffect(() => {
     const { fetchUser } = useUserStore.getState()
     fetchUser()
   }, [])
+
+  useEffect(() => {
+    setAnalyticsUser(user ? { userId: user.userId, userType: user.userType } : null)
+  }, [user?.userId, user?.userType])
+
+  useEffect(() => {
+    const pathname = location.pathname
+    if (previousPathRef.current === null) {
+      previousPathRef.current = pathname
+      return
+    }
+    if (previousPathRef.current !== pathname) {
+      trackPageView(pathname)
+      previousPathRef.current = pathname
+    }
+  }, [location.pathname])
 
   const isSpecialPage =
     location.pathname.startsWith("/ai-toolkit") || location.pathname.startsWith("/session")

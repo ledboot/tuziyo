@@ -16,8 +16,17 @@ interface UserState {
   isLoading: boolean;
   isFetching: boolean;
   setUser: (user: User | null) => void;
+  setCredits: (credits: number) => void
   setToken: (token: string | null) => void;
-  login: (code: string, codeVerifier: string) => Promise<{ success: boolean; error?: string }>;
+  login: (
+    code: string,
+    codeVerifier: string
+  ) => Promise<{
+    success: boolean
+    error?: string
+    isNewUser?: boolean
+    onboardingCredits?: number
+  }>
   logout: () => Promise<void>;
   fetchUser: () => void;
 }
@@ -27,6 +36,8 @@ interface AuthResponse {
   message?: string;
   token?: string;
   user?: User;
+  isNewUser?: boolean
+  onboardingCredits?: number
 }
 
 const API_BASE = import.meta.env.DEV ? "http://localhost:8787" : "https://api.tuziyo.com";
@@ -40,6 +51,8 @@ export const useUserStore = create<UserState>()(
       isFetching: false,
 
       setUser: (user) => set({ user }),
+      setCredits: credits =>
+        set(state => ({ user: state.user ? { ...state.user, credits } : state.user })),
       setToken: (token) => set({ token }),
 
       login: async (code: string, codeVerifier: string) => {
@@ -58,7 +71,11 @@ export const useUserStore = create<UserState>()(
 
           if (data.token && data.user) {
             set({ user: data.user, token: data.token, isLoading: false });
-            return { success: true };
+            return {
+              success: true,
+              isNewUser: data.isNewUser,
+              onboardingCredits: data.onboardingCredits,
+            };
           }
 
           return { success: false, error: "Login failed" };

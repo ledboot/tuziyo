@@ -10,6 +10,13 @@ import { AIToolkitSidebar } from "~/components/AIToolkitSidebar"
 import MessageImageCard from "~/components/MessageImageCard"
 import type { GeneratedImageMessage, GeneratedImageOutput } from "~/types/generatedImage"
 import { createNoIndexMeta } from "~/lib/seo"
+import {
+  classifyAnalyticsError,
+  getCreditBalanceBucket,
+  getGenerationTaskContext,
+  trackFreeCreditProgress,
+  trackGenerationOutcomeOnce,
+} from "~/lib/analytics"
 
 export function meta() {
   return createNoIndexMeta("Creative Session | tuziyo")
@@ -36,7 +43,13 @@ export default function SessionDetailPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const generationState = location.state as any
-  const { user, token, isLoading: isUserLoading, isFetching: isUserFetching } = useUserStore()
+  const {
+    user,
+    token,
+    isLoading: isUserLoading,
+    isFetching: isUserFetching,
+    setCredits,
+  } = useUserStore()
 
   const [session, setSession] = useState<Session | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -154,12 +167,51 @@ export default function SessionDetailPage() {
         if (!isSubscribed) return
 
         if (res.status === "completed") {
+          const taskContext = getGenerationTaskContext(pollingTaskId)
+          const creditsData = await api.credits.get().catch(() => null)
+          if (creditsData) {
+            setCredits(creditsData.credits.balance)
+            if (user?.userType === "free") {
+              trackFreeCreditProgress({
+                userId: user.userId,
+                totalGranted: creditsData.credits.total_purchased,
+                totalUsed: creditsData.credits.total_used,
+                balance: creditsData.credits.balance,
+              })
+            }
+          }
+          trackGenerationOutcomeOnce(pollingTaskId, "completed", {
+            model_id: taskContext?.model_id ?? res.analytics?.model ?? "unknown",
+            media_type: taskContext?.media_type ?? "image",
+            credit_cost: taskContext?.credit_cost,
+            requested_outputs:
+              taskContext?.requested_outputs ?? res.analytics?.requested_count ?? 1,
+            completed_outputs: res.analytics?.completed_count ?? res.outputs?.length ?? 0,
+            failed_outputs: res.analytics?.failed_count ?? 0,
+            duration_seconds:
+              res.analytics?.duration_seconds ??
+              (taskContext ? Math.round((Date.now() - taskContext.started_at_ms) / 1000) : 0),
+            is_first_generation: taskContext?.is_first_generation,
+            remaining_credit_bucket: creditsData
+              ? getCreditBalanceBucket(creditsData.credits.balance)
+              : undefined,
+          })
           setIsGenerating(false)
           setPendingPrompt(null)
           setPollingTaskId(null)
           toast.success("Generation completed!")
           await fetchSessionData()
         } else if (res.status === "failed") {
+          const taskContext = getGenerationTaskContext(pollingTaskId)
+          trackGenerationOutcomeOnce(pollingTaskId, "failed", {
+            model_id: taskContext?.model_id ?? res.analytics?.model ?? "unknown",
+            media_type: taskContext?.media_type ?? "image",
+            failure_stage: "processing",
+            error_type: classifyAnalyticsError(res.error),
+            duration_seconds:
+              res.analytics?.duration_seconds ??
+              (taskContext ? Math.round((Date.now() - taskContext.started_at_ms) / 1000) : 0),
+          })
           setIsGenerating(false)
           setPendingPrompt(null)
           setPollingTaskId(null)

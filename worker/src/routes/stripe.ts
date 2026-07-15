@@ -200,6 +200,59 @@ export async function handleCreateCheckoutSession(c: AuthenticatedContext) {
   }
 }
 
+export async function handleGetCheckoutStatus(c: AuthenticatedContext) {
+  const user = c.get("user")
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401)
+  }
+
+  const sessionId = c.req.param("id")
+  if (!sessionId || !sessionId.startsWith("cs_")) {
+    return c.json({ error: "Invalid checkout session ID" }, 400)
+  }
+
+  try {
+    const stripe = getStripe(c)
+    const session = await stripe.checkout.sessions.retrieve(sessionId)
+    if (session.metadata?.userId !== user.userId) {
+      return c.json({ error: "Checkout session not found" }, 404)
+    }
+
+    const priceId = session.metadata?.priceId || null
+    let billingPeriod: "monthly" | "yearly" | "unknown" = "unknown"
+    if (priceId) {
+      const price = await stripe.prices.retrieve(priceId)
+      billingPeriod =
+        price.recurring?.interval === "month"
+          ? "monthly"
+          : price.recurring?.interval === "year"
+            ? "yearly"
+            : "unknown"
+    }
+
+    const completed =
+      session.status === "complete" &&
+      (session.payment_status === "paid" || session.payment_status === "no_payment_required")
+
+    return c.json({
+      checkout: {
+        completed,
+        status: session.status,
+        payment_status: session.payment_status,
+        transaction_id: session.id,
+        plan_id: priceId,
+        plan_name: session.metadata?.plan || "unknown",
+        billing_period: billingPeriod,
+        value: (session.amount_total || 0) / 100,
+        currency: (session.currency || "usd").toUpperCase(),
+      },
+    })
+  } catch (error) {
+    console.error("Failed to verify checkout session:", error)
+    return c.json({ error: "Failed to verify checkout session" }, 500)
+  }
+}
+
 export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
   const stripe = getStripe(c)
   const signature = c.req.header("stripe-signature")

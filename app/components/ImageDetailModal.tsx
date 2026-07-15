@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { useGenerateStore } from "~/stores/generateStore"
 import { api } from "~/lib/api"
 import ImageThumbnailStrip from "~/components/ImageThumbnailStrip"
+import { trackEvent } from "~/lib/analytics"
 import {
   getActiveOutput,
   getVisibleOutputs,
@@ -65,6 +66,16 @@ export default function ImageDetailModal({
     setIsFavorited(Boolean(activeOutput?.is_favorite))
   }, [activeOutput?.id, activeOutput?.is_favorite])
 
+  useEffect(() => {
+    if (!image || !activeOutput) return
+    trackEvent("view_generation_result", {
+      model_id: image.model,
+      media_type: activeOutput.content_type,
+      output_status: activeOutput.status,
+      is_favorited: Boolean(activeOutput.is_favorite),
+    })
+  }, [activeOutput?.id, image?.id])
+
   if (!image) return null
 
   const displayImageUrl = activeOutput?.display_url ?? null
@@ -72,6 +83,10 @@ export default function ImageDetailModal({
   const handleSelectOutput = (outputId: string) => setActiveOutputId(outputId)
 
   const handleRegenerate = () => {
+    trackEvent("regenerate", {
+      model_id: image.model,
+      media_type: activeOutput?.content_type ?? "image",
+    })
     if (onRecreate) {
       onRecreate(image)
       onClose()
@@ -115,6 +130,11 @@ export default function ImageDetailModal({
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      trackEvent("result_download", {
+        model_id: image.model,
+        media_type: activeOutput.content_type,
+        file_format: extension,
+      })
     } catch (error) {
       console.error("Download failed:", error)
       toast.error(error instanceof Error ? error.message : "Download failed")
@@ -135,6 +155,10 @@ export default function ImageDetailModal({
 
     try {
       await api.images.favorite(activeOutput.id, nextFavorited)
+      trackEvent(nextFavorited ? "favorite_result" : "unfavorite_result", {
+        model_id: image.model,
+        media_type: activeOutput.content_type,
+      })
       toast.success(nextFavorited ? "Added to favorites" : "Removed from favorites")
       onFavoriteToggle?.(activeOutput.id, nextFavorited)
     } catch (error) {

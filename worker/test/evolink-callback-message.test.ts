@@ -236,7 +236,9 @@ describe("EvoLink callback message association", () => {
       SET status = 'completed', image_url = 'generated-images/user-1/output.png'
       WHERE id = 'output-1';
       UPDATE generation_tasks
-      SET status = 'completed', result = '{"success":true,"messageId":"original-message"}'
+      SET status = 'completed', completed_count = 1, failed_count = 0,
+        created_at = 100, updated_at = 112,
+        result = '{"success":true,"messageId":"original-message"}'
       WHERE id = 'task-1';
     `)
 
@@ -261,6 +263,7 @@ describe("EvoLink callback message association", () => {
     expect(response.status).toBe(200)
     const body = (await response.json()) as {
       outputs: Array<Record<string, unknown>>
+      analytics: Record<string, unknown>
     }
     const thumbnailUrl = new URL(String(body.outputs[0]?.thumbnail_url))
     const displayUrl = new URL(String(body.outputs[0]?.display_url))
@@ -274,6 +277,13 @@ describe("EvoLink callback message association", () => {
     expect(body.outputs[0]?.height).toBeNull()
     expect(body.outputs[0]).not.toHaveProperty("url")
     expect(body.outputs[0]).not.toHaveProperty("image_url")
+    expect(body.analytics).toEqual({
+      model: "openai/gpt-image-2",
+      requested_count: 1,
+      completed_count: 1,
+      failed_count: 0,
+      duration_seconds: 12,
+    })
   })
 
   test("session outputs expose signed variants without leaking the original URL", async () => {

@@ -17,6 +17,7 @@ import { handleGoogleCallback, handleLogout } from "./routes/auth"
 import {
   handleGetProducts,
   handleCreateCheckoutSession,
+  handleGetCheckoutStatus,
   handleStripeWebhook,
   handleGetSubscription,
   handleCreateCustomerPortal,
@@ -118,6 +119,7 @@ protectedRoutes.delete("/api/sessions/:id", handleDeleteSession)
 protectedRoutes.patch("/api/sessions/:id", handleUpdateSession)
 protectedRoutes.post("/api/sessions/:id/messages", handleCreateMessage)
 protectedRoutes.post("/api/stripe/checkout", handleCreateCheckoutSession)
+protectedRoutes.get("/api/stripe/checkout/:id", handleGetCheckoutStatus)
 protectedRoutes.get("/api/stripe/subscription", handleGetSubscription)
 protectedRoutes.post("/api/stripe/portal", handleCreateCustomerPortal)
 

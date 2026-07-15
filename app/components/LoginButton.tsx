@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { cn } from "~/lib/utils"
+import { trackEvent } from "~/lib/analytics"
 
 function base64UrlEncode(str: ArrayBuffer) {
   return btoa(String.fromCharCode(...new Uint8Array(str)))
@@ -34,6 +35,7 @@ export function LoginButton({ className, onClick }: LoginButtonProps) {
 
   const handleGoogleLogin = async () => {
     onClick?.()
+    trackEvent("login_start", { method: "google" })
     setLoading(true)
     const codeVerifier = generateRandomString(64)
     const codeChallenge = await generateCodeChallenge(codeVerifier)

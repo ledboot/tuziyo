@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { LoginButton } from "~/components/LoginButton"
 import { useUserStore } from "~/stores/userStore"
 import { createNoIndexMeta } from "~/lib/seo"
+import { trackEvent } from "~/lib/analytics"
 
 export function meta() {
   return createNoIndexMeta("Completing Sign In | tuziyo")
@@ -71,6 +72,13 @@ export default function AuthCallback() {
       const result = await login(code, codeVerifier)
 
       if (result.success) {
+        trackEvent(result.isNewUser ? "sign_up" : "login", { method: "google" })
+        if (result.isNewUser && result.onboardingCredits) {
+          trackEvent("credit_granted", {
+            grant_type: "onboarding",
+            credit_amount: result.onboardingCredits,
+          })
+        }
         const storedRedirectUrl = localStorage.getItem("login_redirect_url") || "/"
         const redirectUrl = storedRedirectUrl.startsWith("/") ? storedRedirectUrl : "/"
         localStorage.removeItem("login_redirect_url")

@@ -3,6 +3,7 @@ import { ChevronDown, Globe, LogOut, Menu, User, X } from "lucide-react"
 import { languageNames, useI18n, type Language } from "~/lib/i18n"
 import { useState, useEffect } from "react"
 import { useUserStore } from "../stores/userStore"
+import { markPricingIntent, trackEvent } from "~/lib/analytics"
 
 interface NavItemSimple {
   title: string
@@ -42,7 +43,12 @@ export default function Header() {
 
   const openLogin = () => {
     closeMenus()
+    trackEvent("login_prompt", { source: "header" })
     window.dispatchEvent(new CustomEvent("openLoginModal"))
+  }
+
+  const handleNavigation = (to: string) => {
+    if (to === "/pricing") markPricingIntent("navigation")
   }
 
   useEffect(() => {
@@ -143,6 +149,7 @@ export default function Header() {
                 ) : (
                   <Link
                     to={item.to}
+                    onClick={() => handleNavigation(item.to)}
                     className={[
                       "ai-toolkit-nav-item",
                       isSegmentedNavItemActive(item.to) ? "is-active" : "",
@@ -336,7 +343,10 @@ export default function Header() {
                     <Link
                       key={item.to}
                       to={item.to}
-                      onClick={closeMenus}
+                      onClick={() => {
+                        handleNavigation(item.to)
+                        closeMenus()
+                      }}
                       className={`text-2xl font-medium tracking-tight transition-colors duration-200 ${
                         isActive ? "text-[#00C2B8]" : "text-white/80 hover:text-white"
                       }`}

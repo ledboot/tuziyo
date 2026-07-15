@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Check,
   X,
@@ -12,6 +12,12 @@ import { api } from "~/lib/api"
 import { useI18n } from "~/lib/i18n"
 import { toast } from "sonner"
 import { createSeoMeta } from "~/lib/seo"
+import {
+  consumePricingIntent,
+  getCreditBalanceBucket,
+  trackEvent,
+  trackPurchaseOnce,
+} from "~/lib/analytics"
 
 interface Product {
   product_id: string
@@ -179,8 +185,74 @@ export default function PricingPage() {
     string,
     Array<{ name: string; supported: boolean; label?: string }>
   > | null>(null)
-  const { user, token } = useUserStore()
+  const { user, token, isLoading: isUserLoading, isFetching: isUserFetching } = useUserStore()
   const { lang } = useI18n()
+  const pricingViewTrackedRef = useRef(false)
+  const checkoutReturnHandledRef = useRef(false)
+
+  useEffect(() => {
+    if (pricingViewTrackedRef.current || isUserLoading || isUserFetching) return
+    pricingViewTrackedRef.current = true
+    trackEvent("view_pricing", {
+      source: consumePricingIntent(),
+      user_type: user?.userType ?? "anonymous",
+      credit_balance_bucket: user ? getCreditBalanceBucket(user.credits) : "anonymous",
+    })
+  }, [isUserFetching, isUserLoading, user])
+
+  useEffect(() => {
+    if (checkoutReturnHandledRef.current) return
+    checkoutReturnHandledRef.current = true
+
+    const searchParams = new URLSearchParams(window.location.search)
+    const sessionId = searchParams.get("session_id")
+    const isSuccessReturn = searchParams.get("success") === "true"
+    const isCanceledReturn = searchParams.get("canceled") === "true"
+
+    if (isCanceledReturn) {
+      trackEvent("checkout_cancelled", { checkout_type: "subscription" })
+      window.history.replaceState({}, "", "/pricing")
+      return
+    }
+
+    if (!isSuccessReturn || !sessionId) return
+
+    void api.stripe
+      .checkoutStatus(sessionId)
+      .then(({ checkout }) => {
+        if (!checkout.completed) {
+          trackEvent("checkout_incomplete", {
+            payment_status: checkout.payment_status,
+            checkout_status: checkout.status ?? "unknown",
+          })
+          return
+        }
+
+        trackPurchaseOnce(checkout.transaction_id, {
+          value: checkout.value,
+          currency: checkout.currency,
+          plan_id: checkout.plan_id,
+          plan_name: checkout.plan_name,
+          billing_period: checkout.billing_period,
+          items: [
+            {
+              item_id: checkout.plan_id ?? "unknown",
+              item_name: checkout.plan_name,
+              item_category: "subscription",
+              price: checkout.value,
+              quantity: 1,
+            },
+          ],
+        })
+        toast.success(lang === "zh" ? "订阅成功" : "Subscription activated")
+      })
+      .catch(error => {
+        console.error("Checkout verification error:", error)
+      })
+      .finally(() => {
+        window.history.replaceState({}, "", "/pricing")
+      })
+  }, [lang])
 
   useEffect(() => {
     api.stripe
@@ -202,8 +274,22 @@ export default function PricingPage() {
       .catch(console.error)
   }, [])
 
-  const handleSubscribe = async (priceId: string) => {
+  const handleSubscribe = async (
+    product: Product,
+    price: NonNullable<Product["prices"]["monthly"]>,
+    planKey: "starter" | "professional" | "creator"
+  ) => {
+    trackEvent("select_plan", {
+      plan_id: price.id,
+      plan_name: planKey,
+      billing_period: billingPeriod,
+      value: price.unit_amount / 100,
+      currency: price.currency.toUpperCase(),
+      credit_amount: product.credits,
+    })
+
     if (!user) {
+      trackEvent("login_prompt", { source: "pricing_checkout" })
       window.dispatchEvent(new CustomEvent("openLoginModal"))
       return
     }
@@ -222,10 +308,26 @@ export default function PricingPage() {
       return
     }
 
-    setLoadingPlan(priceId)
+    setLoadingPlan(price.id)
     try {
-      const data = await api.stripe.checkout(priceId)
+      const data = await api.stripe.checkout(price.id)
       if (data.url) {
+        trackEvent("begin_checkout", {
+          currency: price.currency.toUpperCase(),
+          value: price.unit_amount / 100,
+          plan_id: price.id,
+          plan_name: planKey,
+          billing_period: billingPeriod,
+          items: [
+            {
+              item_id: price.id,
+              item_name: planKey,
+              item_category: "subscription",
+              price: price.unit_amount / 100,
+              quantity: 1,
+            },
+          ],
+        })
         window.location.href = data.url
       }
     } catch (error) {
@@ -353,7 +455,10 @@ export default function PricingPage() {
                   ? "bg-white text-[#060709] shadow-lg shadow-black/35 scale-100 font-extrabold"
                   : "bg-transparent text-gray-400 hover:text-white hover:scale-102"
               }`}
-              onClick={() => setBillingPeriod("monthly")}
+              onClick={() => {
+                setBillingPeriod("monthly")
+                trackEvent("select_billing_period", { billing_period: "monthly" })
+              }}
             >
               Monthly
             </button>
@@ -364,7 +469,10 @@ export default function PricingPage() {
                   ? "bg-white text-[#060709] shadow-lg shadow-black/35 scale-100 font-extrabold"
                   : "bg-transparent text-gray-400 hover:text-white hover:scale-102"
               }`}
-              onClick={() => setBillingPeriod("yearly")}
+              onClick={() => {
+                setBillingPeriod("yearly")
+                trackEvent("select_billing_period", { billing_period: "yearly" })
+              }}
             >
               <span>Yearly</span>
               <span
@@ -452,7 +560,7 @@ export default function PricingPage() {
                   ) : (
                     <button
                       className={`btn btn-block py-3.5 rounded-2xl font-extrabold text-sm transition-all duration-300 transform active:scale-95 ${styles.btnClass}`}
-                      onClick={() => handleSubscribe(activePrice.id)}
+                      onClick={() => handleSubscribe(product, activePrice, planKey)}
                       disabled={loadingPlan === activePrice.id}
                     >
                       {loadingPlan === activePrice.id ? (

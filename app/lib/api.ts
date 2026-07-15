@@ -343,6 +343,13 @@ export const api = {
           updated_at: number
         }>
         error?: string
+        analytics?: {
+          model: string | null
+          requested_count: number
+          completed_count: number
+          failed_count: number
+          duration_seconds: number
+        }
       }>(`/api/generate/task/${taskId}`),
   },
 
@@ -373,10 +380,24 @@ export const api = {
         }>
       }>("/api/stripe/products"),
     checkout: (priceId: string) =>
-      request<{ url: string }>("/api/stripe/checkout", {
+      request<{ url: string; sessionId: string }>("/api/stripe/checkout", {
         method: "POST",
         body: JSON.stringify({ priceId }),
       }),
+    checkoutStatus: (sessionId: string) =>
+      request<{
+        checkout: {
+          completed: boolean
+          status: string | null
+          payment_status: string
+          transaction_id: string
+          plan_id: string | null
+          plan_name: string
+          billing_period: "monthly" | "yearly" | "unknown"
+          value: number
+          currency: string
+        }
+      }>(`/api/stripe/checkout/${encodeURIComponent(sessionId)}`),
     subscription: () => request<{ subscription: unknown }>("/api/stripe/subscription"),
     portal: () => request<{ url: string }>("/api/stripe/portal", { method: "POST" }),
   },

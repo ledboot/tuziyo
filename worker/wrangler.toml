@@ -2,41 +2,89 @@ name = "tuziyo-worker"
 main = "src/index.ts"
 compatibility_date = "2026-07-06"
 
-[triggers]
-crons = ["0 0 * * *", "10 0 * * *", "* * * * *"]
+# Preview environment
+[env.preview]
+name = "tuziyo-worker-preview"
+workers_dev = false
+routes = [
+  { pattern = "api-preview.tuziyo.com", custom_domain = true }
+]
 
-[vars]
-FRONTEND_URL="https://tuziyo.com"
-MEDIA_BASE_URL = "https://api.tuziyo.com"
+[env.preview.vars]
+ENVIRONMENT = "preview"
+FRONTEND_URL = "https://preview.tuziyo.com"
+MEDIA_BASE_URL = "https://api-preview.tuziyo.com"
 R2_ACCOUNT_ID = "2b00eb739bd84104c948e47541a47b2a"
-R2_BUCKET_NAME = "tuziyo"  # R2 存储桶名称
-EVOLINK_CALLBACK_URL = "https://api.tuziyo.com/api/evolink/callback"
+R2_BUCKET_NAME = "tuziyo-preview"
+EVOLINK_CALLBACK_URL = "https://api-preview.tuziyo.com/api/evolink/callback"
 
-[ai]
+[env.preview.ai]
 binding = "AI"
 remote = true
 
-[images]
+[env.preview.images]
 binding = "IMAGES"
 remote = true
 
-[cache]
-enabled = true
+[[env.preview.r2_buckets]]
+binding = "R2"
+bucket_name = "tuziyo-preview"
 
-[[r2_buckets]]
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "tuziyo-preview"
+database_id = "00cf30d2-e6bf-469b-849e-d038e5fc50fb"
+
+# Preview only needs the generation-task recovery job. Billing jobs remain production-only.
+[env.preview.triggers]
+crons = ["* * * * *"]
+
+[env.preview.observability.logs]
+enabled = true
+invocation_logs = true
+
+[env.preview.observability.traces]
+enabled = false
+
+# Production environment
+[env.prod]
+name = "tuziyo-worker"
+workers_dev = false
+routes = [
+  { pattern = "api.tuziyo.com", custom_domain = true }
+]
+
+[env.prod.vars]
+ENVIRONMENT = "production"
+FRONTEND_URL = "https://tuziyo.com"
+MEDIA_BASE_URL = "https://api.tuziyo.com"
+R2_ACCOUNT_ID = "2b00eb739bd84104c948e47541a47b2a"
+R2_BUCKET_NAME = "tuziyo"
+EVOLINK_CALLBACK_URL = "https://api.tuziyo.com/api/evolink/callback"
+
+[env.prod.ai]
+binding = "AI"
+remote = true
+
+[env.prod.images]
+binding = "IMAGES"
+remote = true
+
+[[env.prod.r2_buckets]]
 binding = "R2"
 bucket_name = "tuziyo"
-preview_bucket_name="tuziyo"
 
-[[d1_databases]]
+[[env.prod.d1_databases]]
 binding = "DB"
 database_name = "tuziyo-db"
 database_id = "87c3889f-0a77-4252-8cd5-f59dbc523d0f"
 
+[env.prod.triggers]
+crons = ["0 0 * * *", "10 0 * * *", "* * * * *"]
 
-[observability.logs]
+[env.prod.observability.logs]
 enabled = true
 invocation_logs = true
 
-[observability.traces]
+[env.prod.observability.traces]
 enabled = false

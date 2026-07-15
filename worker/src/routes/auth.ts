@@ -80,6 +80,7 @@ export async function handleGoogleCallback(c: Context<{ Bindings: Env }>) {
       .first()
 
     let user
+    let isNewUser = false
     if (existingAccount) {
       const userIdFromAccount = (existingAccount as { user_id: string }).user_id
       await c.env.DB.prepare(
@@ -93,6 +94,7 @@ export async function handleGoogleCallback(c: Context<{ Bindings: Env }>) {
         | { id: string; email: string; name: string; avatar_url: string | null; user_type: string }
         | undefined
     } else {
+      isNewUser = true
       await c.env.DB.prepare(
         "INSERT INTO users (id, email, name, avatar_url, user_type, created_at, updated_at) VALUES (?, ?, ?, ?, 'free', ?, ?)"
       )
@@ -134,6 +136,8 @@ export async function handleGoogleCallback(c: Context<{ Bindings: Env }>) {
 
     return c.json({
       token: jwt,
+      isNewUser,
+      onboardingCredits: isNewUser ? 10 : 0,
       user: {
         userId: user.id,
         email: user.email,

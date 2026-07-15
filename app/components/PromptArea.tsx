@@ -8,6 +8,14 @@ import { ModelOptions, type OptionGroup } from "~/components/ModelOptions"
 import { useUserStore } from "~/stores/userStore"
 import { useModelStore, type Model, type ModelOptionsConfig } from "~/stores/modelStore"
 import { api, getApiErrorMessage } from "~/lib/api"
+import {
+  classifyAnalyticsError,
+  getCreditBalanceBucket,
+  markGenerationStarted,
+  markPricingIntent,
+  rememberGenerationTask,
+  trackEvent,
+} from "~/lib/analytics"
 
 interface PromptAreaProps {
   models: Model[]
@@ -182,6 +190,7 @@ export default function PromptArea({
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadedImagesRef = useRef<UploadedImage[]>([])
+  const insufficientCreditsEventRef = useRef<string | null>(null)
 
   const modelOptionConfig = useModelStore(
     state => state.modelOptionsConfig[selectedModel] ?? EMPTY_MODEL_OPTIONS_CONFIG
@@ -243,6 +252,11 @@ export default function PromptArea({
       ) : undefined,
     }
   })
+
+  const handleModelChange = (model: string) => {
+    trackEvent("select_model", { model_id: model, previous_model_id: selectedModel })
+    onModelChange(model)
+  }
 
   useEffect(() => {
     if (models.length === 0) return
@@ -309,6 +323,30 @@ export default function PromptArea({
   }, [uploadedImages])
 
   useEffect(() => {
+    if (!user || !prompt.trim() || !hasInsufficientCredits) {
+      insufficientCreditsEventRef.current = null
+      return
+    }
+
+    const eventKey = `${selectedModel}:${requiredCredits}:${availableCredits}`
+    if (insufficientCreditsEventRef.current === eventKey) return
+    insufficientCreditsEventRef.current = eventKey
+    markPricingIntent("credit_insufficient")
+    trackEvent("credit_insufficient_shown", {
+      model_id: selectedModel,
+      required_credits: requiredCredits,
+      credit_balance_bucket: getCreditBalanceBucket(availableCredits),
+    })
+  }, [
+    availableCredits,
+    hasInsufficientCredits,
+    prompt,
+    requiredCredits,
+    selectedModel,
+    user,
+  ])
+
+  useEffect(() => {
     return () => {
       uploadedImagesRef.current.forEach(image => URL.revokeObjectURL(image.previewUrl))
     }
@@ -366,6 +404,7 @@ export default function PromptArea({
     if (!files) return
 
     if (!user) {
+      trackEvent("login_prompt", { source: "reference_image_upload" })
       window.dispatchEvent(new CustomEvent("openLoginModal"))
       e.target.value = ""
       return
@@ -420,6 +459,7 @@ export default function PromptArea({
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return
     if (!user) {
+      trackEvent("login_prompt", { source: "generate" })
       window.dispatchEvent(new CustomEvent("openLoginModal"))
       return
     }
@@ -482,6 +522,11 @@ export default function PromptArea({
         requestBody as Parameters<typeof api.generate.create>[0]
       )
       if (data.error) {
+        trackEvent("generate_failed", {
+          model_id: selectedModel,
+          failure_stage: "submission",
+          error_type: classifyAnalyticsError(data.error),
+        })
         toast.error(`ERROR: ${data.error}`)
         return
       }
@@ -490,6 +535,36 @@ export default function PromptArea({
       const returnedSessionId = data.sessionId || currentSessionId
       if (!returnedSessionId) {
         throw new Error("Generate API did not return a session ID")
+      }
+
+      const requestedOutputs = Math.max(
+        1,
+        (data.requestedCount ?? Number(normalizedModelOptions.num_images)) || 1
+      )
+      const isFirstGeneration = markGenerationStarted(user.userId)
+      trackEvent("generate_start", {
+        model_id: selectedModel,
+        media_type: "image",
+        credit_cost: requiredCredits,
+        requested_outputs: requestedOutputs,
+        reference_image_count: referenceImages.length,
+        is_first_generation: isFirstGeneration,
+        is_new_session: !currentSessionId,
+        user_type: user.userType,
+        credit_balance_bucket: getCreditBalanceBucket(availableCredits),
+      })
+      if (returnedTaskId) {
+        rememberGenerationTask(returnedTaskId, {
+          model_id: selectedModel,
+          media_type: "image",
+          credit_cost: requiredCredits,
+          starting_credit_balance: availableCredits,
+          requested_outputs: requestedOutputs,
+          reference_image_count: referenceImages.length,
+          is_first_generation: isFirstGeneration,
+          started_at_ms: Date.now(),
+          user_type: user.userType,
+        })
       }
 
       setPrompt("")
@@ -506,6 +581,11 @@ export default function PromptArea({
       }
     } catch (error) {
       console.error("Generate error:", error)
+      trackEvent("generate_failed", {
+        model_id: selectedModel,
+        failure_stage: "submission",
+        error_type: classifyAnalyticsError(error),
+      })
       toast.error(
         `ERROR: ${getApiErrorMessage(error, "Failed to generate image. Please try again.")}`
       )
@@ -834,7 +914,7 @@ export default function PromptArea({
               label="Models"
               options={modelSelectOptions}
               value={selectedModel}
-              onChange={onModelChange}
+              onChange={handleModelChange}
               className="liquid-model-select min-w-10"
             />
 

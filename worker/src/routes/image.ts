@@ -1610,10 +1610,15 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
 
   const taskRecord = task as {
     message_id: string | null
+    model: string | null
     status: string
     result: string | null
     error: string | null
+    requested_count: number
+    completed_count: number
+    failed_count: number
     created_at: number
+    updated_at: number
   }
 
   const storedResult = taskRecord.result ? JSON.parse(taskRecord.result) : null
@@ -1693,6 +1698,13 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
     result: parsedResult,
     outputs,
     error: taskRecord.error,
+    analytics: {
+      model: taskRecord.model,
+      requested_count: taskRecord.requested_count,
+      completed_count: taskRecord.completed_count,
+      failed_count: taskRecord.failed_count,
+      duration_seconds: Math.max(0, taskRecord.updated_at - taskRecord.created_at),
+    },
   })
 }
 
