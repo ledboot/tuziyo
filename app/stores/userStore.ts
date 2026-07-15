@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { API_BASE } from "../lib/config";
+import { setAnalyticsUser, trackEvent } from "../lib/analytics";
 
 interface User {
   userId: string;
@@ -70,6 +71,10 @@ export const useUserStore = create<UserState>()(
 
           if (data.token && data.user) {
             set({ user: data.user, token: data.token, isLoading: false });
+            setAnalyticsUser({
+              userId: data.user.userId,
+              userType: data.user.userType,
+            });
             return {
               success: true,
               isNewUser: data.isNewUser,
@@ -84,6 +89,11 @@ export const useUserStore = create<UserState>()(
       },
 
       logout: async () => {
+        trackEvent("logout", {
+          user_type: get().user?.userType ?? "unknown",
+        });
+        setAnalyticsUser(null);
+
         try {
           const token = get().token;
           if (token) {

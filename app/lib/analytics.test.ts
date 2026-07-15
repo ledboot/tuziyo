@@ -7,6 +7,7 @@ import {
   trackModelOptionSelection,
   trackPurchaseOnce,
   trackSessionSelection,
+  setAnalyticsUser,
   markPricingIntent,
   consumePricingIntent,
 } from "./analytics"
@@ -124,6 +125,26 @@ describe("analytics event collection", () => {
           previous_session_id: "session-1",
         },
       ],
+    ])
+  })
+
+  test("sets the user ID before login events and clears it after logout events", () => {
+    setAnalyticsUser({ userId: "user-1", userType: "starter" })
+    trackEvent("login", { method: "google" })
+    trackEvent("logout", { user_type: "starter" })
+    setAnalyticsUser(null)
+
+    expect(recordedEvents(fakeWindow.dataLayer)).toEqual([
+      [
+        "config",
+        "G-LNMKGNRR1W",
+        { user_id: "user-1", send_page_view: false },
+      ],
+      ["set", "user_properties", { account_type: "starter", signed_in: true }],
+      ["event", "login", { method: "google" }],
+      ["event", "logout", { user_type: "starter" }],
+      ["config", "G-LNMKGNRR1W", { user_id: null, send_page_view: false }],
+      ["set", "user_properties", { account_type: "anonymous", signed_in: false }],
     ])
   })
 
