@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
-    "dev:preview": "wrangler dev --env preview",
+    "dev:preview": "wrangler dev --remote --ip 0.0.0.0 --env preview",
     "deploy:preview": "wrangler deploy --env preview",
     "deploy:prod": "wrangler deploy --env prod",
     "typecheck": "tsc --noEmit",
