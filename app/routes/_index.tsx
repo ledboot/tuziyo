@@ -50,7 +50,6 @@ const models = [
 ]
 
 const galleryImages = [
-  showcaseImages.hero,
   showcaseImages.image,
   showcaseImages.poster,
   showcaseImages.video,
@@ -189,10 +188,10 @@ export default function Index() {
         </div>
 
         <div className="home-redesign-gallery">
-          {galleryImages.map((src, index) => (
-            <figure key={src} className={index === 3 ? "is-wide" : undefined}>
+          {galleryImages.map(src => (
+            <figure key={src}>
               <img src={src} alt={home.galleryImageAlt} />
-              {index === 0 ? (
+              {src === showcaseImages.video ? (
                 <span aria-hidden="true">
                   <Play className="size-5" fill="currentColor" />
                 </span>

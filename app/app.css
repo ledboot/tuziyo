@@ -1807,7 +1807,7 @@ select {
 
 .home-redesign-gallery {
   display: grid;
-  grid-template-columns: repeat(6, minmax(16rem, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.75rem;
   overflow-x: auto;
   padding: 0 clamp(1rem, 3vw, 2rem) 0.4rem;
@@ -1816,17 +1816,13 @@ select {
 
 .home-redesign-gallery figure {
   position: relative;
-  min-width: 16rem;
+  min-width: 0;
   height: clamp(22rem, 34vw, 34rem);
   margin: 0;
   overflow: hidden;
   border: 0;
   border-radius: 0.7rem;
   background: #171717;
-}
-
-.home-redesign-gallery figure.is-wide {
-  min-width: min(34rem, 86vw);
 }
 
 .home-redesign-gallery img {
@@ -2016,7 +2012,7 @@ select {
   }
 
   .home-redesign-gallery {
-    grid-template-columns: repeat(6, 15rem);
+    grid-template-columns: repeat(5, 15rem);
   }
 }
 

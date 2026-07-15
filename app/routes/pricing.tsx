@@ -186,9 +186,11 @@ export default function PricingPage() {
     Array<{ name: string; supported: boolean; label?: string }>
   > | null>(null)
   const { user, token, isLoading: isUserLoading, isFetching: isUserFetching } = useUserStore()
-  const { lang } = useI18n()
+  const { lang, t } = useI18n()
   const pricingViewTrackedRef = useRef(false)
   const checkoutReturnHandledRef = useRef(false)
+  const currentUserPlan = (user?.userType ?? "free").toLowerCase()
+  const hasActiveSubscription = ["starter", "professional", "creator"].includes(currentUserPlan)
 
   useEffect(() => {
     if (pricingViewTrackedRef.current || isUserLoading || isUserFetching) return
@@ -299,12 +301,8 @@ export default function PricingPage() {
     }
 
     // Check if the user is already subscribed to any tier
-    const userPlan = (user.userType ?? "free").toLowerCase()
-    if (userPlan === "starter" || userPlan === "professional" || userPlan === "creator") {
-      const msg = lang === "zh"
-        ? "您已拥有激活的订阅。请前往个人中心管理或变更您的方案。"
-        : "You already have an active subscription. Please manage or change your plan in your profile."
-      toast.info(msg)
+    if (hasActiveSubscription) {
+      toast.info(t.pricing.activeSubscriptionTip)
       return
     }
 
@@ -493,8 +491,9 @@ export default function PricingPage() {
             const styles = getPlanStyles(planKey)
             const additionalFeatures = getAdditionalFeatures(planKey)
             const modelsList = (planModelsConfig && planModelsConfig[planKey]) || []
-            const currentUserPlan = (user?.userType ?? "free").toLowerCase()
             const isCurrentPlan = currentUserPlan === planKey
+            const isOtherPlanDisabled = hasActiveSubscription && !isCurrentPlan
+            const subscriptionTooltipId = `active-subscription-tip-${product.product_id}`
 
             const activePrice =
               billingPeriod === "monthly" ? product.prices.monthly : product.prices.yearly
@@ -557,6 +556,24 @@ export default function PricingPage() {
                     >
                       {lang === "zh" ? "当前方案" : "Current Plan"}
                     </button>
+                  ) : isOtherPlanDisabled ? (
+                    <div className="group relative" tabIndex={0}>
+                      <div
+                        id={subscriptionTooltipId}
+                        role="tooltip"
+                        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-3 w-max max-w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-white/10 bg-[#171a22] px-3 py-2 text-center text-xs font-semibold leading-relaxed text-gray-100 opacity-0 shadow-2xl shadow-black/50 transition-opacity duration-200 group-hover:opacity-100 group-focus:opacity-100"
+                      >
+                        {t.pricing.activeSubscriptionTip}
+                        <span className="absolute left-1/2 top-full size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-white/10 bg-[#171a22]" />
+                      </div>
+                      <button
+                        className="btn btn-block cursor-not-allowed rounded-2xl border-none bg-slate-800 py-3.5 text-sm font-extrabold text-slate-500 opacity-60"
+                        disabled
+                        aria-describedby={subscriptionTooltipId}
+                      >
+                        Get Started
+                      </button>
+                    </div>
                   ) : (
                     <button
                       className={`btn btn-block py-3.5 rounded-2xl font-extrabold text-sm transition-all duration-300 transform active:scale-95 ${styles.btnClass}`}

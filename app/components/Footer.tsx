@@ -52,19 +52,14 @@ export default function Footer() {
             <h4 className="footer-links-title">Resources</h4>
             <ul className="footer-links-list">
               <li>
-                <a
-                  href="https://github.com/ledboot/tuziyo"
+                <Link
+                  to="/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="footer-link"
                 >
-                  GitHub
-                </a>
-              </li>
-              <li>
-                <a href="#" className="footer-link">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

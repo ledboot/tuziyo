@@ -43,6 +43,9 @@ export interface Translations {
     openUserMenu: string
     openMenu: string
   }
+  pricing: {
+    activeSubscriptionTip: string
+  }
   home: {
     heroLead: string
     heroBody: string
@@ -299,6 +302,9 @@ export const translations: Record<Language, Translations> = {
       openUserMenu: "Open user menu",
       openMenu: "Open menu",
     },
+    pricing: {
+      activeSubscriptionTip: "You seem to already have an active subscription.",
+    },
     home: {
       ...homeMarketingByLanguage.en,
       privacyTitle: "Prompt Workspace",
@@ -422,6 +428,9 @@ export const translations: Record<Language, Translations> = {
       openUserMenu: "打开用户菜单",
       openMenu: "打开菜单",
     },
+    pricing: {
+      activeSubscriptionTip: "你似乎已有有效的订阅。",
+    },
     home: {
       ...homeMarketingByLanguage.zh,
       privacyTitle: "提示词工作区",
@@ -535,6 +544,9 @@ export const translations: Record<Language, Translations> = {
       changeLanguage: "Changer de langue",
       openUserMenu: "Ouvrir le menu utilisateur",
       openMenu: "Ouvrir le menu",
+    },
+    pricing: {
+      activeSubscriptionTip: "Il semble que vous ayez déjà un abonnement actif.",
     },
     home: {
       ...homeMarketingByLanguage.fr,
@@ -658,6 +670,9 @@ export const translations: Record<Language, Translations> = {
       openUserMenu: "ユーザーメニューを開く",
       openMenu: "メニューを開く",
     },
+    pricing: {
+      activeSubscriptionTip: "有効なサブスクリプションをすでにお持ちのようです。",
+    },
     home: {
       ...homeMarketingByLanguage.ja,
       privacyTitle: "究極のプライバシー",
@@ -778,6 +793,9 @@ export const translations: Record<Language, Translations> = {
       changeLanguage: "언어 변경",
       openUserMenu: "사용자 메뉴 열기",
       openMenu: "메뉴 열기",
+    },
+    pricing: {
+      activeSubscriptionTip: "이미 유효한 구독을 보유하고 계신 것 같습니다.",
     },
     home: {
       ...homeMarketingByLanguage.ko,
@@ -901,6 +919,9 @@ export const translations: Record<Language, Translations> = {
       openUserMenu: "Открыть меню пользователя",
       openMenu: "Открыть меню",
     },
+    pricing: {
+      activeSubscriptionTip: "Похоже, у вас уже есть активная подписка.",
+    },
     home: {
       ...homeMarketingByLanguage.ru,
       privacyTitle: "Безупречная приватность",
@@ -1022,6 +1043,9 @@ export const translations: Record<Language, Translations> = {
       changeLanguage: "Cambia lingua",
       openUserMenu: "Apri menu utente",
       openMenu: "Apri menu",
+    },
+    pricing: {
+      activeSubscriptionTip: "Sembra che tu abbia già un abbonamento attivo.",
     },
     home: {
       ...homeMarketingByLanguage.it,

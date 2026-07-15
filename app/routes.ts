@@ -13,6 +13,7 @@ export default [
   route("crop", "routes/crop.tsx"),
   route("convert", "routes/convert.tsx"),
   route("pricing", "routes/pricing.tsx"),
+  route("privacy", "routes/privacy.tsx"),
   route("profile", "routes/profile.tsx"),
   route("login", "routes/login.tsx"),
   route("auth/callback", "routes/auth/callback.tsx"),
