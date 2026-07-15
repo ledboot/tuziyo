@@ -1,4 +1,4 @@
-import { useState, useEffect, type ComponentProps } from "react"
+import { useState, useEffect, useRef, type ComponentProps } from "react"
 import { Link } from "react-router"
 import {
   Coins,
@@ -14,6 +14,7 @@ import {
 import ImageDetailModal from "~/components/ImageDetailModal"
 import { useUserStore } from "~/stores/userStore"
 import { api } from "~/lib/api"
+import { getCreditBalanceBucket, trackEvent } from "~/lib/analytics"
 import { createNoIndexMeta } from "~/lib/seo"
 
 export function meta() {
@@ -173,7 +174,12 @@ function toFavoriteDetailImage(item: FavoriteItem): FavoriteDetailImage {
 }
 
 export default function ProfilePage() {
-  const { user, logout } = useUserStore()
+  const {
+    user,
+    logout,
+    isLoading: isUserLoading,
+    isFetching: isUserFetching,
+  } = useUserStore()
   const [credits, setCredits] = useState<CreditInfo | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
@@ -181,9 +187,19 @@ export default function ProfilePage() {
   const [selectedFavorite, setSelectedFavorite] = useState<FavoriteDetailImage | null>(null)
   const [favorites, setFavorites] = useState<FavoriteDetailImage[]>([])
   const [loadingFavorites, setLoadingFavorites] = useState(false)
+  const profileViewTrackedRef = useRef(false)
 
   // Example state for sidebar selection
   const [activeTab, setActiveTab] = useState("credits")
+
+  useEffect(() => {
+    if (profileViewTrackedRef.current || isUserLoading || isUserFetching) return
+    profileViewTrackedRef.current = true
+    trackEvent("view_profile", {
+      user_type: user?.userType ?? "anonymous",
+      credit_balance_bucket: user ? getCreditBalanceBucket(user.credits) : "anonymous",
+    })
+  }, [isUserFetching, isUserLoading, user])
 
   useEffect(() => {
     if (!user) {

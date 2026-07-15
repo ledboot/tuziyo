@@ -3,6 +3,7 @@ import { SquarePen, Trash2, Pencil, Pin } from "lucide-react"
 import { api } from "~/lib/api"
 import { toast } from "sonner"
 import { useI18n } from "~/lib/i18n"
+import { trackSessionSelection } from "~/lib/analytics"
 
 interface Session {
   id: string
@@ -44,6 +45,10 @@ export function AIToolkitSidebar({
 }: AIToolkitSidebarProps) {
   const { t } = useI18n()
   const handleSessionSelect = (sessionId: string) => {
+    trackSessionSelection({
+      sessionId,
+      previousSessionId: currentSession?.id,
+    })
     setShowSidebar(false)
     handleSelectSession(sessionId)
   }

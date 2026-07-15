@@ -15,6 +15,7 @@ import {
   markPricingIntent,
   rememberGenerationTask,
   trackEvent,
+  trackModelOptionSelection,
 } from "~/lib/analytics"
 
 interface PromptAreaProps {
@@ -230,7 +231,28 @@ export default function PromptArea({
     requiredCredits > 0
       ? `Cost ≈ ${requiredCredits.toLocaleString("en-US")} credits`
       : "Cost ≈ 0 credits"
-  const optionGroups = buildOptionGroups(modelOptionConfig, normalizedModelOptions, onOptionsChange)
+  const handleModelOptionsChange = (nextOptions: Record<string, string>) => {
+    const changedOption = Object.entries(nextOptions).find(
+      ([key, value]) => normalizedModelOptions[key] !== value
+    )
+
+    if (changedOption) {
+      const [optionId, optionValue] = changedOption
+      trackModelOptionSelection({
+        modelId: selectedModel,
+        optionId,
+        optionValue,
+        previousOptionValue: normalizedModelOptions[optionId],
+      })
+    }
+
+    onOptionsChange(nextOptions)
+  }
+  const optionGroups = buildOptionGroups(
+    modelOptionConfig,
+    normalizedModelOptions,
+    handleModelOptionsChange
+  )
   const negativePromptConfig = modelOptionConfig.negative_prompt
   const supportsNegativePrompt = negativePromptConfig?.type === "textarea"
   const promptCharacterCount = getPromptCharacterCount(prompt)

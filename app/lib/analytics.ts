@@ -64,6 +64,35 @@ export function trackEvent(eventName: string, params: AnalyticsParams = {}) {
   gtag("event", eventName, compactParams(params))
 }
 
+export function trackModelOptionSelection(input: {
+  modelId: string
+  optionId: string
+  optionValue: string
+  previousOptionValue?: string
+}) {
+  if (input.optionValue === input.previousOptionValue) return false
+
+  trackEvent("select_model_option", {
+    model_id: input.modelId,
+    option_id: input.optionId,
+    option_value: input.optionValue,
+    previous_option_value: input.previousOptionValue ?? "unset",
+  })
+  return true
+}
+
+export function trackSessionSelection(input: {
+  sessionId: string
+  previousSessionId?: string
+  source?: string
+}) {
+  trackEvent("select_session", {
+    session_id: input.sessionId,
+    source: input.source ?? "session_list",
+    previous_session_id: input.previousSessionId,
+  })
+}
+
 export function setAnalyticsUser(user: { userId: string; userType: string } | null) {
   const gtag = getGtag()
   if (!gtag) return

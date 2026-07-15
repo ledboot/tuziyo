@@ -4,7 +4,9 @@ import {
   trackEvent,
   trackFreeCreditProgress,
   trackGenerationOutcomeOnce,
+  trackModelOptionSelection,
   trackPurchaseOnce,
+  trackSessionSelection,
   markPricingIntent,
   consumePricingIntent,
 } from "./analytics"
@@ -71,6 +73,57 @@ describe("analytics event collection", () => {
 
     expect(recordedEvents(fakeWindow.dataLayer)).toEqual([
       ["event", "generate_start", { model_id: "model-1" }],
+    ])
+  })
+
+  test("records model option selections only when the value changes", () => {
+    expect(
+      trackModelOptionSelection({
+        modelId: "model-1",
+        optionId: "aspect_ratio",
+        optionValue: "16:9",
+        previousOptionValue: "1:1",
+      })
+    ).toBe(true)
+    expect(
+      trackModelOptionSelection({
+        modelId: "model-1",
+        optionId: "aspect_ratio",
+        optionValue: "16:9",
+        previousOptionValue: "16:9",
+      })
+    ).toBe(false)
+
+    expect(recordedEvents(fakeWindow.dataLayer)).toEqual([
+      [
+        "event",
+        "select_model_option",
+        {
+          model_id: "model-1",
+          option_id: "aspect_ratio",
+          option_value: "16:9",
+          previous_option_value: "1:1",
+        },
+      ],
+    ])
+  })
+
+  test("records session selections from the session list", () => {
+    trackSessionSelection({
+      sessionId: "session-2",
+      previousSessionId: "session-1",
+    })
+
+    expect(recordedEvents(fakeWindow.dataLayer)).toEqual([
+      [
+        "event",
+        "select_session",
+        {
+          session_id: "session-2",
+          source: "session_list",
+          previous_session_id: "session-1",
+        },
+      ],
     ])
   })
 
