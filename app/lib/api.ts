@@ -344,7 +344,9 @@ export const api = {
         }>
         error?: string
         analytics?: {
+          task_id: string
           model: string | null
+          provider: string | null
           requested_count: number
           completed_count: number
           failed_count: number

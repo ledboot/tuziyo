@@ -8,7 +8,11 @@ import ImageDetailModal from "~/components/ImageDetailModal"
 import PromptArea, { type UploadedImage } from "~/components/PromptArea"
 import { AIToolkitSidebar } from "~/components/AIToolkitSidebar"
 import MessageImageCard from "~/components/MessageImageCard"
-import type { GeneratedImageMessage, GeneratedImageOutput } from "~/types/generatedImage"
+import {
+  mergeTaskOutputs,
+  type GeneratedImageMessage,
+  type GeneratedImageOutput,
+} from "~/types/generatedImage"
 import { createNoIndexMeta } from "~/lib/seo"
 import {
   classifyAnalyticsError,
@@ -166,6 +170,10 @@ export default function SessionDetailPage() {
         const res = await api.generate.getTaskStatus(pollingTaskId)
         if (!isSubscribed) return
 
+        if (res.outputs?.length) {
+          setMessages(previous => mergeTaskOutputs(previous, res.outputs as GeneratedImageOutput[]))
+        }
+
         if (res.status === "completed") {
           const taskContext = getGenerationTaskContext(pollingTaskId)
           const creditsData = await api.credits.get().catch(() => null)
@@ -204,7 +212,9 @@ export default function SessionDetailPage() {
         } else if (res.status === "failed") {
           const taskContext = getGenerationTaskContext(pollingTaskId)
           trackGenerationOutcomeOnce(pollingTaskId, "failed", {
+            task_id: pollingTaskId,
             model_id: taskContext?.model_id ?? res.analytics?.model ?? "unknown",
+            provider: res.analytics?.provider ?? "unknown",
             media_type: taskContext?.media_type ?? "image",
             failure_stage: "processing",
             error_type: classifyAnalyticsError(res.error),

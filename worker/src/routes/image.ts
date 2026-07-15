@@ -125,6 +125,18 @@ function getCurrentTimestamp() {
   return Math.floor(Date.now() / 1000)
 }
 
+async function setGenerationTaskProvider(
+  db: D1Database,
+  taskId: string,
+  provider: string,
+  now = getCurrentTimestamp()
+) {
+  await db
+    .prepare("UPDATE generation_tasks SET provider = ?, updated_at = ? WHERE id = ?")
+    .bind(provider, now, taskId)
+    .run()
+}
+
 function getRequestedImageCount(input: GenerateInput) {
   if (
     input.model === "bytedance/seedream-5-pro" ||
@@ -983,6 +995,8 @@ async function generateViaEvoLink(
     throw new Error(`Unknown model: ${input.model}`)
   }
 
+  await setGenerationTaskProvider(c.env.DB, dbTaskId, PROVIDERS.EVOLINK)
+
   const payload = buildEvoLinkPayload(
     evolinkModelName,
     input,
@@ -1107,6 +1121,7 @@ async function generateBytedanceImage(
 
   // 2. Try BytePlus (Backup)
   const arkKey = c.env.ARK_API_KEY
+  await setGenerationTaskProvider(c.env.DB, dbTaskId, PROVIDERS.BYTEPLUS)
   if (!arkKey) {
     throw new Error(
       `Primary EvoLink failed: ${lastError?.message || "Not configured"}. Backup BytePlus could not be tried because ARK_API_KEY is not configured.`
@@ -1402,6 +1417,7 @@ async function runBackgroundGeneration(
         },
       }
     } else if (isEvoLinkModel) {
+      await setGenerationTaskProvider(db, taskId, PROVIDERS.EVOLINK)
       const evolinkKey = c.env.EVOLINK_API_KEY
       if (!evolinkKey) {
         throw new Error("EVOLINK_API_KEY is not configured for this image model.")
@@ -1428,6 +1444,7 @@ async function runBackgroundGeneration(
     } else {
       // Call Cloudflare AI
       console.log("generation by cloudflare ai",JSON.stringify(input))
+      await setGenerationTaskProvider(db, taskId, PROVIDERS.CLOUDFLARE, now)
       result = (await c.env.AI.run(input.model as any, aiInput, {
         gateway: { id: "image-ai-gateway" },
       })) as any
@@ -1611,6 +1628,7 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
   const taskRecord = task as {
     message_id: string | null
     model: string | null
+    provider: string | null
     status: string
     result: string | null
     error: string | null
@@ -1699,7 +1717,9 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
     outputs,
     error: taskRecord.error,
     analytics: {
+      task_id: taskId,
       model: taskRecord.model,
+      provider: taskRecord.provider,
       requested_count: taskRecord.requested_count,
       completed_count: taskRecord.completed_count,
       failed_count: taskRecord.failed_count,

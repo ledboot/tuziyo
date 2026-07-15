@@ -58,3 +58,39 @@ export function getActiveOutput(message: GeneratedImageMessage, outputId?: strin
   const outputs = getVisibleOutputs(message)
   return outputs.find(output => output.id === outputId) ?? getDefaultOutput(message)
 }
+
+export function hasOutputError(output: GeneratedImageOutput) {
+  return output.status === "failed" || Boolean(output.error?.trim())
+}
+
+export function getOutputErrorMessage(output: GeneratedImageOutput) {
+  return output.error?.trim() || "The image could not be generated. Please try again."
+}
+
+export function mergeTaskOutputs(
+  messages: GeneratedImageMessage[],
+  taskOutputs: GeneratedImageOutput[]
+) {
+  if (taskOutputs.length === 0) return messages
+
+  const outputsByMessage = new Map<string, GeneratedImageOutput[]>()
+  for (const output of taskOutputs) {
+    const messageOutputs = outputsByMessage.get(output.message_id) ?? []
+    messageOutputs.push(output)
+    outputsByMessage.set(output.message_id, messageOutputs)
+  }
+
+  return messages.map(message => {
+    const incomingOutputs = outputsByMessage.get(message.id)
+    if (!incomingOutputs) return message
+
+    const existingOutputs = new Map(message.outputs.map(output => [output.id, output]))
+    return {
+      ...message,
+      outputs: incomingOutputs.map(output => ({
+        ...existingOutputs.get(output.id),
+        ...output,
+      })),
+    }
+  })
+}

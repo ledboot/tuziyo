@@ -479,6 +479,8 @@ export default function PromptArea({
   }
 
   const handleGenerate = async () => {
+    let submittedTaskId: string | undefined
+
     if (!prompt.trim() || isGenerating) return
     if (!user) {
       trackEvent("login_prompt", { source: "generate" })
@@ -543,9 +545,12 @@ export default function PromptArea({
       const data = await api.generate.create(
         requestBody as Parameters<typeof api.generate.create>[0]
       )
+      submittedTaskId = data.taskId
       if (data.error) {
         trackEvent("generate_failed", {
+          task_id: submittedTaskId ?? "not_created",
           model_id: selectedModel,
+          provider: submittedTaskId ? "pending" : "not_assigned",
           failure_stage: "submission",
           error_type: classifyAnalyticsError(data.error),
         })
@@ -604,7 +609,9 @@ export default function PromptArea({
     } catch (error) {
       console.error("Generate error:", error)
       trackEvent("generate_failed", {
+        task_id: submittedTaskId ?? "not_created",
         model_id: selectedModel,
+        provider: submittedTaskId ? "pending" : "not_assigned",
         failure_stage: "submission",
         error_type: classifyAnalyticsError(error),
       })

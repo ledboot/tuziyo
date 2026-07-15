@@ -1,5 +1,9 @@
 import { AlertTriangle } from "lucide-react"
-import type { GeneratedImageOutput } from "~/types/generatedImage"
+import {
+  getOutputErrorMessage,
+  hasOutputError,
+  type GeneratedImageOutput,
+} from "~/types/generatedImage"
 
 interface ImageThumbnailStripProps {
   outputs: GeneratedImageOutput[]
@@ -18,17 +22,13 @@ interface ImageThumbnailProps {
   onSelect: (outputId: string) => void
 }
 
-function ImageThumbnail({
-  output,
-  active,
-  compact,
-  hoverShadow,
-  onSelect,
-}: ImageThumbnailProps) {
+function ImageThumbnail({ output, active, compact, hoverShadow, onSelect }: ImageThumbnailProps) {
   const handleClick = () => onSelect(output.id)
   const sizeClass = compact ? "size-12" : "size-14 md:size-16"
   const hoverShadowClass = hoverShadow ? "hover:shadow-lg hover:shadow-black/30" : ""
   const thumbnailUrl = output.thumbnail_url
+  const outputHasError = hasOutputError(output)
+  const errorMessage = outputHasError ? getOutputErrorMessage(output) : null
 
   return (
     <button
@@ -39,12 +39,17 @@ function ImageThumbnail({
           ? "border-white opacity-100 ring-1 ring-white/30 hover:border-white"
           : "border-white/15 opacity-60 hover:border-white/45 hover:opacity-100"
       }`}
-      aria-label={`Show generated image ${output.output_index + 1}`}
+      aria-label={
+        outputHasError
+          ? `Generated image ${output.output_index + 1} failed: ${errorMessage}`
+          : `Show generated image ${output.output_index + 1}`
+      }
       aria-pressed={active}
+      title={errorMessage ?? undefined}
     >
-      {output.status === "completed" && thumbnailUrl ? (
+      {output.status === "completed" && thumbnailUrl && !outputHasError ? (
         <img src={thumbnailUrl} alt="" className="size-full object-cover" loading="lazy" />
-      ) : output.status === "failed" ? (
+      ) : outputHasError ? (
         <span className="flex size-full items-center justify-center bg-red-950/40 text-red-300">
           <AlertTriangle className="size-4" aria-hidden="true" />
         </span>

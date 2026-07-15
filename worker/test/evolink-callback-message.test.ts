@@ -278,11 +278,59 @@ describe("EvoLink callback message association", () => {
     expect(body.outputs[0]).not.toHaveProperty("url")
     expect(body.outputs[0]).not.toHaveProperty("image_url")
     expect(body.analytics).toEqual({
+      task_id: "task-1",
       model: "openai/gpt-image-2",
+      provider: "evolink",
       requested_count: 1,
       completed_count: 1,
       failed_count: 0,
       duration_seconds: 12,
+    })
+  })
+
+  test("failed task status exposes the task ID and final provider", async () => {
+    const { sqlite, env } = setup()
+    sqlite.exec(`
+      UPDATE generation_tasks
+      SET status = 'failed', provider = 'byteplus', error = 'Provider request failed',
+        failed_count = 1, created_at = 100, updated_at = 109
+      WHERE id = 'task-1';
+    `)
+
+    const token = await sign(
+      {
+        userId: "user-1",
+        email: "user@example.com",
+        name: "User",
+        userType: "free",
+        credits: 1000,
+        exp: Math.floor(Date.now() / 1000) + 60,
+      },
+      JWT_SECRET,
+      "HS256"
+    )
+    const response = await app.request(
+      "/api/generate/task/task-1",
+      { headers: { Authorization: `Bearer ${token}` } },
+      env
+    )
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as {
+      status: string
+      error: string | null
+      analytics: Record<string, unknown>
+    }
+    expect(body.status).toBe("failed")
+    expect(body.error).toBe("Provider request failed")
+    expect(body.analytics).toEqual({
+      task_id: "task-1",
+      model: "openai/gpt-image-2",
+      provider: "byteplus",
+      requested_count: 1,
+      completed_count: 0,
+      failed_count: 1,
+      duration_seconds: 9,
     })
   })
 
