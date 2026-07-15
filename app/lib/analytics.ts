@@ -1,4 +1,4 @@
-export const GA_MEASUREMENT_ID = "G-27ZPF1WLVF"
+export const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID?.trim() ?? ""
 
 type AnalyticsPrimitive = string | number | boolean
 type AnalyticsItem = Record<string, AnalyticsPrimitive>
@@ -95,7 +95,7 @@ export function trackSessionSelection(input: {
 
 export function setAnalyticsUser(user: { userId: string; userType: string } | null) {
   const gtag = getGtag()
-  if (!gtag) return
+  if (!gtag || !GA_MEASUREMENT_ID) return
 
   gtag("config", GA_MEASUREMENT_ID, {
     user_id: user?.userId ?? null,
