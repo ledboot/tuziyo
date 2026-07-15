@@ -200,16 +200,23 @@ export function trackFreeCreditProgress(input: {
   const storageKey = `${CREDIT_MILESTONES_PREFIX}${input.userId}`
   const reached = new Set(readStringList(localStorage, storageKey))
 
-  for (const milestone of [50, 80, 100]) {
-    const milestoneKey = String(milestone)
-    if (usedPercent < milestone || reached.has(milestoneKey)) continue
+  const reachedMilestones = [50, 80, 100].filter(milestone => usedPercent >= milestone)
+  let highestNewMilestone: number | undefined
+  for (let index = reachedMilestones.length - 1; index >= 0; index -= 1) {
+    const milestone = reachedMilestones[index]
+    if (!reached.has(String(milestone))) {
+      highestNewMilestone = milestone
+      break
+    }
+  }
 
+  if (highestNewMilestone !== undefined) {
     trackEvent("credit_milestone", {
-      milestone,
+      milestone: highestNewMilestone,
       grant_type: "onboarding",
       remaining_credit_bucket: getCreditBalanceBucket(input.balance),
     })
-    reached.add(milestoneKey)
+    reachedMilestones.forEach(milestone => reached.add(String(milestone)))
   }
 
   if (input.balance === 0 && !reached.has("exhausted")) {

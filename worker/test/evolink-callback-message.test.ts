@@ -148,7 +148,7 @@ describe("EvoLink callback message association", () => {
           object: EVOLINK_TASK_OBJECTS.IMAGE,
           id: "provider-task-1",
           status: "completed",
-          results: ["https://provider.example.com/generated.png"],
+          results: ["https://provider.example.com/generated"],
         }),
       },
       env
@@ -161,13 +161,13 @@ describe("EvoLink callback message association", () => {
     expect(inspectedImages[0]?.byteLength).toBe(3)
 
     const messages = sqlite
-      .query("SELECT id, provider, image_url FROM messages ORDER BY created_at")
+      .query("SELECT id, provider, output_format FROM messages ORDER BY created_at")
       .all()
     expect(messages).toHaveLength(1)
     expect(messages[0]).toEqual({
       id: "original-message",
       provider: "evolink",
-      image_url: storedKeys[0],
+      output_format: "png",
     })
 
     const output = sqlite
@@ -191,6 +191,7 @@ describe("EvoLink callback message association", () => {
     const taskResult = JSON.parse(task.result)
     expect(taskResult.messageId).toBe("original-message")
     expect(taskResult.outputs[0]).toMatchObject({ width: 1536, height: 1024 })
+    expect(storedKeys[0]).toEndWith(".png")
   })
 
   test("does not write to R2 when image dimensions cannot be inspected", async () => {
@@ -549,6 +550,55 @@ describe("EvoLink callback message association", () => {
 
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({ error: "Invalid image key" })
+  })
+
+  test("message creation stores an owned image only in message_outputs", async () => {
+    const { sqlite, env } = setup()
+    const token = await sign(
+      {
+        userId: "user-1",
+        email: "user@example.com",
+        name: "User",
+        userType: "free",
+        credits: 1000,
+        exp: Math.floor(Date.now() / 1000) + 60,
+      },
+      JWT_SECRET,
+      "HS256"
+    )
+
+    const response = await app.request(
+      "/api/sessions/session-1/messages",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          role: "assistant",
+          prompt: "Stored output",
+          model: "openai/gpt-image-2",
+          image_url: "generated-images/user-1/manual.webp",
+        }),
+      },
+      env
+    )
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { message: { id: string } }
+    expect(
+      sqlite.query("SELECT output_format FROM messages WHERE id = ?").get(body.message.id)
+    ).toEqual({ output_format: "webp" })
+    expect(
+      sqlite
+        .query("SELECT message_id, image_url, status FROM message_outputs WHERE message_id = ?")
+        .get(body.message.id)
+    ).toEqual({
+      message_id: body.message.id,
+      image_url: "generated-images/user-1/manual.webp",
+      status: "completed",
+    })
   })
 })
 

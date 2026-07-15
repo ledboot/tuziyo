@@ -123,6 +123,7 @@ export const IMAGE_MODEL_CATALOG: Record<string, ImageModelDefinition> = {
         values: ["2K", "4K"],
         defaultValue: "2K",
         valueCredits: {
+          "2K": 4,
           "4K": 15,
         },
       },

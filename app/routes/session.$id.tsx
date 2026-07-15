@@ -189,7 +189,9 @@ export default function SessionDetailPage() {
             }
           }
           trackGenerationOutcomeOnce(pollingTaskId, "completed", {
+            task_id: res.analytics?.task_id ?? pollingTaskId,
             model_id: taskContext?.model_id ?? res.analytics?.model ?? "unknown",
+            provider: res.analytics?.provider ?? "unknown",
             media_type: taskContext?.media_type ?? "image",
             credit_cost: taskContext?.credit_cost,
             requested_outputs:

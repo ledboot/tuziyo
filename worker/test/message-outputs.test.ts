@@ -38,6 +38,15 @@ afterEach(() => {
 })
 
 describe("message outputs schema", () => {
+  test("stores image keys only in message_outputs", () => {
+    const database = createDatabase()
+    const messageColumns = database.query("PRAGMA table_info(messages)").all() as Array<{
+      name: string
+    }>
+
+    expect(messageColumns.map(column => column.name)).not.toContain("image_url")
+  })
+
   test("stores multiple ordered outputs under one message", () => {
     const database = createDatabase()
     insertMessageFixture(database)
@@ -138,6 +147,7 @@ describe("message outputs schema", () => {
         user_id TEXT NOT NULL,
         status INTEGER NOT NULL DEFAULT 1,
         image_url TEXT,
+        output_format TEXT,
         created_at INTEGER NOT NULL
       );
       CREATE TABLE generation_tasks (
@@ -203,8 +213,17 @@ describe("message outputs schema", () => {
         "utf8"
       )
     )
+    database.exec(
+      readFileSync(
+        join(import.meta.dir, "../../db/migrations/0006_remove_messages_image_url.sql"),
+        "utf8"
+      )
+    )
 
     const taskColumns = database.query("PRAGMA table_info(generation_tasks)").all() as Array<{
+      name: string
+    }>
+    const messageColumns = database.query("PRAGMA table_info(messages)").all() as Array<{
       name: string
     }>
     const favorite = database
@@ -220,9 +239,14 @@ describe("message outputs schema", () => {
         "SELECT message_id, requested_count, completed_count, failed_count FROM generation_tasks WHERE id = 'task-1'"
       )
       .get()
+    const message = database
+      .query("SELECT output_format FROM messages WHERE id = 'message-1'")
+      .get()
 
     expect(taskColumns.map(column => column.name)).toContain("message_id")
     expect(taskColumns.map(column => column.name)).toContain("requested_count")
+    expect(messageColumns.map(column => column.name)).not.toContain("image_url")
+    expect(message).toEqual({ output_format: "png" })
     expect(favorite).toEqual({ message_id: "message-1", output_id: "legacy-message-1" })
     expect(output).toEqual({
       message_id: "message-1",

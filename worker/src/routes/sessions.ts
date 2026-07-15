@@ -19,7 +19,6 @@ interface SessionMessageRecord {
   provider: string | null
   model: string
   prompt: string | null
-  image_url: string | null
   aspect_ratio: string | null
   resolution: string | null
   image_size: string | null
@@ -59,22 +58,13 @@ export async function handleGetSessions(c: AuthenticatedContext) {
   const sessions = await c.env.DB.prepare(
     `
       SELECT s.id, s.title, s.is_pinned, s.created_at, s.updated_at,
-        COALESCE(
-          (
-            SELECT mo.image_url
-            FROM message_outputs mo
-            INNER JOIN messages m ON m.id = mo.message_id
-            WHERE m.session_id = s.id AND m.status = 1 AND mo.status = 'completed' AND mo.image_url IS NOT NULL
-            ORDER BY m.created_at ASC, mo.output_index ASC
-            LIMIT 1
-          ),
-          (
-            SELECT m.image_url
-            FROM messages m
-            WHERE m.session_id = s.id AND m.status = 1 AND m.image_url IS NOT NULL
-            ORDER BY m.created_at ASC
-            LIMIT 1
-          )
+        (
+          SELECT mo.image_url
+          FROM message_outputs mo
+          INNER JOIN messages m ON m.id = mo.message_id
+          WHERE m.session_id = s.id AND m.status = 1 AND mo.status = 'completed' AND mo.image_url IS NOT NULL
+          ORDER BY m.created_at ASC, mo.output_index ASC
+          LIMIT 1
         ) AS preview_image
       FROM sessions s
       WHERE s.user_id = ? AND s.status = 1
@@ -115,8 +105,8 @@ export async function handleGetSession(c: AuthenticatedContext) {
 
   const messages = await c.env.DB.prepare(
     `
-      SELECT m.id, m.role, m.provider, m.model, m.prompt, m.image_url, m.aspect_ratio, m.resolution,
-        m.image_size, m.quality, m.style, m.negative_prompt, m.output_format, m.num_images,
+      SELECT m.id, m.role, m.provider, m.model, m.prompt, m.aspect_ratio,
+        m.resolution, m.image_size, m.quality, m.style, m.negative_prompt, m.output_format, m.num_images,
         m.google_search, m.image_search, m.created_at,
         (CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END) AS is_favorite
       FROM messages m
@@ -128,12 +118,7 @@ export async function handleGetSession(c: AuthenticatedContext) {
     .bind(user.userId, sessionId)
     .all()
 
-  const messageRecords = messages.results as unknown as SessionMessageRecord[]
-  const legacyImageUrls = new Map(messageRecords.map(message => [message.id, message.image_url]))
-  const messageResults = messageRecords.map(message => {
-    const { image_url: _imageUrl, ...publicMessage } = message
-    return publicMessage
-  })
+  const messageResults = messages.results as unknown as SessionMessageRecord[]
 
   const outputs = await c.env.DB.prepare(
     `
@@ -174,42 +159,10 @@ export async function handleGetSession(c: AuthenticatedContext) {
     outputsByMessage.set(output.message_id, messageOutputs)
   }
 
-  const results = await Promise.all(
-    messageResults.map(async message => {
-      const messageOutputs = outputsByMessage.get(message.id)
-      if (messageOutputs && messageOutputs.length > 0) {
-        return { ...message, outputs: messageOutputs }
-      }
-
-      const legacyImageKey = legacyImageUrls.get(message.id) ?? null
-      if (legacyImageKey) {
-        return {
-          ...message,
-          outputs: [
-            {
-              id: message.id,
-              message_id: message.id,
-              output_index: 0,
-              status: "completed" as const,
-              content_type: MIME_TYPES.IMAGE,
-              width: null,
-              height: null,
-              file_size: null,
-              error: null,
-              created_at: message.created_at,
-              updated_at: message.created_at,
-              is_favorite: message.is_favorite ?? 0,
-              thumbnail_url: await createSignedImageVariantUrl(c.env, legacyImageKey, "small"),
-              display_url: await createSignedImageVariantUrl(c.env, legacyImageKey, "large"),
-              legacy: true,
-            },
-          ],
-        }
-      }
-
-      return { ...message, outputs: [] }
-    })
-  )
+  const results = messageResults.map(message => ({
+    ...message,
+    outputs: outputsByMessage.get(message.id) ?? [],
+  }))
 
   const pendingTasksResult = await c.env.DB.prepare(
     `
@@ -324,14 +277,20 @@ export async function handleCreateMessage(c: AuthenticatedContext) {
 
   const now = Math.floor(Date.now() / 1000)
   const messageId = uuidv4()
+  const outputId = normalizedImageKey ? uuidv4() : null
+  const extension = normalizedImageKey?.split("?")[0].split(".").pop()?.toLowerCase()
+  const outputFormat =
+    extension && ["png", "jpg", "jpeg", "webp"].includes(extension) ? extension : null
 
-  await c.env.DB.prepare(
-    `
-      INSERT INTO messages (id, session_id, user_id, role, provider, model, prompt, image_url, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `
-  )
-    .bind(
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `
+          INSERT INTO messages (
+            id, session_id, user_id, role, provider, model, prompt, output_format, created_at
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `
+    ).bind(
       messageId,
       sessionId,
       user.userId,
@@ -339,10 +298,22 @@ export async function handleCreateMessage(c: AuthenticatedContext) {
       role === "user" ? "user" : "assistant",
       model,
       prompt,
-      normalizedImageKey || null,
+      outputFormat,
       now
-    )
-    .run()
+    ),
+    ...(outputId
+      ? [
+          c.env.DB.prepare(
+            `
+                INSERT INTO message_outputs (
+                  id, message_id, output_index, status, image_url, content_type, created_at, updated_at
+                )
+                VALUES (?, ?, 0, 'completed', ?, ?, ?, ?)
+              `
+          ).bind(outputId, messageId, normalizedImageKey, MIME_TYPES.IMAGE, now, now),
+        ]
+      : []),
+  ])
 
   await c.env.DB.prepare("UPDATE sessions SET updated_at = ? WHERE id = ?")
     .bind(now, sessionId)

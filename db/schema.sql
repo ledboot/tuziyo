@@ -48,7 +48,6 @@ CREATE TABLE IF NOT EXISTS messages (
     provider TEXT NOT NULL,
     model TEXT NOT NULL,
     prompt TEXT,
-    image_url TEXT,
     aspect_ratio TEXT,
     resolution TEXT,
     enable_search INTEGER DEFAULT 0,

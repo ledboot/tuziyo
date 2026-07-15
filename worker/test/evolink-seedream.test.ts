@@ -32,7 +32,7 @@ describe("Seedream 5 Pro EvoLink integration", () => {
       (provider, index) => index === 0 || provider !== providers[index - 1]
     )
 
-    expect(providerGroups).toEqual(["Alibaba", "ByteDance", "Google", "OpenAI", "Recraft", "xAI"])
+    expect(providerGroups).toEqual(["ByteDance", "Google", "OpenAI"])
 
     for (const provider of providerGroups) {
       const providerModels = models.filter(model => model.provider === provider)

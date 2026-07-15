@@ -4,6 +4,37 @@ import { buildEvoLinkPayload } from "../src/routes/image"
 import { calculateRequiredCredits } from "../src/routes/credits"
 
 describe("EvoLink GPT Image 2", () => {
+  test("keeps provider size separate from aspect_ratio", () => {
+    expect(IMAGE_MODEL_CATALOG["openai/gpt-image-2"].options.size).toMatchObject({
+      name: "Size",
+      defaultValue: "1:1",
+    })
+    expect(IMAGE_MODEL_CATALOG["openai/gpt-image-2"].options.aspect_ratio).toBeUndefined()
+
+    expect(
+      buildEvoLinkPayload("gpt-image-2", {
+        model: "openai/gpt-image-2",
+        prompt: "A cinematic rabbit",
+        size: "16:9",
+      }).size
+    ).toBe("16:9")
+  })
+
+  test("catalog models expose only their actual size or aspect-ratio option", () => {
+    const sizeModels = Object.entries(IMAGE_MODEL_CATALOG)
+      .filter(([, model]) => model.options.size)
+      .map(([id]) => id)
+
+    expect(sizeModels).toEqual([
+      "openai/gpt-image-1.5",
+      "alibaba/wan-2.6-image",
+      "openai/gpt-image-2",
+    ])
+    for (const modelId of sizeModels) {
+      expect(IMAGE_MODEL_CATALOG[modelId].options.aspect_ratio).toBeUndefined()
+    }
+  })
+
   test("exposes a one-to-five image selector", () => {
     expect(IMAGE_MODEL_CATALOG["openai/gpt-image-2"].options.num_images).toMatchObject({
       values: ["1", "2", "3", "4", "5"],

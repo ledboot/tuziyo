@@ -87,7 +87,6 @@ interface ImageRecord {
   message_id: string
   session_id: string
   image_url: string
-  is_legacy: number
 }
 
 interface FavoriteImageRecord {
@@ -173,11 +172,33 @@ const DEFAULT_MEDIA_CONTENT_TYPE: Record<MimeType, string> = {
   [MIME_TYPES.AUDIO]: "audio/mpeg",
 }
 
+const CONTENT_TYPE_EXTENSIONS: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+  "audio/mpeg": "mp3",
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+  "audio/mp4": "m4a",
+  "audio/aac": "aac",
+  "audio/ogg": "ogg",
+  "audio/flac": "flac",
+}
+
 function getGeneratedMediaExtension(
   originUrl: string,
   outputFormat: string | undefined,
-  mimeType: MimeType
+  mimeType: MimeType,
+  contentType?: string
 ) {
+  const contentTypeExtension = CONTENT_TYPE_EXTENSIONS[normalizeContentType(contentType || "")]
+  if (contentTypeExtension && MEDIA_EXTENSIONS[mimeType].includes(contentTypeExtension)) {
+    return contentTypeExtension
+  }
+
   const urlExtension = originUrl.split("?")[0].split(".").pop()?.toLowerCase()
   if (urlExtension && MEDIA_EXTENSIONS[mimeType].includes(urlExtension)) {
     return urlExtension
@@ -326,27 +347,13 @@ function applyReferenceImages(
 }
 
 async function getUserImage(c: AuthenticatedContext, imageId: string, userId: string) {
-  const output = await c.env.DB.prepare(
+  return c.env.DB.prepare(
     `
-      SELECT mo.id, mo.message_id, m.session_id, mo.image_url, 0 AS is_legacy
+      SELECT mo.id, mo.message_id, m.session_id, mo.image_url
       FROM message_outputs mo
       INNER JOIN messages m ON m.id = mo.message_id AND m.status = 1
       INNER JOIN sessions s ON s.id = m.session_id AND s.status = 1
       WHERE mo.id = ? AND s.user_id = ? AND mo.status = 'completed' AND mo.image_url IS NOT NULL
-      LIMIT 1
-    `
-  )
-    .bind(imageId, userId)
-    .first<ImageRecord>()
-
-  if (output) return output
-
-  return c.env.DB.prepare(
-    `
-      SELECT m.id, m.id AS message_id, m.session_id, m.image_url, 1 AS is_legacy
-      FROM messages m
-      INNER JOIN sessions s ON s.id = m.session_id AND s.status = 1
-      WHERE m.id = ? AND s.user_id = ? AND m.status = 1 AND m.image_url IS NOT NULL
       LIMIT 1
     `
   )
@@ -455,7 +462,7 @@ export async function handleGetFavorites(c: AuthenticatedContext) {
         f.id AS favorite_id,
         f.content_type,
         f.created_at AS favorite_created_at,
-        COALESCE(mo.id, m.id) AS id,
+        mo.id AS id,
         m.id AS message_id,
         mo.id AS output_id,
         m.session_id,
@@ -464,7 +471,7 @@ export async function handleGetFavorites(c: AuthenticatedContext) {
         m.provider,
         m.model,
         m.prompt,
-        COALESCE(mo.image_url, m.image_url) AS image_url,
+        mo.image_url AS image_url,
         m.aspect_ratio,
         m.resolution,
         m.image_size,
@@ -478,10 +485,10 @@ export async function handleGetFavorites(c: AuthenticatedContext) {
         m.created_at
       FROM content_favorites f
       INNER JOIN messages m ON m.id = f.message_id
-      LEFT JOIN message_outputs mo ON mo.id = f.output_id AND mo.status = 'completed'
+      INNER JOIN message_outputs mo ON mo.id = f.output_id AND mo.status = 'completed'
       INNER JOIN sessions s ON s.id = m.session_id AND s.status = 1
       WHERE f.user_id = ? AND f.content_type = 'image' AND s.user_id = ? AND m.status = 1
-        AND COALESCE(mo.image_url, m.image_url) IS NOT NULL
+        AND mo.image_url IS NOT NULL
       ORDER BY f.created_at DESC
       LIMIT ? OFFSET ?
     `
@@ -494,10 +501,10 @@ export async function handleGetFavorites(c: AuthenticatedContext) {
       SELECT COUNT(*) AS total
       FROM content_favorites f
       INNER JOIN messages m ON m.id = f.message_id
-      LEFT JOIN message_outputs mo ON mo.id = f.output_id AND mo.status = 'completed'
+      INNER JOIN message_outputs mo ON mo.id = f.output_id AND mo.status = 'completed'
       INNER JOIN sessions s ON s.id = m.session_id AND s.status = 1
       WHERE f.user_id = ? AND f.content_type = 'image' AND s.user_id = ? AND m.status = 1
-        AND COALESCE(mo.image_url, m.image_url) IS NOT NULL
+        AND mo.image_url IS NOT NULL
     `
   )
     .bind(user.userId, user.userId)
@@ -544,31 +551,19 @@ export async function handleSetImageFavorite(c: AuthenticatedContext) {
   }
 
   if (favorited) {
-    if (image.is_legacy) {
-      await c.env.DB.prepare(
-        `
-          INSERT OR IGNORE INTO content_favorites (id, user_id, content_type, message_id, output_id, created_at)
-          VALUES (?, ?, 'image', ?, NULL, ?)
-        `
-      )
-        .bind(uuidv4(), user.userId, image.message_id, getCurrentTimestamp())
-        .run()
-    } else {
-      await c.env.DB.prepare(
-        `
-          INSERT OR IGNORE INTO content_favorites (id, user_id, content_type, message_id, output_id, created_at)
-          VALUES (?, ?, 'image', ?, ?, ?)
-        `
-      )
-        .bind(uuidv4(), user.userId, image.message_id, image.id, getCurrentTimestamp())
-        .run()
-    }
+    await c.env.DB.prepare(
+      `
+        INSERT OR IGNORE INTO content_favorites (id, user_id, content_type, message_id, output_id, created_at)
+        VALUES (?, ?, 'image', ?, ?, ?)
+      `
+    )
+      .bind(uuidv4(), user.userId, image.message_id, image.id, getCurrentTimestamp())
+      .run()
   } else {
-    const deleteSql = image.is_legacy
-      ? "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND message_id = ? AND output_id IS NULL"
-      : "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND output_id = ?"
-    await c.env.DB.prepare(deleteSql)
-      .bind(user.userId, image.is_legacy ? image.message_id : image.id)
+    await c.env.DB.prepare(
+      "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND output_id = ?"
+    )
+      .bind(user.userId, image.id)
       .run()
   }
 
@@ -622,38 +617,26 @@ export async function handleDeleteImage(c: AuthenticatedContext) {
   }
 
   const now = getCurrentTimestamp()
-  if (image.is_legacy) {
-    await c.env.DB.batch([
-      c.env.DB.prepare(
-        "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND message_id = ? AND output_id IS NULL"
-      ).bind(user.userId, image.message_id),
-      c.env.DB.prepare("UPDATE messages SET status = 2 WHERE id = ?").bind(image.message_id),
-      c.env.DB.prepare(
-        "UPDATE sessions SET updated_at = ? WHERE id = ? AND user_id = ? AND status = 1"
-      ).bind(now, image.session_id, user.userId),
-    ])
-  } else {
-    await c.env.DB.batch([
-      c.env.DB.prepare(
-        "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND output_id = ?"
-      ).bind(user.userId, image.id),
-      c.env.DB.prepare(
-        "UPDATE message_outputs SET status = 'deleted', deleted_at = ?, updated_at = ? WHERE id = ?"
-      ).bind(now, now, image.id),
-      c.env.DB.prepare(
-        `
-          UPDATE messages
-          SET status = 2
-          WHERE id = ? AND NOT EXISTS (
-            SELECT 1 FROM message_outputs WHERE message_id = ? AND status != 'deleted'
-          )
-        `
-      ).bind(image.message_id, image.message_id),
-      c.env.DB.prepare(
-        "UPDATE sessions SET updated_at = ? WHERE id = ? AND user_id = ? AND status = 1"
-      ).bind(now, image.session_id, user.userId),
-    ])
-  }
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND output_id = ?"
+    ).bind(user.userId, image.id),
+    c.env.DB.prepare(
+      "UPDATE message_outputs SET status = 'deleted', deleted_at = ?, updated_at = ? WHERE id = ?"
+    ).bind(now, now, image.id),
+    c.env.DB.prepare(
+      `
+        UPDATE messages
+        SET status = 2
+        WHERE id = ? AND NOT EXISTS (
+          SELECT 1 FROM message_outputs WHERE message_id = ? AND status != 'deleted'
+        )
+      `
+    ).bind(image.message_id, image.message_id),
+    c.env.DB.prepare(
+      "UPDATE sessions SET updated_at = ? WHERE id = ? AND user_id = ? AND status = 1"
+    ).bind(now, image.session_id, user.userId),
+  ])
 
   return c.json({
     success: true,
@@ -810,9 +793,9 @@ export async function handleGenerate(c: AuthenticatedContext) {
         INSERT INTO messages (
           id, session_id, user_id, role, provider, model, prompt, aspect_ratio, resolution,
           google_search, image_search, image_size, quality, style, negative_prompt,
-          output_format, num_images, image_url, created_at
+          output_format, num_images, created_at
         )
-        VALUES (?, ?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+        VALUES (?, ?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `
     ).bind(
       messageId,
@@ -1228,6 +1211,7 @@ async function completeGenerationTask(
     id: string
     index: number
     key: string
+    extension: string
     width: number | null
     height: number | null
   }> = []
@@ -1256,10 +1240,18 @@ async function completeGenerationTask(
       }
 
       const imageBuffer = await imageResponse.arrayBuffer()
-      const extension = getGeneratedMediaExtension(originUrl, input.output_format, mimeType)
+      const responseContentType = normalizeContentType(
+        imageResponse.headers.get("content-type") || ""
+      )
+      const extension = getGeneratedMediaExtension(
+        originUrl,
+        input.output_format,
+        mimeType,
+        responseContentType
+      )
       const key = createGeneratedImageKey(userId, extension)
       const contentType =
-        normalizeContentType(imageResponse.headers.get("content-type") || "") ||
+        responseContentType ||
         getImageContentTypeFromKey(key) ||
         DEFAULT_MEDIA_CONTENT_TYPE[mimeType]
 
@@ -1294,6 +1286,7 @@ async function completeGenerationTask(
         id: output.id,
         index: outputIndex,
         key,
+        extension,
         width,
         height,
       })
@@ -1346,11 +1339,16 @@ async function completeGenerationTask(
     .prepare(
       `
         UPDATE messages
-        SET provider = ?, image_url = ?
+        SET provider = ?, output_format = ?
         WHERE id = ? AND user_id = ?
       `
     )
-    .bind(finalProvider, completedOutputs[0].key, messageId, userId)
+    .bind(
+      finalProvider,
+      input.output_format?.toLowerCase() || completedOutputs[0].extension,
+      messageId,
+      userId
+    )
     .run()
 
   // Update session updated_at
