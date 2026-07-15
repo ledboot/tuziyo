@@ -15,13 +15,8 @@ export const languageNames: Record<Language, string> = {
 export interface Translations {
   common: {
     tools: string
-    aboutUs: string
-    resources: string
-    languages: string
     uploadImage: string
     saveResult: string
-    undo: string
-    loading: string
     processing: string
     ready: string
     freeForever: string
@@ -34,23 +29,10 @@ export interface Translations {
     failed: string
     free: string
     total: string
-    back: string
-    explore: string
-    ctaDesc: string
-    privacyPolicy: string
-    termsOfService: string
-    contactSupport: string
   }
   nav: {
-    tools: string
-    freeTools: string
     aiToolkit: string
-    inpainting: string
-    resize: string
-    crop: string
-    convert: string
     pricing: string
-    api: string
     login: string
     register: string
     profile: string
@@ -60,29 +42,19 @@ export interface Translations {
     changeLanguage: string
     openUserMenu: string
     openMenu: string
-    x: string
-    github: string
-    about: string
-    blog: string
-    contactAuthor: string
   }
   home: {
     heroLead: string
     heroBody: string
     start: string
-    explore: string
-    proofTags: string[]
     proofAriaLabel: string
-    heroVisualAriaLabel: string
     generationTitle: string
     generationDesc: string
     imageTitle: string
     imageDesc: string
-    imagePrompt: string
     imageAction: string
     videoTitle: string
     videoDesc: string
-    videoPrompt: string
     videoAction: string
     toolkitTitle: string
     toolkitDesc: string
@@ -95,27 +67,16 @@ export interface Translations {
     ctaTitle: string
     ctaDesc: string
     register: string
-    tools: [string, string][]
     testimonials: [string, string, string][]
-    heroTitle: string
-    heroSubtitle: string
-    getStarted: string
-    featuresTitle: string
     privacyTitle: string
     privacyDesc: string
     speedTitle: string
     speedDesc: string
-    aiTitle: string
     aiDesc: string
   }
   aiToolkit: {
     promptPlaceholder: string
     generating: string
-    pressEnter: string
-    settings: string
-    aspectRatio: string
-    quality: string
-    numberOfImages: string
     newSession: string
   }
   inpainting: {
@@ -124,13 +85,6 @@ export interface Translations {
     dropzone: string
     history: string
     brushSize: string
-    engine: string
-    comparison: string
-    splitView: string
-    sideBySide: string
-    currentVersion: string
-    iteration: string
-    aiModel: string
     aiPowered: string
     newImage: string
     showMask: string
@@ -151,7 +105,6 @@ export interface Translations {
   }
   resize: {
     title: string
-    description: string
     pixels: string
     percentage: string
     width: string
@@ -161,7 +114,6 @@ export interface Translations {
   }
   crop: {
     title: string
-    description: string
     aspectRatio: string
     format: string
     downloadAll: string
@@ -180,9 +132,6 @@ export interface Translations {
     title: string
     description: string
     keywords: string
-    watermarkTitle: string
-    watermarkDesc: string
-    watermarkKeywords: string
     resizeTitle: string
     resizeDesc: string
     resizeKeywords: string
@@ -203,19 +152,14 @@ type HomeMarketingTranslations = Pick<
   | "heroLead"
   | "heroBody"
   | "start"
-  | "explore"
-  | "proofTags"
   | "proofAriaLabel"
-  | "heroVisualAriaLabel"
   | "generationTitle"
   | "generationDesc"
   | "imageTitle"
   | "imageDesc"
-  | "imagePrompt"
   | "imageAction"
   | "videoTitle"
   | "videoDesc"
-  | "videoPrompt"
   | "videoAction"
   | "toolkitTitle"
   | "toolkitDesc"
@@ -228,7 +172,6 @@ type HomeMarketingTranslations = Pick<
   | "ctaTitle"
   | "ctaDesc"
   | "register"
-  | "tools"
   | "testimonials"
 >
 
@@ -237,20 +180,15 @@ const enHomeMarketing: HomeMarketingTranslations = {
   heroBody:
     "A cinematic creative workspace for generating images and videos, editing pictures, and preparing polished assets for every project.",
   start: "Start Free Now",
-  explore: "Explore the suite",
-  proofTags: ["Images", "Videos", "Editing"],
   proofAriaLabel: "Creative model and tool strip",
-  heroVisualAriaLabel: "Cinematic creative workspace preview",
   generationTitle: "Everything you need to shape the shot",
   generationDesc:
     "Move from idea to finished asset with image creation, video direction, and practical editing tools in one elegant flow.",
   imageTitle: "Image creation",
   imageDesc: "Create product shots, campaign visuals, covers, and concept frames with a polished production look.",
-  imagePrompt: "A cinematic product scene with reflective glass, soft daylight, and refined composition...",
   imageAction: "Create image",
   videoTitle: "Video concepts",
   videoDesc: "Explore cinematic motion ideas for ads, stories, launch films, and visual experiments.",
-  videoPrompt: "A slow camera move through a mirrored hall filled with floating masks...",
   videoAction: "Create video",
   toolkitTitle: "Picture finishing",
   toolkitDesc: "Retouch, crop, resize, and convert images so every output is ready to publish.",
@@ -263,12 +201,6 @@ const enHomeMarketing: HomeMarketingTranslations = {
   ctaTitle: "Make your next visual with tuziyo",
   ctaDesc: "Start with an idea, shape the look, and finish it with the tools your content needs.",
   register: "Start Free Now",
-  tools: [
-    ["Resize", "Resize images for social, product, and publishing formats while preserving quality."],
-    ["Convert Format", "Convert assets across JPG, PNG, WebP, and production-friendly export formats."],
-    ["Inpainting", "Remove unwanted elements, repair scenes, and complete missing image areas."],
-    ["Crop", "Reframe generated or uploaded images for thumbnails, covers, and campaign layouts."],
-  ],
   testimonials: [
     [
       "Prompt",
@@ -297,19 +229,14 @@ const zhHomeMarketing: HomeMarketingTranslations = {
   heroLead: "创作你想象中的任何视觉",
   heroBody: "一个有电影质感的创作工作区，用来生成图片和视频、编辑图片，并整理出适合项目使用的成品资产。",
   start: "免费开始",
-  explore: "浏览套件",
-  proofTags: ["图片", "视频", "编辑"],
   proofAriaLabel: "创作模型与工具条",
-  heroVisualAriaLabel: "电影感创作工作区预览",
   generationTitle: "从想法到画面，一套工具完成",
   generationDesc: "把图片创作、视频方向和实用图片处理放在一个优雅流程里，从概念到成品更顺。",
   imageTitle: "图片创作",
   imageDesc: "生成产品图、营销视觉、封面和概念帧，保持更成熟的视觉质感。",
-  imagePrompt: "一个带反射玻璃、柔和日光和精致构图的电影感产品场景...",
   imageAction: "创建图片",
   videoTitle: "视频概念",
   videoDesc: "探索适合广告、故事、发布短片和创意测试的电影感动态画面。",
-  videoPrompt: "镜头缓慢穿过一间充满漂浮面具的镜面大厅...",
   videoAction: "创建视频",
   toolkitTitle: "图片精修处理",
   toolkitDesc: "修补、裁剪、调整尺寸、转换格式，让每张图都能直接进入发布流程。",
@@ -322,12 +249,6 @@ const zhHomeMarketing: HomeMarketingTranslations = {
   ctaTitle: "用 tuziyo 创作下一张视觉",
   ctaDesc: "从一个想法开始，塑造画面质感，再用合适工具完成它。",
   register: "免费开始",
-  tools: [
-    ["Resize", "为社媒、商品图和发布场景调整尺寸，同时尽量保持画质。"],
-    ["Convert Format", "在 JPG、PNG、WebP 等常用格式之间快速转换。"],
-    ["Inpainting", "去除多余元素、修复画面，并补全缺失的图片区域。"],
-    ["Crop", "为缩略图、封面和营销版式重新裁剪生成或上传的图片。"],
-  ],
   testimonials: [
     ["提示词", "创意简报", "从一句想法、一个产品方向或一张参考图开始。"],
     ["生成", "图片与视频", "在同一个工作区生成静态视觉和短视频概念。"],
@@ -350,13 +271,8 @@ export const translations: Record<Language, Translations> = {
   en: {
     common: {
       tools: "Tools",
-      aboutUs: "About Us",
-      resources: "Resources",
-      languages: "Languages",
       uploadImage: "Upload Image",
       saveResult: "Save Result",
-      undo: "Undo Last Step",
-      loading: "Loading...",
       processing: "AI Processing...",
       ready: "Engine Ready",
       freeForever: "Prompt to image and video",
@@ -369,24 +285,10 @@ export const translations: Record<Language, Translations> = {
       failed: "Failed",
       free: "Free",
       total: "Total",
-      back: "Go Back",
-      explore: "Explore Studio",
-      ctaDesc:
-        "Go from first prompt to polished visual direction with image and video models in one creative workspace.",
-      privacyPolicy: "Privacy Policy",
-      termsOfService: "Terms of Service",
-      contactSupport: "Contact Support",
     },
     nav: {
-      tools: "Tools",
-      freeTools: "Free Tools",
       aiToolkit: "AI Studio",
-      inpainting: "Inpainting",
-      resize: "Resize",
-      crop: "Crop",
-      convert: "Convert",
       pricing: "Pricing",
-      api: "API",
       login: "Log in",
       register: "Register free",
       profile: "Profile",
@@ -396,35 +298,19 @@ export const translations: Record<Language, Translations> = {
       changeLanguage: "Change language",
       openUserMenu: "Open user menu",
       openMenu: "Open menu",
-      x: "X (Twitter)",
-      github: "GitHub",
-      about: "About Us",
-      blog: "Blog",
-      contactAuthor: "Contact Author",
     },
     home: {
       ...homeMarketingByLanguage.en,
-      heroTitle: "Create any image or video you can imagine.",
-      heroSubtitle:
-        "The creative AI workspace for image generation, video drafts, model comparison, and prompt-led production.",
-      getStarted: "Start creating",
-      featuresTitle: "Creation workflow",
       privacyTitle: "Prompt Workspace",
       privacyDesc:
         "Keep prompts, references, negative prompts, and output settings together in one session.",
       speedTitle: "Model Routing",
       speedDesc: "Move between image and video models while preserving your creative brief.",
-      aiTitle: "Variant Control",
       aiDesc: "Generate, compare, and continue from the strongest result without losing context.",
     },
     aiToolkit: {
       promptPlaceholder: "Describe your image...",
       generating: "Generating...",
-      pressEnter: "Press Enter to generate · Shift+Enter for new line",
-      settings: "Settings",
-      aspectRatio: "Aspect Ratio",
-      quality: "Quality",
-      numberOfImages: "Number of Images",
       newSession: "New Session",
     },
     inpainting: {
@@ -433,13 +319,6 @@ export const translations: Record<Language, Translations> = {
       dropzone: "Drop your image here",
       history: "Edit History",
       brushSize: "Brush Size",
-      engine: "Processing Engine",
-      comparison: "View Settings",
-      splitView: "Split View",
-      sideBySide: "Side-by-Side",
-      currentVersion: "Current Version",
-      iteration: "Iteration",
-      aiModel: "AI Powered v2.4",
       aiPowered: "AI Powered",
       newImage: "New Image",
       showMask: "Show Mask",
@@ -460,7 +339,6 @@ export const translations: Record<Language, Translations> = {
     },
     resize: {
       title: "Expert Image Resizer",
-      description: "Scale your images perfectly with multiple modes and aspect ratio preservation.",
       pixels: "Pixels (px)",
       percentage: "Percentage (%)",
       width: "Width",
@@ -470,7 +348,6 @@ export const translations: Record<Language, Translations> = {
     },
     crop: {
       title: "Precision Crop Tool",
-      description: "Crop images with pixel-perfect accuracy and fixed aspect ratios.",
       aspectRatio: "Aspect Ratio",
       format: "Output Format",
       downloadAll: "Save All Images",
@@ -492,11 +369,6 @@ export const translations: Record<Language, Translations> = {
         "Create images and videos from prompts with multiple AI models, reusable sessions, reference images, and production-ready output controls.",
       keywords:
         "tuziyo, ai image generator, ai video generator, prompt studio, multi model image generation, ai creative tools",
-      watermarkTitle: "AI Watermark Remover | Remove Objects from Photos Online",
-      watermarkDesc:
-        "Use AI to remove watermarks, text, and unwanted objects from photos instantly in your browser. No registration, no watermarks left behind.",
-      watermarkKeywords:
-        "tuziyo, ai inpainting, remove object from image, powered by ai, photo inpainting, ai image editor",
       resizeTitle: "Batch Image Resizer | Resize Images by Percentage or Pixels",
       resizeDesc:
         "Resize multiple images at once with precision. Support for aspect ratio locking and percentage scaling. 100% private and fast.",
@@ -522,13 +394,8 @@ export const translations: Record<Language, Translations> = {
   zh: {
     common: {
       tools: "常用工具",
-      aboutUs: "关于我们",
-      resources: "相关资源",
-      languages: "语言选择",
       uploadImage: "上传图片",
       saveResult: "保存结果",
-      undo: "撤销上一步",
-      loading: "加载中...",
       processing: "AI 处理中...",
       ready: "引擎就绪",
       freeForever: "提示词生成图片与视频",
@@ -541,60 +408,31 @@ export const translations: Record<Language, Translations> = {
       failed: "失败",
       free: "比例自由",
       total: "合计",
-      back: "返回",
-      explore: "进入创作台",
-      ctaDesc: "从第一句提示词到可交付的视觉方向，在同一个创作空间里完成图片与视频模型生成。",
-      privacyPolicy: "隐私政策",
-      termsOfService: "服务条款",
-      contactSupport: "联系支持",
     },
     nav: {
-      tools: "工具",
-      freeTools: "免费工具",
       aiToolkit: "AI 创作台",
-      inpainting: "图像修复",
-      resize: "调整尺寸",
-      crop: "图片裁剪",
-      convert: "格式转换",
       pricing: "订阅价格",
-      api: "API",
       login: "登录",
       register: "注册免费使用",
       profile: "个人中心",
       logout: "退出登录",
-      home: "tuziyo 首页",
+      home: "首页",
       mainNavigation: "主导航",
       changeLanguage: "切换语言",
       openUserMenu: "打开用户菜单",
       openMenu: "打开菜单",
-      x: "X (Twitter)",
-      github: "GitHub",
-      about: "关于我们",
-      blog: "技术博客",
-      contactAuthor: "联系作者",
     },
     home: {
       ...homeMarketingByLanguage.zh,
-      heroTitle: "生成你想象中的任何图片与视频。",
-      heroSubtitle:
-        "一个面向创作者的 AI 工作区，把图片生成、视频草稿、模型对比和提示词生产流程放在一起。",
-      getStarted: "开始创作",
-      featuresTitle: "创作工作流",
       privacyTitle: "提示词工作区",
       privacyDesc: "在同一个会话中管理提示词、参考图、反向提示词和输出参数。",
       speedTitle: "模型路由",
       speedDesc: "在图片与视频模型之间切换，同时保留完整创意简报。",
-      aiTitle: "变体控制",
       aiDesc: "生成、对比并沿着最好的结果继续迭代，不丢失上下文。",
     },
     aiToolkit: {
       promptPlaceholder: "描述你的图片...",
       generating: "生成中...",
-      pressEnter: "按 Enter 生成 · Shift+Enter 换行",
-      settings: "设置",
-      aspectRatio: "宽高比",
-      quality: "质量",
-      numberOfImages: "图片数量",
       newSession: "新建会话",
     },
     inpainting: {
@@ -603,13 +441,6 @@ export const translations: Record<Language, Translations> = {
       dropzone: "将图片拖到此处",
       history: "编辑历史",
       brushSize: "画笔大小",
-      engine: "处理引擎",
-      comparison: "对比设置",
-      splitView: "拆分视图",
-      sideBySide: "并排对比",
-      currentVersion: "当前版本",
-      iteration: "修复记录",
-      aiModel: "AI 驱动 v2.4",
       aiPowered: "AI 驱动",
       newImage: "新图片",
       showMask: "显示遮罩",
@@ -630,7 +461,6 @@ export const translations: Record<Language, Translations> = {
     },
     resize: {
       title: "专家级尺寸调节",
-      description: "多种模式可选，完美保持纵横比，精准缩放您的每一张图片。",
       pixels: "像素 (px)",
       percentage: "百分比 (%)",
       width: "宽度",
@@ -640,7 +470,6 @@ export const translations: Record<Language, Translations> = {
     },
     crop: {
       title: "高精度裁剪",
-      description: "像素级精准裁剪，支持多种固定比例，助您快速构图。",
       aspectRatio: "宽高比",
       format: "输出格式",
       downloadAll: "保存全部图片",
@@ -659,10 +488,6 @@ export const translations: Record<Language, Translations> = {
       title: "tuziyo - AI 图片与视频生成创作台",
       description: "通过提示词和多种 AI 模型生成图片与视频，支持会话、参考图和可控输出参数。",
       keywords: "AI图片生成, AI视频生成, 提示词工作台, 多模型生成, tuziyo, AI创作工具",
-      watermarkTitle: "AI 智能消水印 | 在线免费移除图片水印与杂物",
-      watermarkDesc:
-        "使用AI瞬间移除图片中的水印、文字和多余物体。无需注册，不在图片上留痕，浏览器直出。",
-      watermarkKeywords: "在线移除图片水印, AI 杂物清除工具免费, 擦除图片文字, 浏览器图片清理工具",
       resizeTitle: "批量图片缩放 | 按百分比或像素调整图片尺寸",
       resizeDesc: "精准批量缩放多张图片。支持纵横比锁定和百分比缩放，100%隐私安全且速度极快。",
       resizeKeywords: "在线批量缩放图片, 图片百分比缩放, 社交媒体图片尺寸调整, 浏览器快速缩放图片",
@@ -683,13 +508,8 @@ export const translations: Record<Language, Translations> = {
   fr: {
     common: {
       tools: "Outils",
-      aboutUs: "À propos de nous",
-      resources: "Ressources",
-      languages: "Langues",
       uploadImage: "Télécharger l'image",
       saveResult: "Enregistrer",
-      undo: "Annuler l'action",
-      loading: "Chargement...",
       processing: "Traitement IA...",
       ready: "Moteur prêt",
       freeForever: "Sans compte",
@@ -702,62 +522,32 @@ export const translations: Record<Language, Translations> = {
       failed: "Échoué",
       free: "Libre",
       total: "Total",
-      back: "Retour",
-      explore: "Explorer les Outils",
-      ctaDesc:
-        "Découvrez des outils d'image professionnels avec une confidentialité totale. Tout le traitement se fait localement dans votre navigateur.",
-      privacyPolicy: "Politique de Confidentialité",
-      termsOfService: "Conditions d'Utilisation",
-      contactSupport: "Contacter le Support",
     },
     nav: {
-      tools: "Outils",
-      freeTools: "Outils Gratuits",
       aiToolkit: "IA Toolkit",
-      inpainting: "Inpainting",
-      resize: "Redimensionner",
-      crop: "Recadrer",
-      convert: "Convertir",
       pricing: "Tarifs",
-      api: "API",
       login: "Se connecter",
       register: "Inscription gratuite",
       profile: "Profil",
       logout: "Déconnexion",
-      home: "Accueil tuziyo",
+      home: "Accueil",
       mainNavigation: "Navigation principale",
       changeLanguage: "Changer de langue",
       openUserMenu: "Ouvrir le menu utilisateur",
       openMenu: "Ouvrir le menu",
-      x: "X (Twitter)",
-      github: "GitHub",
-      about: "À propos",
-      blog: "Blog",
-      contactAuthor: "Contacter l'auteur",
     },
     home: {
       ...homeMarketingByLanguage.fr,
-      heroTitle: "Outils Image Pros. Réimaginés par l'IA.",
-      heroSubtitle:
-        "La suite ultime pour le retrait de filigrane, le redimensionnement, le recadrage et la conversion. Propulsé par l'IA locale, 100 % privé.",
-      getStarted: "Commencer",
-      featuresTitle: "Pourquoi choisir tuziyo ?",
       privacyTitle: "Confidentialité Totale",
       privacyDesc:
         "Tout le traitement se fait localement. Vos images ne quittent jamais votre appareil.",
       speedTitle: "Vitesse de l'Éclair",
       speedDesc: "WASM optimisé et accélération GPU pour des résultats instantanés.",
-      aiTitle: "IA de Pointe",
       aiDesc: "Des réseaux neuronaux avancés pour une retouche d'image professionnelle.",
     },
     aiToolkit: {
       promptPlaceholder: "Décrivez votre image...",
       generating: "Génération...",
-      pressEnter: "Appuyez sur Entrée pour générer · Maj+Entrée pour nouvelle ligne",
-      settings: "Paramètres",
-      aspectRatio: "Format",
-      quality: "Qualité",
-      numberOfImages: "Nombre d'images",
       newSession: "Nouvelle session",
     },
     inpainting: {
@@ -766,13 +556,6 @@ export const translations: Record<Language, Translations> = {
       dropzone: "Déposez votre image ici",
       history: "Historique",
       brushSize: "Taille du pinceau",
-      engine: "Moteur de traitement",
-      comparison: "Paramètres vue",
-      splitView: "Vue scindée",
-      sideBySide: "Côte à côte",
-      currentVersion: "Version actuelle",
-      iteration: "Itération",
-      aiModel: "Propulsé par l'IA v2.4",
       aiPowered: "Propulsé par l'IA",
       newImage: "Nouvelle image",
       showMask: "Afficher le masque",
@@ -793,7 +576,6 @@ export const translations: Record<Language, Translations> = {
     },
     resize: {
       title: "Expert Redimensionnement",
-      description: "Ajustez la taille de vos images parfaitement en conservant les proportions.",
       pixels: "Pixels (px)",
       percentage: "Pourcentage (%)",
       width: "Largeur",
@@ -803,7 +585,6 @@ export const translations: Record<Language, Translations> = {
     },
     crop: {
       title: "Outil de Recadrage Précis",
-      description: "Recadrez avec une précision au pixel près et des ratios fixes.",
       aspectRatio: "Ratio d'aspect",
       format: "Format de sortie",
       downloadAll: "Tout enregistrer",
@@ -824,11 +605,6 @@ export const translations: Record<Language, Translations> = {
         "Outils IA gratuits dans le navigateur pour supprimer les filigranes, redimensionner en lot, recadrer avec précision et convertir.",
       keywords:
         "outils image ia gratuits, enlever filigrane en ligne, redimensionner images navigateur, recadrage photo pro, convertisseur image privé heic",
-      watermarkTitle: "Enlever Filigrane IA | Supprimer Objets des Photos en Ligne Gratuit",
-      watermarkDesc:
-        "Utilisez l'IA pour supprimer filigranes, texte et objets indésirables instantanément. Sans inscription, 100% privé.",
-      watermarkKeywords:
-        "enlever filigrane photo ligne, suppression objet ia gratuit, effacer texte image, nettoyage photo navigateur",
       resizeTitle: "Redimensionner Images IA | Ajuster par Pourcentage ou Pixels",
       resizeDesc:
         "Redimensionnez plusieurs images à la fois avec précision. Support du ratio d'aspect et échelle en pourcentage. Rapide et privé.",
@@ -854,13 +630,8 @@ export const translations: Record<Language, Translations> = {
   ja: {
     common: {
       tools: "ツール",
-      aboutUs: "私たちについて",
-      resources: "リソース",
-      languages: "言語",
       uploadImage: "画像をアップロード",
       saveResult: "結果を保存",
-      undo: "元に戻す",
-      loading: "読み込み中...",
       processing: "AI処理中...",
       ready: "準備完了",
       freeForever: "登録不要",
@@ -873,24 +644,10 @@ export const translations: Record<Language, Translations> = {
       failed: "失敗",
       free: "自由",
       total: "合計",
-      back: "戻る",
-      explore: "ツールを見る",
-      ctaDesc:
-        "完全なプライバシー保護でプロ仕様の画像ツールを体験。すべての処理はブラウザ内でローカルに実行されます。",
-      privacyPolicy: "プライバシーポリシー",
-      termsOfService: "利用規約",
-      contactSupport: "お問い合わせ",
     },
     nav: {
-      tools: "ツール",
-      freeTools: "無料ツール",
       aiToolkit: "AI ツールキット",
-      inpainting: "画像修復",
-      resize: "リサイズ",
-      crop: "切り抜き",
-      convert: "形式変換",
       pricing: "料金",
-      api: "API",
       login: "ログイン",
       register: "無料登録",
       profile: "プロフィール",
@@ -900,34 +657,18 @@ export const translations: Record<Language, Translations> = {
       changeLanguage: "言語を変更",
       openUserMenu: "ユーザーメニューを開く",
       openMenu: "メニューを開く",
-      x: "X (Twitter)",
-      github: "GitHub",
-      about: "運営会社",
-      blog: "ブログ",
-      contactAuthor: "作者に連絡",
     },
     home: {
       ...homeMarketingByLanguage.ja,
-      heroTitle: "プロ仕様の画像ツール、AIで進化。",
-      heroSubtitle:
-        "透かし消去、リサイズ、切り抜き、変換。ローカルAI搭載で100%プライベート、安全な統合ツール。",
-      getStarted: "今すぐ開始",
-      featuresTitle: "tuziyoが選ばれる理由",
       privacyTitle: "究極のプライバシー",
       privacyDesc: "全ての処理はブラウザ内で完結。画像が外部へ送信されることはありません。",
       speedTitle: "圧倒的なスピード",
       speedDesc: "最適化されたWASMとGPU加速により、一瞬で処理を完了します。",
-      aiTitle: "最先端のAI技術",
       aiDesc: "高度なニューラルネットワークが、プロ品質の画像修復を実現。",
     },
     aiToolkit: {
       promptPlaceholder: "画像を描述してください...",
       generating: "生成中...",
-      pressEnter: "Enterで生成 · Shift+Enterで改行",
-      settings: "設定",
-      aspectRatio: "アスペクト比",
-      quality: "品質",
-      numberOfImages: "画像数",
       newSession: "新規セッション",
     },
     inpainting: {
@@ -936,13 +677,6 @@ export const translations: Record<Language, Translations> = {
       dropzone: "ここに画像をドロップしてください",
       history: "編集履歴",
       brushSize: "ブラシサイズ",
-      engine: "処理エンジン",
-      comparison: "表示設定",
-      splitView: "スプリットビュー",
-      sideBySide: "並べて表示",
-      currentVersion: "現在のバージョン",
-      iteration: "イテレーション",
-      aiModel: "AI搭載 v2.4",
       aiPowered: "AI搭載",
       newImage: "新しい画像",
       showMask: "マスクを表示",
@@ -963,7 +697,6 @@ export const translations: Record<Language, Translations> = {
     },
     resize: {
       title: "高度なリサイズ",
-      description: "アスペクト比を維持しながら、画像を思い通りのサイズに完璧に調整。",
       pixels: "ピクセル (px)",
       percentage: "パーセント (%)",
       width: "幅",
@@ -973,7 +706,6 @@ export const translations: Record<Language, Translations> = {
     },
     crop: {
       title: "精密切り抜き",
-      description: "ピクセル単位の精度で、自由な比率や固定比率での切り抜きが可能。",
       aspectRatio: "アスペクト比",
       format: "出力形式",
       downloadAll: "すべて保存",
@@ -994,11 +726,6 @@ export const translations: Record<Language, Translations> = {
         "ブラウザで完結するAI画像ツール。透かし消去、リサイズ、切り抜き、変換。アップロード不要で100%安全。",
       keywords:
         "無料AI画像ツール, 透かし消去 オンライン, 画像リサイズ 一括, 画像切り抜き プロ, 画像変換 安全 HEIC",
-      watermarkTitle: "AI透かし消去 | オンラインで写真から不要な物を消す",
-      watermarkDesc:
-        "AI技術で透かしや文字、不要なオブジェクトを一瞬で消去。登録不要、ブラウザ内処理でプライバシーも安心。",
-      watermarkKeywords:
-        "写真 透かし消す オンライン, AI不要物消去 無料, 画像 文字消し, 写真クリーニング ツール",
       resizeTitle: "画像リサイズ一括 | 比率やピクセルを指定して高速変換",
       resizeDesc:
         "複数画像を一度に精密リサイズ。アスペクト比維持やパーセント指定に対応。100%プライベートで高速。",
@@ -1024,13 +751,8 @@ export const translations: Record<Language, Translations> = {
   ko: {
     common: {
       tools: "도구",
-      aboutUs: "회사 소개",
-      resources: "리소스",
-      languages: "언어",
       uploadImage: "이미지 업로드",
       saveResult: "결과 저장",
-      undo: "실행 취소",
-      loading: "로딩 중...",
       processing: "AI 처리 중...",
       ready: "엔진 준비됨",
       freeForever: "영구 무료 • 계정 불필요",
@@ -1043,24 +765,10 @@ export const translations: Record<Language, Translations> = {
       failed: "실패함",
       free: "자유 비율",
       total: "합계",
-      back: "뒤로 가기",
-      explore: "도구 둘러보기",
-      ctaDesc:
-        "완벽한 개인정보 보호로 전문가급 이미지 도구를 경험하세요. 모든 처리는 브라우저에서 로컬로 진행됩니다.",
-      privacyPolicy: "개인정보 처리방침",
-      termsOfService: "이용 약관",
-      contactSupport: "고객 지원 문의",
     },
     nav: {
-      tools: "도구",
-      freeTools: "무료 도구",
       aiToolkit: "AI 툴킷",
-      inpainting: "이미지 복원",
-      resize: "크기 조정",
-      crop: "자르기",
-      convert: "형식 변환",
       pricing: "가격",
-      api: "API",
       login: "로그인",
       register: "무료 가입",
       profile: "프로필",
@@ -1070,35 +778,19 @@ export const translations: Record<Language, Translations> = {
       changeLanguage: "언어 변경",
       openUserMenu: "사용자 메뉴 열기",
       openMenu: "메뉴 열기",
-      x: "X (Twitter)",
-      github: "GitHub",
-      about: "회사 소개",
-      blog: "블로그",
-      contactAuthor: "작가에게 연락",
     },
     home: {
       ...homeMarketingByLanguage.ko,
-      heroTitle: "AI로 재탄생한 전문가용 이미지 도구.",
-      heroSubtitle:
-        "워터마크 제거, 크기 조정, 자르기, 변환을 위한 완벽한 솔루션. 로컬 AI 기반으로 100% 개인정보 보호.",
-      getStarted: "시작하기",
-      featuresTitle: "왜 tuziyo인가요?",
       privacyTitle: "철저한 개인정보 보호",
       privacyDesc:
         "모든 처리는 브라우저 내에서 로컬로 진행됩니다. 이미지가 외부로 전송되지 않습니다.",
       speedTitle: "초고속 성능",
       speedDesc: "최적화된 WASM 및 GPU 가속으로 지연 없는 결과를 제공합니다.",
-      aiTitle: "최첨단 AI 기술",
       aiDesc: "고급 신경망 기술로 전문가 수준의 이미지 복원 및 보정을 실현합니다.",
     },
     aiToolkit: {
       promptPlaceholder: "이미지를 설명하세요...",
       generating: "생성 중...",
-      pressEnter: "Enter를 눌러 생성 · Shift+Enter로 줄바꿈",
-      settings: "설정",
-      aspectRatio: "종횡비",
-      quality: "품질",
-      numberOfImages: "이미지 수",
       newSession: "새 세션",
     },
     inpainting: {
@@ -1107,13 +799,6 @@ export const translations: Record<Language, Translations> = {
       dropzone: "여기에 이미지를 드롭하세요",
       history: "편집 기록",
       brushSize: "브러시 크기",
-      engine: "처리 엔진",
-      comparison: "보기 설정",
-      splitView: "분할 보기",
-      sideBySide: "나란히 보기",
-      currentVersion: "현재 버전",
-      iteration: "반복",
-      aiModel: "AI 구동 v2.4",
       aiPowered: "AI 구동",
       newImage: "새 이미지",
       showMask: "마스크 표시",
@@ -1134,7 +819,6 @@ export const translations: Record<Language, Translations> = {
     },
     resize: {
       title: "전문가용 크기 조정",
-      description: "비율을 유지하면서 이미지를 완벽한 크기로 정밀하게 조정하세요.",
       pixels: "픽셀 (px)",
       percentage: "백분율 (%)",
       width: "너비",
@@ -1144,7 +828,6 @@ export const translations: Record<Language, Translations> = {
     },
     crop: {
       title: "정밀 자르기 도구",
-      description: "픽셀 단위의 정확도로 원하는 비율에 맞춰 이미지를 자르세요.",
       aspectRatio: "종횡비",
       format: "출력 형식",
       downloadAll: "모두 저장",
@@ -1165,11 +848,6 @@ export const translations: Record<Language, Translations> = {
         "워터마크 제거, 일괄 크기 조정, 정밀 자르기 및 형식 변환을 위한 무료 브라우저 기반 AI 도구입니다. 업로드 없이 완벽한 프라이버시를 보장합니다.",
       keywords:
         "무료 AI 이미지 도구, 온라인 워터마크 제거 무료, 브라우저 이미지 일괄 크기 조정, 전문 사진 자르기, 개인용 이미지 변환기 HEIC",
-      watermarkTitle: "AI 워터마크 제거기 | 온라인에서 무료로 사진 개체 제거",
-      watermarkDesc:
-        "AI를 사용해 브라우저에서 즉시 워터마크, 텍스트 및 원치 않는 개체를 제거하세요. 가입 불필요, 흔적 없는 제거.",
-      watermarkKeywords:
-        "사진 워터마크 온라인 제거, AI 개체 제거기 무료, 이미지 텍스트 삭제, 브라우저 사진 정리 도구",
       resizeTitle: "일괄 이미지 크기 조정기 | 백분율 또는 픽셀로 크기 조정",
       resizeDesc:
         "여러 이미지의 크기를 한 번에 정밀하게 조정하세요. 종횡비 고정 및 백분율 스케일링 지원. 100% 비공개 및 고속.",
@@ -1195,13 +873,8 @@ export const translations: Record<Language, Translations> = {
   ru: {
     common: {
       tools: "Инструменты",
-      aboutUs: "О нас",
-      resources: "Ресурсы",
-      languages: "Языки",
       uploadImage: "Загрузить изображение",
       saveResult: "Сохранить результат",
-      undo: "Отменить шаг",
-      loading: "Загрузка...",
       processing: "AI Обработка...",
       ready: "Движок готов",
       freeForever: "Без регистрации",
@@ -1214,24 +887,10 @@ export const translations: Record<Language, Translations> = {
       failed: "Ошибка",
       free: "Свободно",
       total: "Всего",
-      back: "Назад",
-      explore: "К инструментам",
-      ctaDesc:
-        "Испытайте профессиональные инструменты для изображений с полной конфиденциальностью. Вся обработка происходит локально в вашем браузере.",
-      privacyPolicy: "Политика конфиденциальности",
-      termsOfService: "Условия использования",
-      contactSupport: "Служба поддержки",
     },
     nav: {
-      tools: "Инструменты",
-      freeTools: "Бесплатные Инструменты",
       aiToolkit: "AI Инструменты",
-      inpainting: "Восстановление изображений",
-      resize: "Изменение размера",
-      crop: "Обрезка",
-      convert: "Конвертация",
       pricing: "Цены",
-      api: "API",
       login: "Войти",
       register: "Бесплатная регистрация",
       profile: "Профиль",
@@ -1241,35 +900,19 @@ export const translations: Record<Language, Translations> = {
       changeLanguage: "Сменить язык",
       openUserMenu: "Открыть меню пользователя",
       openMenu: "Открыть меню",
-      x: "X (Twitter)",
-      github: "GitHub",
-      about: "О нас",
-      blog: "Блог",
-      contactAuthor: "Связаться с автором",
     },
     home: {
       ...homeMarketingByLanguage.ru,
-      heroTitle: "Профи-инструменты для фото. Переосмыслено с AI.",
-      heroSubtitle:
-        "Лучший набор для удаления водяных знаков, изменения размера и конвертации. На базе локального AI, 100% приватно и безопасно.",
-      getStarted: "Начать работу",
-      featuresTitle: "Почему выбирают tuziyo?",
       privacyTitle: "Безупречная приватность",
       privacyDesc:
         "Вся обработка происходит локально в браузере. Ваши фото не покидают устройство.",
       speedTitle: "Молниеносная скорость",
       speedDesc: "Оптимизированный WASM и GPU ускорение для мгновенных результатов.",
-      aiTitle: "Передовой AI",
       aiDesc: "Продвинутые нейросети обеспечивают профессиональное восстановление изображений.",
     },
     aiToolkit: {
       promptPlaceholder: "Опишите ваше изображение...",
       generating: "Генерация...",
-      pressEnter: "Нажмите Enter для генерации · Shift+Enter для новой строки",
-      settings: "Настройки",
-      aspectRatio: "Соотношение",
-      quality: "Качество",
-      numberOfImages: "Кол-во изображений",
       newSession: "Новая сессия",
     },
     inpainting: {
@@ -1278,13 +921,6 @@ export const translations: Record<Language, Translations> = {
       dropzone: "Перетащите изображение сюда",
       history: "История изменений",
       brushSize: "Размер кисти",
-      engine: "Движок обработки",
-      comparison: "Настройки просмотра",
-      splitView: "Разделение",
-      sideBySide: "Рядом",
-      currentVersion: "Текущая версия",
-      iteration: "Итерация",
-      aiModel: "На базе ИИ v2.4",
       aiPowered: "На базе ИИ",
       newImage: "Новое изображение",
       showMask: "Показать маску",
@@ -1305,7 +941,6 @@ export const translations: Record<Language, Translations> = {
     },
     resize: {
       title: "Масштабирование фото",
-      description: "Идеально меняйте размер изображений с сохранением пропорций.",
       pixels: "Пиксели (px)",
       percentage: "Проценты (%)",
       width: "Ширина",
@@ -1315,7 +950,6 @@ export const translations: Record<Language, Translations> = {
     },
     crop: {
       title: "Инструмент обрезки",
-      description: "Обрезайте фото с точностью до пикселя и заданными пропорциями.",
       aspectRatio: "Соотношение сторон",
       format: "Формат вывода",
       downloadAll: "Сохранить все",
@@ -1336,11 +970,6 @@ export const translations: Record<Language, Translations> = {
         "Бесплатные браузерные AI инструменты для удаления водяных знаков, пакетного масштабирования и конвертации. Без загрузки на сервер.",
       keywords:
         "бесплатные ai фото инструменты, удалить водяной знак онлайн бесплатно, пакетное изменение размера браузер, конвертер фото приватный heic",
-      watermarkTitle: "AI Удаление водяных знаков | Убрать объекты с фото онлайн бесплатно",
-      watermarkDesc:
-        "Используйте AI для мгновенного удаления водяных знаков и текста в браузере. Без регистрации, без следов на фото.",
-      watermarkKeywords:
-        "удалить водяной знак с фото онлайн, ai удаление объектов бесплатно, стереть текст с картинки, очистка фото в браузере",
       resizeTitle: "Пакетное изменение размера | Масштабирование в процентах или пикселях",
       resizeDesc:
         "Точно меняйте размер множества фото сразу. Сохранение пропорций и масштабирование. 100% приватно и быстро.",
@@ -1366,13 +995,8 @@ export const translations: Record<Language, Translations> = {
   it: {
     common: {
       tools: "Strumenti",
-      aboutUs: "Chi Siamo",
-      resources: "Risorse",
-      languages: "Lingue",
       uploadImage: "Carica Immagine",
       saveResult: "Salva Risultato",
-      undo: "Annulla Ultimo Passo",
-      loading: "Caricamento...",
       processing: "Elaborazione IA...",
       ready: "Motore Pronto",
       freeForever: "Senza account",
@@ -1385,24 +1009,10 @@ export const translations: Record<Language, Translations> = {
       failed: "Fallito",
       free: "Libero",
       total: "Totale",
-      back: "Torna Indietro",
-      explore: "Esplora Strumenti",
-      ctaDesc:
-        "Prova strumenti per immagini professionali con completa privacy. Tutta l'elaborazione avviene localmente nel tuo browser.",
-      privacyPolicy: "Privacy Policy",
-      termsOfService: "Termini di Servizio",
-      contactSupport: "Contatta il Supporto",
     },
     nav: {
-      tools: "Strumenti",
-      freeTools: "Strumenti Gratuiti",
       aiToolkit: "Toolkit IA",
-      inpainting: "Restauro Immagini",
-      resize: "Ridimensiona",
-      crop: "Ritaglia",
-      convert: "Converti",
       pricing: "Prezzi",
-      api: "API",
       login: "Accedi",
       register: "Registrati gratis",
       profile: "Profilo",
@@ -1412,35 +1022,19 @@ export const translations: Record<Language, Translations> = {
       changeLanguage: "Cambia lingua",
       openUserMenu: "Apri menu utente",
       openMenu: "Apri menu",
-      x: "X (Twitter)",
-      github: "GitHub",
-      about: "Chi Siamo",
-      blog: "Blog",
-      contactAuthor: "Contatta l'autore",
     },
     home: {
       ...homeMarketingByLanguage.it,
-      heroTitle: "Strumenti Immagine Prof. Reinventati con l'IA.",
-      heroSubtitle:
-        "La suite definitiva per rimozione filigrana, ridimensionamento e conversione. Basata su IA locale, 100% privata e sicura.",
-      getStarted: "Inizia Ora",
-      featuresTitle: "Perché scegliere tuziyo?",
       privacyTitle: "Privacy Totale",
       privacyDesc:
         "Tutta l'elaborazione avviene localmente. Le tue immagini non lasciano mai il dispositivo.",
       speedTitle: "Velocità Lampo",
       speedDesc: "WASM ottimizzato e accelerazione GPU per risultati immediati.",
-      aiTitle: "IA all'Avanguardia",
       aiDesc: "Reti neurali avanzate per un fotoritocco di livello professionale.",
     },
     aiToolkit: {
       promptPlaceholder: "Descrivi la tua immagine...",
       generating: "Generazione...",
-      pressEnter: "Premi Invio per generare · Shift+Invio per nuova riga",
-      settings: "Impostazioni",
-      aspectRatio: "Formato",
-      quality: "Qualità",
-      numberOfImages: "Numero di immagini",
       newSession: "Nuova sessione",
     },
     inpainting: {
@@ -1449,13 +1043,6 @@ export const translations: Record<Language, Translations> = {
       dropzone: "Trascina la tua immagine qui",
       history: "Cronologia Modifiche",
       brushSize: "Dimensione Pennello",
-      engine: "Motore di Calcolo",
-      comparison: "Impostazioni Vista",
-      splitView: "Vista Divisa",
-      sideBySide: "Fianco a Fianco",
-      currentVersion: "Versione Corrente",
-      iteration: "Iterazione",
-      aiModel: "Alimentato da IA v2.4",
       aiPowered: "Alimentato da IA",
       newImage: "Nuova Immagine",
       showMask: "Mostra Maschera",
@@ -1476,7 +1063,6 @@ export const translations: Record<Language, Translations> = {
     },
     resize: {
       title: "Ridimensionamento Esperto",
-      description: "Scala le tue immagini perfettamente mantenendo le proporzioni.",
       pixels: "Pixel (px)",
       percentage: "Percentuale (%)",
       width: "Larghezza",
@@ -1486,7 +1072,6 @@ export const translations: Record<Language, Translations> = {
     },
     crop: {
       title: "Ritaglio di Precisione",
-      description: "Ritaglia immagini con precisione al pixel e rapporti fissi.",
       aspectRatio: "Rapporto Aspetto",
       format: "Formato Uscita",
       downloadAll: "Salva Tutte",
@@ -1507,11 +1092,6 @@ export const translations: Record<Language, Translations> = {
         "Strumenti IA gratuiti nel browser per rimozione filigrana, ridimensionamento batch e conversione. Nessun upload, privacy totale.",
       keywords:
         "strumenti immagine ai gratuiti, rimuovere filigrana online gratis, ridimensionare immagini batch browser, convertitore immagine privato heic",
-      watermarkTitle: "Rimozione Filigrana IA | Rimuovi oggetti dalle foto online gratis",
-      watermarkDesc:
-        "Usa l'IA per rimuovere filigrane e oggetti istantaneamente nel browser. Senza registrazione, nessun segno lasciato.",
-      watermarkKeywords:
-        "rimuovere filigrana da foto online, rimozione oggetti ai gratis, cancellare testo da immagine, pulizia foto browser",
       resizeTitle: "Ridimensionatore Immagini Batch | Ridimensiona per Percentuale o Pixel",
       resizeDesc:
         "Ridimensiona più immagini contemporaneamente con precisione. Supporto blocco proporzioni e scaling percentuale.",
