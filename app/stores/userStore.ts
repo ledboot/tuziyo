@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { API_BASE } from "../lib/config";
 
 interface User {
   userId: string;
@@ -39,8 +40,6 @@ interface AuthResponse {
   isNewUser?: boolean
   onboardingCredits?: number
 }
-
-const API_BASE = import.meta.env.DEV ? "http://localhost:8787" : "https://api.tuziyo.com";
 
 export const useUserStore = create<UserState>()(
   persist(

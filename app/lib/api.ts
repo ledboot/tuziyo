@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.DEV ? "http://localhost:8787" : "https://api.tuziyo.com"
+import { API_BASE } from "./config"
 
 export interface ApiModelOption {
   name: string
