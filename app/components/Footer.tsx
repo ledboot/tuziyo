@@ -1,6 +1,6 @@
 import { Link } from "react-router"
 import { useI18n, type Language } from "~/lib/i18n"
-import { GithubIcon, XIcon, YoutubeIcon } from "~/lib/socialIcons"
+import { AI_IMAGE_MODELS, AI_IMAGE_MODEL_SLUGS } from "~/data/aiImageModels"
 
 const LANG_NAMES: Record<Language, string> = {
   en: "English",
@@ -31,9 +31,9 @@ export default function Footer() {
           </p>
         </div>
 
-        <div className="footer-links">
+        <nav className="footer-links" aria-label="Footer navigation">
           <div className="footer-links-col">
-            <h4 className="footer-links-title">Studio</h4>
+            <h4 className="footer-links-title">Create</h4>
             <ul className="footer-links-list">
               <li>
                 <Link to="/ai-toolkit" className="footer-link">
@@ -41,26 +41,36 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/pricing" className="footer-link">
-                  {t.nav.pricing}
+                <Link to="/inpainting" className="footer-link">
+                  AI Image Inpainting
                 </Link>
               </li>
             </ul>
           </div>
 
           <div className="footer-links-col">
-            <h4 className="footer-links-title">Resources</h4>
+            <h4 className="footer-links-title">AI Models</h4>
             <ul className="footer-links-list">
               <li>
-                <Link
-                  to="/privacy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="footer-link"
-                >
-                  Privacy Policy
+                <Link to="/ai/models" className="footer-link">
+                  Compare all models
                 </Link>
               </li>
+              {AI_IMAGE_MODEL_SLUGS.map(slug => (
+                <li key={slug}>
+                  <Link to={`/ai/models/${slug}`} className="footer-link">
+                    {AI_IMAGE_MODELS[slug].name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="footer-links-col">
+            <h4 className="footer-links-title">Resources</h4>
+            <ul className="footer-links-list">
+              <li><Link to="/pricing" className="footer-link">{t.nav.pricing}</Link></li>
+              <li><Link to="/privacy" className="footer-link">Privacy Policy</Link></li>
             </ul>
           </div>
 
@@ -76,43 +86,13 @@ export default function Footer() {
               ))}
             </ul>
           </div>
-        </div>
+        </nav>
       </div>
 
       <div className="footer-bottom">
         <div className="footer-copyright">
           <p>© {new Date().getFullYear()} tuziyo.com. All rights reserved.</p>
         </div>
-
-        {/* <div className="footer-social">
-          <a
-            href="#"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="footer-social-link"
-            aria-label="X"
-          >
-            <XIcon className="size-5" />
-          </a>
-          <a
-            href="#"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="footer-social-link"
-            aria-label="YouTube"
-          >
-            <YoutubeIcon className="size-5" />
-          </a>
-          <a
-            href="#"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="footer-social-link"
-            aria-label="GitHub"
-          >
-            <GithubIcon className="size-5" />
-          </a>
-        </div> */}
       </div>
     </footer>
   )

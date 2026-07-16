@@ -6,6 +6,8 @@ import {
 
 export default [
   index("routes/_index.tsx"),
+  route("ai/models", "routes/ai.models._index.tsx"),
+  route("ai/models/:model", "routes/ai.models.$model.tsx"),
   route("ai-toolkit", "routes/ai-toolkit.tsx"),
   route("session/:id", "routes/session.$id.tsx"),
   route("inpainting", "routes/inpainting.tsx"),

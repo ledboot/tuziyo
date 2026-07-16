@@ -1,9 +1,10 @@
-import { Link, NavLink, useLocation } from "react-router"
+import { Link, useLocation } from "react-router"
 import { ChevronDown, Globe, LogOut, Menu, User, X } from "lucide-react"
 import { languageNames, useI18n, type Language } from "~/lib/i18n"
 import { useState, useEffect } from "react"
 import { useUserStore } from "../stores/userStore"
 import { markPricingIntent, trackEvent } from "~/lib/analytics"
+import { AI_IMAGE_MODELS, AI_IMAGE_MODEL_SLUGS } from "~/data/aiImageModels"
 
 interface NavItemSimple {
   title: string
@@ -23,14 +24,27 @@ export default function Header() {
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showLangMenu, setShowLangMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showMobileImageMenu, setShowMobileImageMenu] = useState(false)
+  const [showDesktopImageMenu, setShowDesktopImageMenu] = useState(false)
   const location = useLocation()
   const { user, token, logout, isLoading: isUserLoading, isFetching: isUserFetching } = useUserStore()
   const isAuthPending = isUserLoading || isUserFetching
   const hasStoredAuth = Boolean(user || token)
   const isAiToolkit = location.pathname.startsWith("/ai-toolkit")
+  const isAiImage = location.pathname === "/ai/models" || location.pathname.startsWith("/ai/models/")
 
   const navItems: NavItem[] = [
     { title: t.nav.home, to: "/" },
+    {
+      title: "AI Image",
+      children: [
+        { title: "All AI image models", to: "/ai/models" },
+        ...AI_IMAGE_MODEL_SLUGS.map(slug => ({
+          title: AI_IMAGE_MODELS[slug].name,
+          to: `/ai/models/${slug}`,
+        })),
+      ],
+    },
     { title: t.nav.aiToolkit, to: "/ai-toolkit" },
     { title: t.nav.pricing, to: "/pricing" },
   ]
@@ -39,6 +53,8 @@ export default function Header() {
     setShowMobileMenu(false)
     setShowLangMenu(false)
     setShowUserMenu(false)
+    setShowMobileImageMenu(false)
+    setShowDesktopImageMenu(false)
   }
 
   const openLogin = () => {
@@ -130,7 +146,52 @@ export default function Header() {
         >
           <ul className="ai-toolkit-nav-list">
             {navItems.map(item => {
-              if ("children" in item) return null
+              if ("children" in item) {
+                return (
+                  <li
+                    key={item.title}
+                    className={`model-nav-dropdown ${showDesktopImageMenu ? "is-open" : ""}`}
+                    onMouseEnter={() => setShowDesktopImageMenu(true)}
+                    onMouseLeave={() => setShowDesktopImageMenu(false)}
+                    onFocus={() => setShowDesktopImageMenu(true)}
+                    onBlur={event => {
+                      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                        setShowDesktopImageMenu(false)
+                      }
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className={["ai-toolkit-nav-item", isAiImage ? "is-active" : ""].join(" ")}
+                      aria-haspopup="true"
+                      aria-expanded={showDesktopImageMenu}
+                      onClick={() => setShowDesktopImageMenu(true)}
+                      onKeyDown={event => {
+                        if (event.key === "Escape") {
+                          setShowDesktopImageMenu(false)
+                          event.currentTarget.blur()
+                        }
+                      }}
+                    >
+                      {item.title}<ChevronDown className="size-3.5" />
+                    </button>
+                    <div className="model-nav-menu">
+                      <div className="model-nav-menu-label">Explore image models</div>
+                      {item.children.map(child => (
+                        <Link
+                          key={child.to}
+                          to={child.to}
+                          onClick={closeMenus}
+                          className={location.pathname === child.to ? "is-active" : ""}
+                          aria-current={location.pathname === child.to ? "page" : undefined}
+                        >
+                          <span>{child.title}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </li>
+                )
+              }
 
               return (
               <li key={item.to}>
@@ -282,7 +343,7 @@ export default function Header() {
                 {t.nav.login}
               </button>
               <button
-                className="header-register-btn"
+                className="model-button model-button-primary"
                 type="button"
                 onClick={openLogin}
               >
@@ -337,7 +398,36 @@ export default function Header() {
               {/* Navigation links */}
               <nav className="flex-1 flex flex-col justify-start gap-6 mt-12 overflow-y-auto">
                 {navItems.map(item => {
-                  if ("children" in item) return null
+                  if ("children" in item) {
+                    return (
+                      <div key={item.title} className="mobile-model-nav">
+                        <button
+                          type="button"
+                          onClick={() => setShowMobileImageMenu(value => !value)}
+                          className={isAiImage ? "is-active" : ""}
+                          aria-expanded={showMobileImageMenu}
+                        >
+                          {item.title}
+                          <ChevronDown className={`size-5 ${showMobileImageMenu ? "rotate-180" : ""}`} />
+                        </button>
+                        {showMobileImageMenu && (
+                          <div>
+                            {item.children.map(child => (
+                              <Link
+                                key={child.to}
+                                to={child.to}
+                                onClick={closeMenus}
+                                className={location.pathname === child.to ? "is-active" : ""}
+                                aria-current={location.pathname === child.to ? "page" : undefined}
+                              >
+                                {child.title}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
                   const isActive = isSegmentedNavItemActive(item.to)
                   return (
                     <Link

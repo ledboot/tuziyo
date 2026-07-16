@@ -10,6 +10,8 @@ interface SeoOptions {
   path: string
   keywords?: string
   type?: "website" | "article"
+  socialImage?: string
+  socialImageAlt?: string
   schema?: Record<string, unknown> | Record<string, unknown>[]
 }
 
@@ -19,9 +21,12 @@ export function createSeoMeta({
   path,
   keywords,
   type = "website",
+  socialImage = DEFAULT_SOCIAL_IMAGE,
+  socialImageAlt = `${SITE_NAME} AI creative tools`,
   schema,
 }: SeoOptions): MetaDescriptor[] {
   const canonical = new URL(path, SITE_ORIGIN).toString()
+  const socialImageUrl = new URL(socialImage, SITE_ORIGIN).toString()
 
   return [
     { title },
@@ -36,12 +41,13 @@ export function createSeoMeta({
     { property: "og:url", content: canonical },
     { property: "og:site_name", content: SITE_NAME },
     { property: "og:locale", content: "en_US" },
-    { property: "og:image", content: DEFAULT_SOCIAL_IMAGE },
-    { property: "og:image:alt", content: `${SITE_NAME} AI creative tools` },
-    { name: "twitter:card", content: "summary" },
+    { property: "og:image", content: socialImageUrl },
+    { property: "og:image:alt", content: socialImageAlt },
+    { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:title", content: title },
     { name: "twitter:description", content: description },
-    { name: "twitter:image", content: DEFAULT_SOCIAL_IMAGE },
+    { name: "twitter:image", content: socialImageUrl },
+    { name: "twitter:image:alt", content: socialImageAlt },
     ...(schema ? [{ "script:ld+json": schema }] : []),
   ]
 }

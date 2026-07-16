@@ -186,7 +186,7 @@ const enHomeMarketing: HomeMarketingTranslations = {
   proofAriaLabel: "Creative model and tool strip",
   generationTitle: "Everything you need to shape the shot",
   generationDesc:
-    "Move from idea to finished asset with image creation, video direction, and practical editing tools in one elegant flow.",
+    "Move from idea to finished asset with AI image creation and practical finishing tools in one focused workflow.",
   imageTitle: "Image creation",
   imageDesc: "Create product shots, campaign visuals, covers, and concept frames with a polished production look.",
   imageAction: "Create image",
@@ -234,7 +234,7 @@ const zhHomeMarketing: HomeMarketingTranslations = {
   start: "免费开始",
   proofAriaLabel: "创作模型与工具条",
   generationTitle: "从想法到画面，一套工具完成",
-  generationDesc: "把图片创作、视频方向和实用图片处理放在一个优雅流程里，从概念到成品更顺。",
+  generationDesc: "把 AI 图片创作与实用精修工具放在一个专注的流程里，从概念到成品更顺。",
   imageTitle: "图片创作",
   imageDesc: "生成产品图、营销视觉、封面和概念帧，保持更成熟的视觉质感。",
   imageAction: "创建图片",

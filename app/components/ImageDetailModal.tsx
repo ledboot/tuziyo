@@ -40,13 +40,14 @@ function getModelName(modelId: string): string {
   return modelNames[modelId] || modelId
 }
 
-function getModalWidthClass(aspectRatio: string | null): string {
+function getModalSizeClass(aspectRatio: string | null): string {
   const [width, height] = aspectRatio?.split(":").map(Number) ?? []
   if (Number.isFinite(width) && Number.isFinite(height) && height > 0) {
-    if (width > height) return "w-[1600px] max-w-[96vw]"
-    if (width < height) return "w-[1100px] max-w-[92vw]"
+    if (width > height) return "h-[90vh] w-[1800px] max-w-[98vw]"
+    if (width < height) return "h-[90vh] w-[1200px] max-w-[94vw]"
+    return "h-[94vh] w-[1400px] max-w-[96vw]"
   }
-  return "w-[1240px] max-w-[94vw]"
+  return "h-[90vh] w-[1240px] max-w-[94vw]"
 }
 
 export default function ImageDetailModal({
@@ -88,7 +89,7 @@ export default function ImageDetailModal({
   if (!image) return null
 
   const displayImageUrl = activeOutput?.display_url ?? null
-  const modalWidthClass = getModalWidthClass(image.aspect_ratio || image.image_size)
+  const modalSizeClass = getModalSizeClass(image.aspect_ratio || image.image_size)
 
   const handleSelectOutput = (outputId: string) => setActiveOutputId(outputId)
 
@@ -182,7 +183,7 @@ export default function ImageDetailModal({
   return (
     <div className="modal modal-open">
       <div
-        className={`modal-box ${modalWidthClass} h-[90vh] flex flex-col md:flex-row p-0 overflow-hidden bg-[#0c0c0c] border border-white/10 rounded-2xl shadow-2xl`}
+        className={`modal-box ${modalSizeClass} flex flex-col md:flex-row p-0 overflow-hidden bg-[#0c0c0c] border border-white/10 rounded-2xl shadow-2xl`}
       >
         {/* Left Image Area */}
         <div className="flex min-h-0 flex-1 flex-col bg-black/40 p-4 md:p-6">
