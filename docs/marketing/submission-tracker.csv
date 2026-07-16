@@ -1,0 +1,24 @@
+priority,channel,type,cost,target_url,status,planned_date,live_url,notes
+1,Product Hunt,launch community,free,https://www.producthunt.com/posts/new,drafted,,,Schedule only after gallery assets and maker reply coverage are ready
+1,Hacker News Show HN,launch community,free,https://news.ycombinator.com/submit,drafted,,,Use the technical founder version and reply immediately
+1,Reddit r/SideProject,community,free,https://www.reddit.com/r/SideProject/submit,drafted,,,Check current subreddit rules before posting
+1,Indie Hackers,founder community,free,https://www.indiehackers.com/post,drafted,,,Publish build story rather than a link-only promotion
+1,Peerlist Launchpad,launch community,free,https://peerlist.io/launchpad,drafted,,,Reuse Product Hunt visuals with shorter copy
+1,BetaList,startup directory,freemium,https://betalist.com/submit,drafted,,,Submit after public launch article is live
+1,Uneed,product directory,freemium,https://www.uneed.best/submit-a-tool,drafted,,,Use canonical directory profile
+1,MicroLaunch,launch directory,freemium,https://microlaunch.net/submit,drafted,,,Check current launch calendar
+1,ProductDirs,AI product directory,free,https://productdirs.com/,drafted,,,Use AI image and design categories
+1,SubmitStartup,startup directory,freemium,https://submitstartup.io/,drafted,,,Use canonical directory profile
+2,AI Tools Directory,AI directory,freemium,https://aitoolsdirectory.com/submit-tool,drafted,,,Verify current free option
+2,Aixploria,AI directory,freemium,https://www.aixploria.com/en/add-ai/,drafted,,,Submit model comparison URL as supporting page
+2,AI Tool Hunt,AI directory,freemium,https://www.aitoolhunt.com/submit,drafted,,,Use design and image generation categories
+2,Startup Buffer,startup directory,freemium,https://startupbuffer.com/site/submit,drafted,,,Check backlink and review timing
+2,Launching Next,startup directory,freemium,https://www.launchingnext.com/submit/,drafted,,,Use launch offer in description
+2,BetaPage,startup directory,freemium,https://betapage.co/submit-startup,drafted,,,Use launch article as news link
+2,F6S,startup profile,free,https://www.f6s.com/,drafted,,,Create a company profile if relevant
+2,Wellfound,startup profile,freemium,https://wellfound.com/,drafted,,,Only create if founder and company details are ready
+2,Crunchbase,startup profile,freemium,https://www.crunchbase.com/add-new,drafted,,,Only create with accurate organization details
+3,Futurepedia,AI directory,paid,https://www.futurepedia.io/submit-tool,hold,,,Test only after free channels show conversion
+3,There's An AI For That,AI directory,paid,https://theresanaiforthat.com/submit/,hold,,,Test only after free channels show conversion
+3,TopAI.tools,AI directory,paid,https://topai.tools/submit,hold,,,Test only after free channels show conversion
+3,Toolify,AI directory,paid,https://www.toolify.ai/submit,hold,,,Test only after free channels show conversion

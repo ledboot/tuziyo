@@ -50,6 +50,7 @@ export interface Translations {
     heroLead: string
     heroBody: string
     start: string
+    freeCreditNote: string
     proofAriaLabel: string
     generationTitle: string
     generationDesc: string
@@ -155,6 +156,7 @@ type HomeMarketingTranslations = Pick<
   | "heroLead"
   | "heroBody"
   | "start"
+  | "freeCreditNote"
   | "proofAriaLabel"
   | "generationTitle"
   | "generationDesc"
@@ -183,6 +185,7 @@ const enHomeMarketing: HomeMarketingTranslations = {
   heroBody:
     "A cinematic creative workspace for generating images and videos, editing pictures, and preparing polished assets for every project.",
   start: "Start Free Now",
+  freeCreditNote: "10 free credits for every new account. No credit card required.",
   proofAriaLabel: "Creative model and tool strip",
   generationTitle: "Everything you need to shape the shot",
   generationDesc:
@@ -232,6 +235,7 @@ const zhHomeMarketing: HomeMarketingTranslations = {
   heroLead: "创作你想象中的任何视觉",
   heroBody: "一个有电影质感的创作工作区，用来生成图片和视频、编辑图片，并整理出适合项目使用的成品资产。",
   start: "免费开始",
+  freeCreditNote: "新用户注册即送 10 credits，无需绑定信用卡。",
   proofAriaLabel: "创作模型与工具条",
   generationTitle: "从想法到画面，一套工具完成",
   generationDesc: "把 AI 图片创作与实用精修工具放在一个专注的流程里，从概念到成品更顺。",
