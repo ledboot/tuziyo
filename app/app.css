@@ -790,6 +790,26 @@ select {
   margin-top: 2rem;
 }
 
+.home-redesign-credit-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 1rem !important;
+  color: rgba(245, 249, 251, 0.86) !important;
+  font-size: 0.86rem !important;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.home-redesign-credit-note::before {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: #00c2b8;
+  box-shadow: 0 0 0 0.28rem rgb(0 194 184 / 0.14);
+  content: "";
+}
+
 .home-redesign-button {
   display: inline-flex;
   min-height: 2.9rem;

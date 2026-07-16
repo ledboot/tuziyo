@@ -99,6 +99,7 @@ export default function Index() {
                 {home.start}
               </Link>
             </div>
+            <p className="home-redesign-credit-note">{home.freeCreditNote}</p>
           </div>
 
           <div className="home-model" aria-label={home.proofAriaLabel}>

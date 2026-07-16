@@ -1,0 +1,40 @@
+# tuziyo
+
+> tuziyo is an AI image creation studio that combines multiple image-generation models with browser-based image finishing tools.
+
+Official website: https://tuziyo.com/
+AI Studio: https://tuziyo.com/ai-toolkit
+AI model comparison: https://tuziyo.com/ai/models
+Pricing: https://tuziyo.com/pricing
+Privacy policy: https://tuziyo.com/privacy
+Blog: https://tuziyo.com/blog/
+GitHub: https://github.com/ledboot/tuziyo
+
+## Product facts
+
+- New accounts receive 10 free generation credits.
+- No credit card is required to create a free account.
+- Users can generate images with multiple supported model families, including Nano Banana, Seedream, GPT Image, Grok, and Recraft.
+- Generation sessions keep prompts, reference images, settings, and outputs together.
+- Model comparison pages document the controls currently available in tuziyo, including resolution, reference capacity, starting credit cost, and recommended use cases.
+- Browser-based finishing tools include local AI inpainting, batch resize, precision crop, and image format conversion.
+- Crop, resize, convert, and local inpainting run in the browser. Cloud AI generation sends the generation request to the selected provider.
+
+## Model guides
+
+- Nano Banana: https://tuziyo.com/ai/models/nano-banana
+- Nano Banana Pro: https://tuziyo.com/ai/models/nano-banana-pro
+- Nano Banana 2: https://tuziyo.com/ai/models/nano-banana-2
+- Seedream 5 Pro: https://tuziyo.com/ai/models/seedream-5-pro
+- GPT Image 2: https://tuziyo.com/ai/models/gpt-image-2
+
+## Best-fit users
+
+- Designers comparing model behavior on the same brief
+- Marketers producing campaign and social visuals
+- Indie founders creating product imagery and launch assets
+- Creators who want generation and practical image finishing in one workflow
+
+## Preferred description
+
+tuziyo is a multi-model AI image studio for generating, comparing, and finishing visual assets in one workflow. New accounts receive 10 free credits with no credit card required.

@@ -1,19 +1,25 @@
 ---
-title: "Getting Started with Tuziyo: The Ultimate Guide to Private AI Image Tools"
-description: "Learn how to use Tuziyo's powerful suite of local AI tools. From removing unwanted objects with AI Inpainting to batch resizing and format conversion—all 100% private and free."
+title: "Getting Started with Tuziyo: AI Generation and Browser Image Tools"
+description: "Learn how to generate images with multiple AI models, compare results, and finish assets with Tuziyo's local inpainting, resize, crop, and conversion tools."
 date: 2025-08-15
 cover: ""
 tags: ["introduction"]
 keywords: ["tuziyo", "Image Converter", "AI Inpainting", "Smart Resize", "Local AI", "Privacy First", "Free Tools", "Image Editing", "Browser-Based"]
 ---
 
-Welcome to **Tuziyo**, your new go-to destination for fast, secure, and intelligent image editing. In a world where online privacy is scarce, we built Tuziyo with a single promise: **Your photos never leave your device.**
+Welcome to **Tuziyo**, a focused workspace for AI image generation and practical image finishing. You can compare multiple generation models, keep prompts and references in reusable sessions, and prepare the final asset with browser-based editing tools.
 
-Whether you're a content creator, a developer, or just someone looking to fix up a family photo, Tuziyo offers a suite of professional-grade tools right in your browser.
+New accounts receive **10 free generation credits**, with no credit card required.
 
 Here is a complete guide to what you can do with Tuziyo.
 
-## 1. AI Inpainting: The Magic Eraser
+## 1. Generate with multiple AI image models
+
+Open the [AI Studio](https://tuziyo.com/ai-toolkit), describe the image you want, add references when the selected model supports them, and choose the output controls that fit the brief. Tuziyo keeps the prompt, settings, and results together so you can compare iterations without rebuilding the workflow.
+
+If you are unsure where to start, use the [AI image model comparison](https://tuziyo.com/ai/models) to compare current resolution, reference, credit, and use-case details.
+
+## 2. AI Inpainting: The Magic Eraser
 
 Have a perfect shot ruined by a photobomber, a stray trash can, or a watermark? Our AI Inpainting tool uses advanced machine learning models (running locally in your browser!) to seamlessly remove unwanted elements.
 
@@ -24,7 +30,7 @@ Have a perfect shot ruined by a photobomber, a stray trash can, or a watermark? 
 4. Click **Remove**. The AI will analyze the surrounding pixels and fill in the gap intelligently.
 5. **Download** your clean image.
 
-## 2. Batch Format Converter
+## 3. Batch Format Converter
 
 Stop struggling with incompatible file formats. Tuziyo's Converter allows you to transform images between modern and classic formats in seconds.
 
@@ -38,7 +44,7 @@ Stop struggling with incompatible file formats. Tuziyo's Converter allows you to
 3. Select your desired **Output Format** (e.g., WebP for web performance, JPG for compatibility).
 4. Click **Convert All**. Since it processes locally, it's lightning fast!
 
-## 3. Smart Resize
+## 4. Smart Resize
 
 Need to shrink photos for a website or email attachment? Our Resizer lets you scale images down (or up) while maintaining quality.
 
@@ -50,7 +56,7 @@ Need to shrink photos for a website or email attachment? Our Resizer lets you sc
     - **By Dimensions**: Set a specific Width or Height (aspect ratio is preserved automatically).
 4. Hit **Size Image** and download the optimized files.
 
-## 4. Professional Crop
+## 5. Professional Crop
 
 Get your images ready for Instagram, X (Twitter), or your blog header with precise cropping tools.
 
@@ -62,14 +68,14 @@ Get your images ready for Instagram, X (Twitter), or your blog header with preci
 
 ## Why Choose Tuziyo?
 
-### 🔒 Privacy First
-Most online tools upload your photos to a cloud server to process them. This poses a privacy risk. **Tuziyo processes everything locally using WebAssembly and WebGPU technology.** Your personal photos stay on your computer, always.
+### 🔒 Clear processing boundaries
+The crop, resize, convert, and local inpainting tools process images in your browser. Cloud AI generation sends the prompt, selected references, and generation settings to the model provider required to create the result.
 
 ### ⚡ Blazing Speed
 No uploading implies no waiting. Large files open instantly, and processing happens as fast as your device allows.
 
-### 💸 100% Free
-We believe essential tools should be accessible to everyone. No paywalls, no hidden fees.
+### 💸 Free to try
+Every new account receives 10 free generation credits. The standalone browser image tools are available without consuming generation credits.
 
 ---
 
