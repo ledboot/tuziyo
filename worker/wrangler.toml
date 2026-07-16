@@ -26,6 +26,9 @@ remote = true
 binding = "IMAGES"
 remote = true
 
+[env.preview.cache]
+enabled = true
+
 [[env.preview.r2_buckets]]
 binding = "R2"
 bucket_name = "tuziyo-preview"
@@ -69,6 +72,9 @@ remote = true
 [env.prod.images]
 binding = "IMAGES"
 remote = true
+
+[env.prod.cache]
+enabled = true
 
 [[env.prod.r2_buckets]]
 binding = "R2"
