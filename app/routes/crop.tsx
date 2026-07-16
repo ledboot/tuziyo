@@ -17,6 +17,7 @@ import {
 import type { Route } from "./+types/crop";
 import { useI18n } from "~/lib/i18n";
 import { SEOMeta } from "~/components/SeoMeta";
+import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo";
 
 type AspectRatio = "free" | "1:1" | "4:3" | "16:9" | "3:2" | "2:3";
 
@@ -45,52 +46,17 @@ const ASPECT_RATIOS: (
 ];
 
 export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Precise Image Cropper | Crop Photos to Fixed Aspect Ratios" },
-    {
-      name: "description",
-      content:
-        "Crop images with pixel-perfect accuracy. Presets for 16:9, 4:3, and 1:1. High-quality lossless rendering in your browser.",
-    },
-    {
-      name: "keywords",
-      content:
-        "tuziyo, free image cropping tool, crop image online free, photo crop online, crop image online, online image crop, image cropping tool",
-    },
-    {
-      property: "og:title",
-      content: "Precise Image Cropper | Free Online Photo Tool",
-    },
-    {
-      property: "og:description",
-      content:
-        "Crop images with pixel-perfect accuracy. High-quality lossless rendering.",
-    },
-    { property: "og:type", content: "website" },
-    { property: "og:url", content: "https://tuziyo.com/crop" },
-    {
-      property: "og:image",
-      content: "https://tuziyo.com/og-crop.png",
-    },
-    { name: "twitter:card", content: "summary_large_image" },
-    { property: "twitter:domain", content: "tuziyo.com" },
-    { property: "twitter:url", content: "https://tuziyo.com/crop" },
-    {
-      name: "twitter:title",
-      content: "Precise Image Cropper | Free Online Photo Tool",
-    },
-    {
-      name: "twitter:description",
-      content:
-        "Crop images with pixel-perfect accuracy. High-quality lossless rendering.",
-    },
-    {
-      name: "twitter:image",
-      content: "https://tuziyo.com/og-crop.png",
-    },
-    { name: "robots", content: "index, follow" },
-    { name: "author", content: "tuziyo" },
-  ];
+  const title = "Precise Image Cropper | Crop Photos to Fixed Aspect Ratios";
+  const description =
+    "Crop images with pixel-perfect accuracy. Presets for 16:9, 4:3, and 1:1. High-quality lossless rendering in your browser.";
+
+  return createSeoMeta({
+    title,
+    description,
+    path: "/crop",
+    keywords: "tuziyo, free image cropping tool, crop image online free, photo crop online, fixed aspect ratio crop",
+    schema: createWebApplicationSchema({ name: "tuziyo Image Cropper", description, path: "/crop" }),
+  });
 }
 
 export default function CropPage() {
@@ -110,7 +76,7 @@ export default function CropPage() {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoom, setZoom] = useState(85);
-  const [outputFormat, setOutputFormat] = useState("PNG");
+  const [outputFormat, setOutputFormat] = useState("WEBP");
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -370,7 +336,7 @@ export default function CropPage() {
           canvas.toBlob(
             (blob) => (blob ? resolve(blob) : reject()),
             `image/${outputFormat.toLowerCase()}`,
-            0.95,
+            outputFormat === "PNG" ? undefined : 0.95,
           );
         };
         img.src = item.preview;
@@ -446,7 +412,7 @@ export default function CropPage() {
           <div
             ref={containerRef}
             className={`flex-1 flex items-center justify-center p-12 relative overflow-auto custom-scrollbar touch-none transition-colors ${
-              isDraggingUpload && images.length > 0 ? "bg-primary-brand/5" : ""
+              isDraggingUpload && images.length > 0 ? "bg-primary/5" : ""
             }`}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -469,15 +435,15 @@ export default function CropPage() {
                 <div
                   className={`bg-white dark:bg-slate-900 p-12 rounded-[2.5rem] border-2 border-dashed transition-all duration-300 shadow-xl ${
                     isDraggingUpload
-                      ? "border-primary-brand bg-primary-brand/5 scale-[1.02]"
+                      ? "border-primary bg-primary/5 scale-[1.02]"
                       : "border-slate-300 dark:border-slate-700"
                   }`}
                 >
                   <div
                     className={`size-20 rounded-3xl flex items-center justify-center mb-6 mx-auto transition-colors ${
                       isDraggingUpload
-                        ? "bg-primary-brand text-white"
-                        : "bg-primary-brand/10 text-primary-brand"
+                        ? "bg-primary text-white"
+                        : "bg-primary/10 text-primary"
                     }`}
                   >
                     <Crop className="size-10" />
@@ -486,7 +452,7 @@ export default function CropPage() {
                   <p className="text-slate-500 mb-8">{t.inpainting.dropzone}</p>
                   <label
                     htmlFor="file-upload"
-                    className="inline-flex items-center gap-2 px-8 py-3 bg-primary-brand text-white rounded-xl font-bold cursor-pointer hover:opacity-90 transition-all font-display uppercase tracking-widest text-xs"
+                    className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-white rounded-xl font-bold cursor-pointer hover:opacity-90 transition-all font-display uppercase tracking-widest text-xs"
                   >
                     {t.common.uploadImage}
                     <input
@@ -525,7 +491,7 @@ export default function CropPage() {
                     {/* Crop UI */}
                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
                       <div
-                        className="absolute border-2 border-primary-brand shadow-[0_0_0_2000px_rgba(0,0,0,0.5)] pointer-events-auto cursor-move group"
+                        className="absolute border-2 border-primary shadow-[0_0_0_2000px_rgba(0,0,0,0.5)] pointer-events-auto cursor-move group"
                         style={{
                           left: cropArea.x,
                           top: cropArea.y,
@@ -549,42 +515,42 @@ export default function CropPage() {
 
                         {/* Resize Handles */}
                         <div
-                          className="absolute -top-1.5 -left-1.5 size-3 bg-white border-2 border-primary-brand rounded-full cursor-nw-resize"
+                          className="absolute -top-1.5 -left-1.5 size-3 bg-white border-2 border-primary rounded-full cursor-nw-resize"
                           onPointerDown={(e) => handlePointerDown(e, "nw")}
                         />
                         <div
-                          className="absolute -top-1.5 -right-1.5 size-3 bg-white border-2 border-primary-brand rounded-full cursor-ne-resize"
+                          className="absolute -top-1.5 -right-1.5 size-3 bg-white border-2 border-primary rounded-full cursor-ne-resize"
                           onPointerDown={(e) => handlePointerDown(e, "ne")}
                         />
                         <div
-                          className="absolute -bottom-1.5 -left-1.5 size-3 bg-white border-2 border-primary-brand rounded-full cursor-sw-resize"
+                          className="absolute -bottom-1.5 -left-1.5 size-3 bg-white border-2 border-primary rounded-full cursor-sw-resize"
                           onPointerDown={(e) => handlePointerDown(e, "sw")}
                         />
                         <div
-                          className="absolute -bottom-1.5 -right-1.5 size-3 bg-white border-2 border-primary-brand rounded-full cursor-se-resize"
+                          className="absolute -bottom-1.5 -right-1.5 size-3 bg-white border-2 border-primary rounded-full cursor-se-resize"
                           onPointerDown={(e) => handlePointerDown(e, "se")}
                         />
 
                         {/* Edge Handles */}
                         <div
-                          className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-6 bg-white border border-primary-brand rounded-full cursor-n-resize opacity-0 group-hover:opacity-100"
+                          className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-6 bg-white border border-primary rounded-full cursor-n-resize opacity-0 group-hover:opacity-100"
                           onPointerDown={(e) => handlePointerDown(e, "n")}
                         />
                         <div
-                          className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 h-1.5 w-6 bg-white border border-primary-brand rounded-full cursor-s-resize opacity-0 group-hover:opacity-100"
+                          className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 h-1.5 w-6 bg-white border border-primary rounded-full cursor-s-resize opacity-0 group-hover:opacity-100"
                           onPointerDown={(e) => handlePointerDown(e, "s")}
                         />
                         <div
-                          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-6 bg-white border border-primary-brand rounded-full cursor-w-resize opacity-0 group-hover:opacity-100"
+                          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-6 bg-white border border-primary rounded-full cursor-w-resize opacity-0 group-hover:opacity-100"
                           onPointerDown={(e) => handlePointerDown(e, "w")}
                         />
                         <div
-                          className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 w-1.5 h-6 bg-white border border-primary-brand rounded-full cursor-e-resize opacity-0 group-hover:opacity-100"
+                          className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 w-1.5 h-6 bg-white border border-primary rounded-full cursor-e-resize opacity-0 group-hover:opacity-100"
                           onPointerDown={(e) => handlePointerDown(e, "e")}
                         />
 
                         {/* Dimensions Label */}
-                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary-brand text-white text-2xs font-bold rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-white text-2xs font-bold rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                           {Math.round(cropArea.width / displayScale)} ×{" "}
                           {Math.round(cropArea.height / displayScale)} PX
                         </div>
@@ -613,15 +579,15 @@ export default function CropPage() {
                       onClick={() => setAspectRatio(ratio.value)}
                       className={`p-4 text-left border rounded-2xl transition-all group ${
                         aspectRatio === ratio.value
-                          ? "border-primary-brand bg-primary-brand/5 ring-4 ring-primary-brand/10"
+                          ? "border-primary bg-primary/5 ring-4 ring-primary/10"
                           : "border-slate-100 dark:border-slate-800 hover:border-slate-200"
                       }`}
                     >
                       <ratio.icon
-                        className={`mb-2 block transition-colors size-6 ${aspectRatio === ratio.value ? "text-primary-brand" : "text-slate-400"}`}
+                        className={`mb-2 block transition-colors size-6 ${aspectRatio === ratio.value ? "text-primary" : "text-slate-400"}`}
                       />
                       <p
-                        className={`text-sm font-bold ${aspectRatio === ratio.value ? "text-primary-brand" : "text-slate-700 dark:text-slate-200"}`}
+                        className={`text-sm font-bold ${aspectRatio === ratio.value ? "text-primary" : "text-slate-700 dark:text-slate-200"}`}
                       >
                         {ratio.label}
                       </p>
@@ -640,7 +606,7 @@ export default function CropPage() {
                     id="output-format"
                     value={outputFormat}
                     onChange={(e) => setOutputFormat(e.target.value)}
-                    className="w-full h-14 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary-brand/10 focus:border-primary-brand px-5 appearance-none text-slate-900 dark:text-white"
+                    className="w-full h-14 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary px-5 appearance-none text-slate-900 dark:text-white"
                   >
                     <option>PNG</option>
                     <option>JPG</option>
@@ -657,7 +623,7 @@ export default function CropPage() {
               type="button"
               onClick={handleDownload}
               disabled={isProcessing || images.length === 0}
-              className="w-full py-5 bg-slate-900 dark:bg-primary-brand text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 dark:hover:bg-primary-brand/90 transition-all flex items-center justify-center gap-3 group disabled:opacity-50"
+              className="w-full py-5 bg-slate-900 dark:bg-primary text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 dark:hover:bg-primary/90 transition-all flex items-center justify-center gap-3 group disabled:opacity-50"
             >
               <span className={isProcessing ? "animate-spin" : ""}>
                 {isProcessing ? (
@@ -690,7 +656,7 @@ export default function CropPage() {
               aria-label={`Select image ${idx + 1}`}
               className={`shrink-0 size-14 rounded-xl overflow-hidden border-2 transition-all ${
                 selectedIndex === idx
-                  ? "border-primary-brand scale-110 shadow-lg"
+                  ? "border-primary scale-110 shadow-lg"
                   : "border-transparent opacity-50 hover:opacity-100"
               }`}
             >

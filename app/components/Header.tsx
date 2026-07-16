@@ -1,215 +1,418 @@
-import { Link, NavLink, useLocation } from "react-router";
-import { createPortal } from "react-dom";
-import { Globe, ChevronDown, Menu, X } from "lucide-react";
-import { useI18n, type Language } from "../lib/i18n";
-import { useState, useRef, useEffect } from "react";
+import { Link, NavLink, useLocation } from "react-router"
+import { ChevronDown, Globe, LogOut, Menu, User, X } from "lucide-react"
+import { languageNames, useI18n, type Language } from "~/lib/i18n"
+import { useState, useEffect } from "react"
+import { useUserStore } from "../stores/userStore"
+import { markPricingIntent, trackEvent } from "~/lib/analytics"
 
-const LANG_NAMES: Record<Language, string> = {
-  en: "English",
-  zh: "中文",
-  fr: "Français",
-  ja: "日本語",
-  ko: "한국어",
-  ru: "Русский",
-  it: "Italiano",
-};
+interface NavItemSimple {
+  title: string
+  to: string
+  external?: boolean
+}
+
+interface NavItemWithChildren {
+  title: string
+  children: { title: string; to: string }[]
+}
+
+type NavItem = NavItemSimple | NavItemWithChildren
 
 export default function Header() {
-  const { lang, setLang, t } = useI18n();
-  const [showLangMenu, setShowLangMenu] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const location = useLocation();
+  const { lang, setLang, t } = useI18n()
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showLangMenu, setShowLangMenu] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const location = useLocation()
+  const { user, token, logout, isLoading: isUserLoading, isFetching: isUserFetching } = useUserStore()
+  const isAuthPending = isUserLoading || isUserFetching
+  const hasStoredAuth = Boolean(user || token)
+  const isAiToolkit = location.pathname.startsWith("/ai-toolkit")
+
+  const navItems: NavItem[] = [
+    { title: t.nav.home, to: "/" },
+    { title: t.nav.aiToolkit, to: "/ai-toolkit" },
+    { title: t.nav.pricing, to: "/pricing" },
+  ]
+
+  const closeMenus = () => {
+    setShowMobileMenu(false)
+    setShowLangMenu(false)
+    setShowUserMenu(false)
+  }
+
+  const openLogin = () => {
+    closeMenus()
+    trackEvent("login_prompt", { source: "header" })
+    window.dispatchEvent(new CustomEvent("openLoginModal"))
+  }
+
+  const handleNavigation = (to: string) => {
+    if (to === "/pricing") markPricingIntent("navigation")
+  }
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowLangMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+    if (showMobileMenu) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = ""
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [showMobileMenu])
 
-  const navItems = [
-    { title: t.nav.inpainting, to: "/inpainting", external: false },
-    { title: t.nav.resize, to: "/resize", external: false },
-    { title: t.nav.crop, to: "/crop", external: false },
-    { title: t.nav.convert, to: "/convert", external: false },
-    { title: t.nav.blog, to: "/blog", external: true },
-  ];
 
-  // Check if current path is in blog (for external static site)
-  const isBlogActive = location.pathname.startsWith("/blog");
+
+  const headerClasses = isAiToolkit
+    ? "fixed top-0 left-0 w-full z-[100] text-white group/header"
+    : "fixed top-0 left-0 w-full z-[100] text-white"
+
+  const navClasses = "ai-toolkit-nav-shell"
+
+  const headerInnerClasses =
+    "grid grid-cols-[1fr_auto_1fr] min-h-20 max-[1023px]:min-h-[60px] w-full items-center gap-6 px-6 max-[1023px]:grid-cols-[1fr_auto]"
+
+  const isSegmentedNavItemActive = (to: string) => {
+    if (to === "/") return location.pathname === "/"
+    const [path, hash = ""] = to.split("#")
+    if (location.pathname !== path) return false
+    return hash ? location.hash === `#${hash}` : !location.hash
+  }
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-gray-200/50 bg-white/80 backdrop-blur-md dark:border-gray-800/50 dark:bg-slate-900/80 transition-colors duration-300">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:grid md:grid-cols-[1fr_2fr_1fr] lg:px-12">
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            className="md:hidden -ml-2 p-2 text-slate-600 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-colors"
-            onClick={() => setMobileMenuOpen(true)}
-          >
-            <Menu className="size-6" />
-          </button>
-          <Link to="/">
-            <div className="flex items-center h-10 select-none">
-              <img
-                src="/logo-with-brand.svg"
-                alt="tuziyo"
-                className="h-full w-auto"
-              />
-            </div>
-          </Link>
+    <header
+      className={headerClasses}
+      style={
+        !isAiToolkit
+          ? {
+              background:
+                "linear-gradient(to bottom, oklch(14% 0 0 / 0.6) 0%, oklch(14% 0 0 / 0) 100%)",
+            }
+          : undefined
+      }
+    >
+      {/* Top blur gradient layer - only for AI Toolkit */}
+      {isAiToolkit && (
+        <div className="absolute inset-0 z-[-1] [mask-image:linear-gradient(to_bottom,black,transparent)] backdrop-blur-xl pointer-events-none" />
+      )}
+
+      {/* Progressive backdrop-blur layer - for non-AI Studio pages (like homepage) */}
+      {!isAiToolkit && (
+        <div
+          className="absolute inset-0 z-[-1] backdrop-blur-md pointer-events-none"
+          style={{
+            maskImage: "linear-gradient(to bottom, black 30%, transparent 85%)",
+            WebkitMaskImage: "linear-gradient(to bottom, black 30%, transparent 85%)",
+          }}
+        />
+      )}
+      
+      <div className={headerInnerClasses}>
+        <div className="flex justify-start">
+        <Link
+          to="/"
+          className="inline-flex h-full items-center gap-[0.55rem] text-xl font-semibold tracking-normal text-white uppercase no-underline"
+          aria-label={t.nav.home}
+        >
+          <span className="flex items-center gap-2">
+            <img className="h-10 w-10" src="/logo.svg" alt="" />
+            <span className="text-2xl">tuziyo</span>
+          </span>
+        </Link>
         </div>
 
-        <nav className="hidden md:flex items-center justify-center gap-6 lg:gap-8">
-          {navItems.map((item) =>
-            item.external ? (
-              <a
-                key={item.to}
-                href={item.to}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`text-sm font-bold transition-all hover:text-primary-brand ${
-                  isBlogActive
-                    ? "text-primary-brand"
-                    : "text-slate-600 dark:text-slate-400"
-                }`}
-              >
-                {item.title}
-              </a>
-            ) : (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `text-sm font-bold transition-all hover:text-primary-brand ${
-                    isActive
-                      ? "text-primary-brand"
-                      : "text-slate-600 dark:text-slate-400"
-                  }`
-                }
-              >
-                {item.title}
-              </NavLink>
-            ),
-          )}
-        </nav>
+        <div className="hidden justify-center lg:flex">
 
-        <div className="flex items-center justify-end gap-4">
-          <div className="relative" ref={menuRef}>
+        <nav
+          className={navClasses}
+          aria-label={t.nav.mainNavigation}
+        >
+          <ul className="ai-toolkit-nav-list">
+            {navItems.map(item => {
+              if ("children" in item) return null
+
+              return (
+              <li key={item.to}>
+                {item.external ? (
+                  <a
+                    href={item.to}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={[
+                      "ai-toolkit-nav-item",
+                      isSegmentedNavItemActive(item.to) ? "is-active" : "",
+                    ].join(" ")}
+                  >
+                    {item.title}
+                  </a>
+                ) : (
+                  <Link
+                    to={item.to}
+                    onClick={() => handleNavigation(item.to)}
+                    className={[
+                      "ai-toolkit-nav-item",
+                      isSegmentedNavItemActive(item.to) ? "is-active" : "",
+                    ].join(" ")}
+                  >
+                    {item.title}
+                  </Link>
+                )}
+              </li>
+              )
+            })}
+          </ul>
+        </nav>
+        </div>
+
+        {/* Right Column: Actions */}
+        <div className="flex justify-end items-center gap-[0.55rem]">
+          <div className="hidden lg:flex items-center gap-[0.55rem]">
+          <div
+            className={`group dropdown dropdown-hover h-10 w-28 ${showLangMenu ? "dropdown-open" : ""}`}
+          >
             <button
               type="button"
-              onClick={() => setShowLangMenu(!showLangMenu)}
-              className="flex items-center gap-2 text-slate-500 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-all group px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800"
+              className="!flex h-full w-full items-center justify-center gap-1 rounded-full text-center text-nav-root font-normal text-nav-menu group-hover:!text-gray-100 cursor-pointer transition-colors"
+              onClick={() => setShowLangMenu(value => !value)}
+              aria-label={t.nav.changeLanguage}
+              aria-expanded={showLangMenu}
+              tabIndex={0}
             >
-              <div className="p-1 rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary-brand/10 transition-colors">
-                <Globe className="size-4" />
-              </div>
-              <span className="text-xs font-bold uppercase tracking-tight">
-                {lang}
-              </span>
-              <ChevronDown
-                className={`size-3 transition-transform duration-300 ${showLangMenu ? "rotate-180" : ""}`}
-              />
+              <Globe className="size-4" />
+              <span>{languageNames[lang]}</span>
+              <ChevronDown className="size-4 transition-transform duration-200 group-hover:-rotate-180" />
             </button>
-
-            {showLangMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl py-2 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                {(Object.keys(LANG_NAMES) as Language[]).map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => {
-                      setLang(l);
-                      setShowLangMenu(false);
-                    }}
-                    className={`w-full px-4 py-2.5 text-left text-sm font-bold transition-colors flex items-center justify-between ${
-                      lang === l
-                        ? "text-primary-brand bg-primary-brand/5"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-                    }`}
-                  >
-                    {LANG_NAMES[l]}
-                    {lang === l && (
-                      <div className="size-1.5 rounded-full bg-primary-brand" />
-                    )}
-                  </button>
+            <div className="dropdown-content left-1/2 -translate-x-1/2 z-50 ms-0 pt-1" tabIndex={0}>
+              <ul className="menu menu-md w-40 gap-1 rounded-box liquid-glass-dropdown p-1 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
+                {(Object.keys(languageNames) as Language[]).map(nextLang => (
+                  <li key={nextLang}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLang(nextLang)
+                        closeMenus()
+                      }}
+                      className={[
+                        "justify-between font-normal text-nav-submenu",
+                        lang === nextLang
+                          ? "text-primary font-bold hover:!text-gray-100"
+                          : "text-nav-menu hover:bg-white/10 hover:!text-gray-100 transition-colors",
+                      ].join(" ")}
+                    >
+                      {languageNames[nextLang]}
+                    </button>
+                  </li>
                 ))}
-              </div>
-            )}
+              </ul>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Mobile Drawer */}
-      {/* Mobile Drawer */}
-      {mobileMenuOpen &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div className="fixed inset-0 z-[100] flex justify-start md:hidden">
+          {isAuthPending ? (
             <div
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
-              onClick={() => setMobileMenuOpen(false)}
+              className="flex h-10 items-center justify-end gap-[0.55rem]"
+              aria-hidden="true"
+            >
+              {hasStoredAuth ? (
+                <div className="skeleton size-8 rounded-full bg-white/15" />
+              ) : (
+                <>
+                  <div className="skeleton h-8 w-20 rounded-full bg-white/10" />
+                  <div className="skeleton h-8 w-24 rounded-xl bg-white/15" />
+                </>
+              )}
+            </div>
+          ) : user ? (
+            <div
+              className={`dropdown dropdown-end dropdown-hover ${showUserMenu ? "dropdown-open" : ""}`}
+            >
+              <button
+                type="button"
+                className="avatar btn btn-circle btn-primary btn-sm overflow-hidden"
+                onClick={() => setShowUserMenu(value => !value)}
+                aria-label={t.nav.openUserMenu}
+                aria-expanded={showUserMenu}
+                tabIndex={0}
+              >
+                <img
+                  className="size-full rounded-full object-cover"
+                  src="/default-avatar.svg"
+                  alt={user.name}
+                />
+              </button>
+              <div className="dropdown-content z-50 pt-1" tabIndex={0}>
+                <ul className="menu menu-md w-40 gap-1 rounded-box liquid-glass-dropdown p-2 shadow-2xl before:absolute before:-top-2 before:left-0 before:h-2 before:w-full before:bg-transparent">
+                  <li>
+                    <button
+                      type="button"
+                      className="justify-between rounded-lg text-nav-submenu font-normal text-nav-menu hover:bg-white/10 hover:!text-gray-100 transition-colors"
+                      onClick={() => {
+                        if (location.pathname === "/profile") return
+                        closeMenus()
+                        window.open("/profile", "_blank")
+                      }}
+                    >
+                      {t.nav.profile}
+                      <User className="size-4" />
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      className="justify-between rounded-lg text-nav-submenu font-normal text-nav-menu hover:bg-white/10 hover:!text-gray-100 transition-colors"
+                      onClick={() => {
+                        closeMenus()
+                        logout()
+                      }}
+                    >
+                      {t.nav.logout}
+                      <LogOut className="size-4" />
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                className="!flex h-full w-28 items-center justify-center gap-1 rounded-full text-center text-nav-root font-normal text-nav-menu hover:bg-transparent hover:!text-gray-100 transition-colors"
+                type="button"
+                onClick={openLogin}
+              >
+                {t.nav.login}
+              </button>
+              <button
+                className="header-register-btn"
+                type="button"
+                onClick={openLogin}
+              >
+                {t.nav.register}
+              </button>
+            </>
+          )}
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-circle btn-ghost btn-sm lg:hidden"
+            onClick={() => setShowMobileMenu(value => !value)}
+            aria-label={t.nav.openMenu}
+            aria-expanded={showMobileMenu}
+          >
+            {showMobileMenu ? <X className="size-5" /> : <Menu className="size-5" />}
+          </button>
+
+        {showMobileMenu && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="mobile-menu-backdrop lg:hidden"
+              onClick={closeMenus}
+              aria-hidden="true"
             />
-            <div className="relative w-[300px] max-w-[85vw] h-full bg-white dark:bg-slate-950 p-6 shadow-2xl animate-in slide-in-from-left duration-300 flex flex-col">
-              <div className="flex items-center justify-between mb-10">
-                <Link to="/" onClick={() => setMobileMenuOpen(false)}>
-                  <img
-                    src="/logo-with-brand.svg"
-                    alt="tuziyo"
-                    className="h-10 w-auto"
-                  />
+            {/* Drawer Panel */}
+            <div className="mobile-menu-drawer lg:hidden">
+              {/* Header row */}
+              <div className="flex items-center justify-between">
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-[0.55rem] text-xl font-semibold tracking-normal text-white uppercase no-underline"
+                  onClick={closeMenus}
+                >
+                  <span className="flex items-center gap-2">
+                    <img className="h-9 w-9" src="/logo.svg" alt="" />
+                    <span className="text-xl">tuziyo</span>
+                  </span>
                 </Link>
                 <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 -mr-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+                  type="button"
+                  onClick={closeMenus}
+                  className="p-2 text-white/70 hover:text-white transition-all duration-200 cursor-pointer hover:scale-110 active:scale-90"
+                  aria-label="Close menu"
                 >
                   <X className="size-6" />
                 </button>
               </div>
 
-              <nav className="flex flex-col gap-2">
-                {navItems.map((item) =>
-                  item.external ? (
-                    <a
-                      key={item.to}
-                      href={item.to}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center py-3 text-base font-bold text-slate-600 hover:text-primary-brand dark:text-slate-400 dark:hover:text-primary-brand transition-colors border-b border-slate-100 dark:border-slate-900/50"
-                    >
-                      {item.title}
-                    </a>
-                  ) : (
-                    <NavLink
+              {/* Navigation links */}
+              <nav className="flex-1 flex flex-col justify-start gap-6 mt-12 overflow-y-auto">
+                {navItems.map(item => {
+                  if ("children" in item) return null
+                  const isActive = isSegmentedNavItemActive(item.to)
+                  return (
+                    <Link
                       key={item.to}
                       to={item.to}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={({ isActive }) =>
-                        `flex items-center py-3 text-base font-bold transition-colors border-b border-slate-100 dark:border-slate-900/50 ${
-                          isActive
-                            ? "text-primary-brand"
-                            : "text-slate-600 hover:text-primary-brand dark:text-slate-400"
-                        }`
-                      }
+                      onClick={() => {
+                        handleNavigation(item.to)
+                        closeMenus()
+                      }}
+                      className={`text-2xl font-medium tracking-tight transition-colors duration-200 ${
+                        isActive ? "text-[#00C2B8]" : "text-white/80 hover:text-white"
+                      }`}
                     >
                       {item.title}
-                    </NavLink>
-                  ),
+                    </Link>
+                  )
+                })}
+
+                {/* User profile (if logged in) */}
+                {user && (
+                  <div className="border-t border-white/5 pt-6 mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-full overflow-hidden">
+                        <img
+                          src="/default-avatar.svg"
+                          alt=""
+                          className="size-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <div className="text-white font-medium">{user.name}</div>
+                        <div className="text-xs text-white/50">{user.email}</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeMenus()
+                        logout()
+                      }}
+                      className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 font-medium"
+                    >
+                      <LogOut className="size-4" />
+                      {t.nav.logout}
+                    </button>
+                  </div>
                 )}
               </nav>
 
-              <div className="mt-auto">
-                <p className="text-xs font-bold text-slate-400 text-center">
-                  © {new Date().getFullYear()} tuziyo.com
-                </p>
-              </div>
+              {/* Bottom action buttons */}
+              {!isAuthPending && (
+                <div className="mt-auto flex flex-col gap-3 pt-6 border-t border-white/5">
+                  <Link
+                    to="/ai-toolkit"
+                    onClick={closeMenus}
+                    className="mobile-menu-btn-primary"
+                  >
+                    {t.home.start}
+                  </Link>
+                  {!user && (
+                    <button
+                      type="button"
+                      onClick={openLogin}
+                      className="mobile-menu-btn-secondary"
+                    >
+                      {t.nav.login}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
-          </div>,
-          document.body,
+          </>
         )}
+        </div>
+      </div>
     </header>
-  );
+  )
 }

@@ -8,14 +8,14 @@ const posts = (await getCollection("blog")).sort(
   (a, b) => b.data.date.getTime() - a.data.date.getTime()
 );
 const { pagePosts, totalPages } = paginatePosts(posts, 1);
-const base = import.meta.env.BASE_URL;
-const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN;
+const base = "/blog/";
+const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN ?? "https://tuziyo.com";
 ---
 <BaseLayout
   title="Blog | tuziyo"
   description="Product updates, tips, and workflows for fast, private image editing in your browser."
   ogType="website"
-  ogImage="https://tuziyo.com/og-index.png"
+  ogImage="https://tuziyo.com/web-app-manifest-512x512.png"
 >
   <section class="relative overflow-hidden rounded-5xl border border-primary-brand/10 bg-slate-50 px-8 py-12 hero-pattern dark:border-slate-800 dark:bg-slate-900/30">
     <div class="relative z-10 space-y-4">
@@ -41,7 +41,7 @@ const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN;
       >
         <div class="overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-100 dark:border-slate-800 dark:bg-slate-900 shadow-sm transition-all duration-500 group-hover:shadow-2xl">
           <img
-            src={post.data.cover === "" || post.data.cover === null ? `${MAIN_ORIGIN}/default-cover.png` : post.data.cover}
+            src={post.data.cover || `${MAIN_ORIGIN}/web-app-manifest-512x512.png`}
             alt={post.data.title}
             loading="lazy"
             class="aspect-[16/10] w-full object-cover transition-transform duration-700 group-hover:scale-105"

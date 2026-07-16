@@ -1,53 +1,19 @@
 import { SEOMeta } from "~/components/SeoMeta";
 import Inpainting from "~/components/Inpainting";
+import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo";
 
 export function meta() {
-  return [
-    { title: "AI Image Inpainting | High-Definition Photo Restoration Online" },
-    {
-      name: "description",
-      content:
-        "Professional AI-powered image inpainting tool. Remove unwanted objects, restore photos, and fill missing areas with high-quality results. WebGPU accelerated, 100% private.",
-    },
-    {
-      name: "keywords",
-      content:
-        "tuziyo, ai inpainting, remove object from image, powered by ai, photo inpainting, ai image editor",
-    },
-    {
-      property: "og:title",
-      content: "AI Image Inpainting | HD Photo Restoration",
-    },
-    {
-      property: "og:description",
-      content:
-        "Professional image inpainting with MI-GAN AI. Remove objects and restore photos with high-quality results.",
-    },
-    { property: "og:type", content: "website" },
-    { property: "og:url", content: "https://tuziyo.com/inpainting" },
-    {
-      property: "og:image",
-      content: "https://tuziyo.com/og-inpaint.png",
-    },
-    { name: "twitter:card", content: "summary_large_image" },
-    { property: "twitter:domain", content: "tuziyo.com" },
-    { property: "twitter:url", content: "https://tuziyo.com/inpainting" },
-    {
-      name: "twitter:title",
-      content: "AI Image Inpainting | HD Photo Restoration",
-    },
-    {
-      name: "twitter:description",
-      content:
-        "Professional image inpainting with MI-GAN AI. Remove objects and restore photos with high-quality results.",
-    },
-    {
-      name: "twitter:image",
-      content: "https://tuziyo.com/og-inpaint.png",
-    },
-    { name: "robots", content: "index, follow" },
-    { name: "author", content: "tuziyo" },
-  ];
+  const title = "AI Image Inpainting | High-Definition Photo Restoration Online";
+  const description =
+    "Professional AI-powered image inpainting tool. Remove unwanted objects, restore photos, and fill missing areas with high-quality results. WebGPU accelerated, 100% private.";
+
+  return createSeoMeta({
+    title,
+    description,
+    path: "/inpainting",
+    keywords: "tuziyo, ai inpainting, remove object from image, photo restoration, ai image editor",
+    schema: createWebApplicationSchema({ name: "tuziyo AI Image Inpainting", description, path: "/inpainting" }),
+  });
 }
 
 export default function InpaintingPage() {

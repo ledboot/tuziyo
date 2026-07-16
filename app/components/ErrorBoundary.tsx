@@ -8,7 +8,7 @@ export default function ErrorBoundary() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-6">
         <div className="max-w-md w-full text-center">
           <div className="mb-8">
-            <h1 className="text-9xl font-bold text-primary-brand">
+            <h1 className="text-9xl font-bold text-primary">
               {error.status}
             </h1>
             <p className="text-2xl font-semibold text-gray-900 dark:text-white mt-4">
@@ -25,7 +25,7 @@ export default function ErrorBoundary() {
 
             <a
               href="/"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary-brand text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all"
             >
               <svg
                 className="w-5 h-5"
@@ -98,7 +98,7 @@ export default function ErrorBoundary() {
             </button>
             <a
               href="/"
-              className="px-6 py-3 bg-primary-brand text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all"
+              className="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all"
             >
               Go Home
             </a>

@@ -1,0 +1,152 @@
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { API_BASE } from "../lib/config";
+import { setAnalyticsUser, trackEvent } from "../lib/analytics";
+
+interface User {
+  userId: string;
+  email: string;
+  name: string;
+  avatarUrl?: string;
+  userType: string;
+  credits: number;
+}
+
+interface UserState {
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  isFetching: boolean;
+  setUser: (user: User | null) => void;
+  setCredits: (credits: number) => void
+  setToken: (token: string | null) => void;
+  login: (
+    code: string,
+    codeVerifier: string
+  ) => Promise<{
+    success: boolean
+    error?: string
+    isNewUser?: boolean
+    onboardingCredits?: number
+  }>
+  logout: () => Promise<void>;
+  fetchUser: () => void;
+}
+
+interface AuthResponse {
+  error?: string;
+  message?: string;
+  token?: string;
+  user?: User;
+  isNewUser?: boolean
+  onboardingCredits?: number
+}
+
+export const useUserStore = create<UserState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      token: null,
+      isLoading: true,
+      isFetching: false,
+
+      setUser: (user) => set({ user }),
+      setCredits: credits =>
+        set(state => ({ user: state.user ? { ...state.user, credits } : state.user })),
+      setToken: (token) => set({ token }),
+
+      login: async (code: string, codeVerifier: string) => {
+        try {
+          const response = await fetch(`${API_BASE}/api/auth/google/callback`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code, code_verifier: codeVerifier }),
+          });
+
+          const data = (await response.json()) as AuthResponse;
+
+          if (data.error) {
+            return { success: false, error: data.message || data.error };
+          }
+
+          if (data.token && data.user) {
+            set({ user: data.user, token: data.token, isLoading: false });
+            setAnalyticsUser({
+              userId: data.user.userId,
+              userType: data.user.userType,
+            });
+            return {
+              success: true,
+              isNewUser: data.isNewUser,
+              onboardingCredits: data.onboardingCredits,
+            };
+          }
+
+          return { success: false, error: "Login failed" };
+        } catch (err) {
+          return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+        }
+      },
+
+      logout: async () => {
+        trackEvent("logout", {
+          user_type: get().user?.userType ?? "unknown",
+        });
+        setAnalyticsUser(null);
+
+        try {
+          const token = get().token;
+          if (token) {
+            await fetch(`${API_BASE}/api/auth/logout`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          }
+        } finally {
+          set({ user: null, token: null });
+          localStorage.removeItem("user-storage");
+          window.location.href = "/";
+        }
+      },
+
+      fetchUser: () => {
+        const state = get();
+        if (state.isFetching) return;
+
+        const stored = localStorage.getItem("tuziyo-user-storage");
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (parsed.state?.token) {
+              set({ token: parsed.state.token, isFetching: true });
+              fetch(`${API_BASE}/api/auth/me`, {
+                headers: { Authorization: `Bearer ${parsed.state.token}` },
+              })
+                .then((res) => res.json())
+                .then((data) => {
+                  const authData = data as AuthResponse;
+                  if (authData.user) {
+                    set({ user: authData.user, isLoading: false, isFetching: false });
+                  } else {
+                    set({ user: null, token: null, isLoading: false, isFetching: false });
+                    localStorage.removeItem("tuziyo-user-storage");
+                  }
+                })
+                .catch(() => {
+                  set({ user: null, token: null, isLoading: false, isFetching: false });
+                  localStorage.removeItem("tuziyo-user-storage");
+                });
+              return;
+            }
+          } catch {
+          }
+        }
+        set({ isLoading: false, isFetching: false });
+      },
+    }),
+    {
+      name: "tuziyo-user-storage",
+      partialize: (state) => ({ user: state.user, token: state.token }),
+    },
+  ),
+);

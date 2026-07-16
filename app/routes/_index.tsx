@@ -1,237 +1,217 @@
-import { Link } from "react-router";
-import {
-  Wand2,
-  Scaling,
-  Crop,
-  Repeat,
-  ShieldCheck,
-  ArrowRight,
-  Zap,
-} from "lucide-react";
-import type { Route } from "./+types/_index";
-import { useI18n } from "~/lib/i18n";
-import { SEOMeta } from "~/components/SeoMeta";
+import { Link } from "react-router"
+import { ArrowRight, Play } from "lucide-react"
+import type { Route } from "./+types/_index"
+import { translations, useI18n } from "~/lib/i18n"
+import { SEOMeta } from "~/components/SeoMeta"
+import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo"
 
 export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "tuziyo - Professional AI Image Tools | Free & Secure" },
-    {
-      name: "description",
-      content:
-        "Professional image editing tools powered by AI. Remove watermarks, resize, crop, and convert images - all free and secure in your browser. No registration required.",
-    },
-    {
-      name: "keywords",
-      content:
-        "tuziyo, free ai image editor, remove watermark online, bulk image resizer, free image cropper, photo converter",
-    },
-    { property: "og:title", content: "tuziyo - Professional AI Image Tools" },
-    {
-      property: "og:description",
-      content:
-        "Professional image editing tools powered by AI. 100% private and free.",
-    },
-    { property: "og:type", content: "website" },
-    { property: "og:url", content: "https://tuziyo.com" },
-    {
-      property: "og:image",
-      content: "https://tuziyo.com/og-index.png",
-    },
-    { name: "twitter:card", content: "summary_large_image" },
-    { property: "twitter:domain", content: "tuziyo.com" },
-    { property: "twitter:url", content: "https://tuziyo.com" },
-    { name: "twitter:title", content: "tuziyo - Professional AI Image Tools" },
-    {
-      name: "twitter:description",
-      content:
-        "Professional image editing tools powered by AI. 100% private and free.",
-    },
-    {
-      name: "twitter:image",
-      content:"https://tuziyo.com/og-index.png",
-    },
-    { name: "robots", content: "index, follow" },
-    { name: "author", content: "tuziyo" },
-  ];
+  const seo = translations.en.seo
+
+  return createSeoMeta({
+    title: seo.title,
+    description: seo.description,
+    keywords: seo.keywords,
+    path: "/",
+    schema: [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: "tuziyo",
+        url: "https://tuziyo.com/",
+        description: seo.description,
+      },
+      createWebApplicationSchema({
+        name: "tuziyo AI Image & Video Generation Studio",
+        description: seo.description,
+        path: "/",
+      }),
+    ],
+  })
 }
 
-export default function Index() {
-  const { t } = useI18n();
+const showcaseImages = {
+  hero: "/showcase/case1.avif",
+  heroVideo: "/videos/cover-video.mp4",
+  image: "/showcase/case351.jpg",
+  video: "/showcase/case206.jpg",
+  edit: "/showcase/case250.jpg",
+  poster: "/showcase/case22.jpg",
+  vertical: "/showcase/case6.jpg",
+  concept: "/showcase/case324.jpg",
+}
 
-  const tools = [
+const models = [
+  { name: "GPT Image", slug: "openai" },
+  { name: "Nano Banana", slug: "google" },
+  { name: "Seedance", slug: "bytedance" },
+  { name: "Grok", slug: "grok" },
+  { name: "Recraft", slug: "recraft" },
+]
+
+const galleryImages = [
+  showcaseImages.image,
+  showcaseImages.poster,
+  showcaseImages.video,
+  showcaseImages.vertical,
+  showcaseImages.concept,
+]
+
+export default function Index() {
+  const { t } = useI18n()
+  const home = t.home
+
+  const featureCards = [
     {
-      title: t.inpainting.title,
-      description: t.inpainting.description,
+      title: home.imageTitle,
+      description: home.imageDesc,
+      action: home.imageAction,
+      to: "/ai-toolkit",
+      image: showcaseImages.image,
+    },
+    {
+      title: home.videoTitle,
+      description: home.videoDesc,
+      action: home.videoAction,
+      to: "/ai-toolkit",
+      image: showcaseImages.video,
+      wide: true,
+    },
+    {
+      title: home.toolkitTitle,
+      description: home.toolkitDesc,
+      action: t.common.tools,
       to: "/inpainting",
-      icon: Wand2,
+      image: showcaseImages.edit,
     },
-    {
-      title: t.resize.title,
-      description: t.resize.description,
-      to: "/resize",
-      icon: Scaling,
-    },
-    {
-      title: t.crop.title,
-      description: t.crop.description,
-      to: "/crop",
-      icon: Crop,
-    },
-    {
-      title: t.convert.title,
-      description: t.convert.description,
-      to: "/convert",
-      icon: Repeat,
-    },
-  ];
+  ]
 
   return (
     <>
       <SEOMeta page="home" />
-      {/* Hero Section */}
-      <section className="relative overflow-hidden px-6 py-20 lg:px-12 lg:py-32 text-center hero-pattern transition-colors duration-300">
-        <div className="mx-auto max-w-4xl relative z-10">
-          <div className="inline-flex items-center gap-2 rounded-full bg-primary-brand/10 px-4 py-1.5 text-2xs font-black uppercase tracking-[0.2em] text-primary-brand mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <ShieldCheck className="size-4" />
-            {t.common.freeForever}
+
+      <section className="home-redesign-hero">
+        <figure className="home-redesign-hero__media" aria-hidden="true">
+          <video autoPlay loop muted playsInline preload="metadata" poster={showcaseImages.hero}>
+            <source src={showcaseImages.heroVideo} type="video/mp4" />
+          </video>
+          <img src={showcaseImages.hero} alt="" />
+        </figure>
+
+        <div className="home-redesign-shell home-redesign-hero__inner">
+          <div className="home-redesign-hero__content">
+            <h1>{home.heroLead}</h1>
+            <p>{home.heroBody}</p>
+
+            <div className="home-redesign-actions">
+              <Link to="/ai-toolkit" className="home-redesign-button home-redesign-button--primary">
+                {home.start}
+              </Link>
+            </div>
           </div>
-          <h1 className="text-5xl font-black tracking-tight text-slate-900 dark:text-white sm:text-7xl leading-[1.1] mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-            {t.home.heroTitle.split(".").map((part, i) => (
-              <span key={i} className={i === 1 ? "text-primary-brand" : ""}>
-                {part}
-                {i === 0 && part.length > 0 ? ". " : ""}
+
+          <div className="home-model" aria-label={home.proofAriaLabel}>
+            {models.map(model => (
+              <span key={model.name}>
+                <img
+                  src={`https://unpkg.com/@lobehub/icons-static-svg@latest/icons/${model.slug}.svg`}
+                  alt=""
+                />
+                {model.name}
               </span>
             ))}
-          </h1>
-          <p className="mt-6 text-lg md:text-xl leading-relaxed text-slate-500 dark:text-slate-400 max-w-2xl mx-auto font-medium animate-in fade-in slide-in-from-bottom-12 duration-700 delay-200">
-            {t.home.heroSubtitle}
-          </p>
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-6 animate-in fade-in slide-in-from-bottom-16 duration-700 delay-300">
-            <button
-              type="button"
-              className="rounded-2xl bg-primary-brand px-10 py-5 text-lg font-black text-white shadow-[0_20px_40px_-10px_rgba(0,194,184,0.3)] hover:shadow-[0_25px_50px_-12px_rgba(0,194,184,0.4)] hover:-translate-y-1 active:translate-y-0 transition-all font-display uppercase tracking-widest"
-              onClick={() => {
-                const toolsSection = document.getElementById("tools");
-                toolsSection?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              {t.home.getStarted}
-            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="home-redesign-section" id="suite">
+        <div className="home-redesign-shell">
+          <div className="home-redesign-section__head home-redesign-section__head--center">
+            <h2>{home.generationTitle}</h2>
+            <p>{home.generationDesc}</p>
+          </div>
+
+          <div className="home-redesign-capabilities">
+            {featureCards.map(({ title, description, action, to, image, wide }) => (
+              <Link
+                key={title}
+                to={to}
+                className={`home-redesign-capability-card ${
+                  wide ? "home-redesign-capability-card--wide" : ""
+                }`}
+              >
+                <img src={image} alt="" />
+                <div>
+                  <small>{action}</small>
+                  <h3>{title}</h3>
+                  <p>{description}</p>
+                </div>
+                <ArrowRight className="home-redesign-card-arrow size-5" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="home-redesign-section home-redesign-section--studio">
+        <div className="home-redesign-shell home-redesign-studio">
+          <div className="home-redesign-studio__copy">
+            <span>{home.browse}</span>
+            <h2>{home.voicesTitle}</h2>
+            <p>{home.voicesDesc}</p>
+          </div>
+
+          <div className="home-redesign-workflow">
+            {home.testimonials.map(([name, role, quote]) => (
+              <article key={name}>
+                <span>{role}</span>
+                <h3>{name}</h3>
+                <p>{quote}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="home-redesign-showcase" id="inspiration">
+        <div className="home-redesign-shell">
+          <div className="home-redesign-showcase__head">
+            <div>
+              <h2>{home.galleryTitle}</h2>
+              <p>{home.galleryDesc}</p>
+            </div>
+            <Link to="/ai-toolkit">
+              {home.browse}
+              <ArrowRight className="size-4" />
+            </Link>
           </div>
         </div>
 
-        {/* Decorative elements */}
-        <div className="absolute top-1/2 left-0 -translate-y-1/2 w-64 h-64 bg-primary-brand/5 rounded-full blur-3xl -translate-x-1/2 pointer-events-none" />
-        <div className="absolute top-1/2 right-0 -translate-y-1/2 w-96 h-96 bg-primary-brand/5 rounded-full blur-3xl translate-x-1/2 pointer-events-none" />
-      </section>
-
-      {/* Tools Section */}
-      <section
-        id="tools"
-        className="mx-auto max-w-7xl px-6 py-24 lg:px-12 scroll-mt-20"
-      >
-        <div className="mb-16">
-          <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-            {t.home.featuresTitle}
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {tools.map((tool, i) => (
-            <Link
-              to={tool.to}
-              key={tool.to}
-              className="group relative flex flex-col gap-6 rounded-[2.5rem] border border-primary-brand/30 bg-white p-8 shadow-2xl shadow-primary-brand/5 transition-all hover:-translate-y-2 hover:border-primary-brand/30 hover:shadow-2xl hover:shadow-primary-brand/5 sm:border-slate-100 sm:shadow-none dark:border-primary-brand/30 dark:bg-slate-900/50 dark:sm:border-slate-800"
-            >
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-brand text-white transition-all duration-300 group-hover:rotate-6 sm:bg-slate-50 sm:text-slate-400 dark:bg-primary-brand dark:sm:bg-slate-800 sm:group-hover:bg-primary-brand sm:group-hover:text-white">
-                <tool.icon className="size-7" />
-              </div>
-              <div className="space-y-3">
-                <h3 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
-                  {tool.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400 font-medium">
-                  {tool.description}
-                </p>
-              </div>
-              <div className="mt-auto pt-4 flex items-center justify-between">
-                <div className="size-8 rounded-full border-2 border-primary-brand bg-primary-brand text-white flex items-center justify-center transition-all sm:border-slate-100 sm:bg-transparent sm:text-inherit dark:border-primary-brand dark:sm:border-slate-800 group-hover:border-primary-brand group-hover:bg-primary-brand group-hover:text-white">
-                  <ArrowRight className="size-4" />
-                </div>
-              </div>
-            </Link>
+        <div className="home-redesign-gallery">
+          {galleryImages.map(src => (
+            <figure key={src}>
+              <img src={src} alt={home.galleryImageAlt} />
+              {src === showcaseImages.video ? (
+                <span aria-hidden="true">
+                  <Play className="size-5" fill="currentColor" />
+                </span>
+              ) : null}
+            </figure>
           ))}
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="bg-slate-50 dark:bg-slate-900/30 px-6 py-32 lg:px-12 transition-colors duration-300">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid grid-cols-1 gap-24 lg:grid-cols-3">
-            <div className="space-y-6">
-              <div className="size-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
-                <ShieldCheck className="size-6" />
-              </div>
-              <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                {t.home.privacyTitle}
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                {t.home.privacyDesc}
-              </p>
-            </div>
-            <div className="space-y-6">
-              <div className="size-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                <Zap className="size-6" />
-              </div>
-              <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                {t.home.speedTitle}
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                {t.home.speedDesc}
-              </p>
-            </div>
-            <div className="space-y-6">
-              <div className="size-12 rounded-2xl bg-primary-brand/10 text-primary-brand flex items-center justify-center">
-                <Wand2 className="size-6" />
-              </div>
-              <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                {t.home.aiTitle}
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                {t.home.aiDesc}
-              </p>
-            </div>
+      <section className="home-redesign-cta-section">
+        <div className="home-redesign-shell">
+          <div className="home-redesign-cta">
+            <h2>{home.ctaTitle}</h2>
+            <p>{home.ctaDesc}</p>
+            <Link to="/ai-toolkit" className="home-redesign-button home-redesign-button--primary">
+              {home.register}
+            </Link>
           </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="mx-auto max-w-7xl px-6 py-24 lg:px-12">
-        <div className="relative isolate overflow-hidden bg-slate-900 dark:bg-primary-brand px-6 py-20 shadow-2xl rounded-5xl sm:px-16 md:py-28 text-center transition-all duration-500">
-          <div className="relative z-10 max-w-2xl mx-auto">
-            <h2 className="text-4xl font-black tracking-tight text-white sm:text-5xl leading-tight mb-8">
-              {t.home.getStarted}
-            </h2>
-            <p className="text-lg leading-relaxed text-white/70 mb-12 font-medium">
-              {t.common.ctaDesc}
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                const toolsSection = document.getElementById("tools");
-                toolsSection?.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="inline-flex items-center gap-3 rounded-2xl bg-white px-10 py-5 text-lg font-black text-slate-900 shadow-xl hover:bg-slate-50 transition-all uppercase tracking-widest"
-            >
-              {t.common.explore}
-              <ArrowRight className="size-5" />
-            </button>
-          </div>
-
-          {/* Decorative gradients */}
-          <div className="absolute -top-24 -left-24 w-96 h-96 bg-primary-brand/30 rounded-full blur-[100px] pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-500/20 rounded-full blur-[100px] pointer-events-none" />
         </div>
       </section>
     </>
-  );
+  )
 }
