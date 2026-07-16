@@ -1,5 +1,5 @@
 import { Link } from "react-router"
-import { ArrowRight, Play } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import type { Route } from "./+types/_index"
 import { translations, useI18n } from "~/lib/i18n"
 import { SEOMeta } from "~/components/SeoMeta"
@@ -34,7 +34,6 @@ const showcaseImages = {
   hero: "/showcase/case1.avif",
   heroVideo: "/videos/cover-video.mp4",
   image: "/showcase/case351.jpg",
-  video: "/showcase/case206.jpg",
   edit: "/showcase/case250.jpg",
   poster: "/showcase/case22.jpg",
   vertical: "/showcase/case6.jpg",
@@ -52,7 +51,7 @@ const models = [
 const galleryImages = [
   showcaseImages.image,
   showcaseImages.poster,
-  showcaseImages.video,
+  showcaseImages.edit,
   showcaseImages.vertical,
   showcaseImages.concept,
 ]
@@ -68,14 +67,6 @@ export default function Index() {
       action: home.imageAction,
       to: "/ai-toolkit",
       image: showcaseImages.image,
-    },
-    {
-      title: home.videoTitle,
-      description: home.videoDesc,
-      action: home.videoAction,
-      to: "/ai-toolkit",
-      image: showcaseImages.video,
-      wide: true,
     },
     {
       title: home.toolkitTitle,
@@ -104,7 +95,7 @@ export default function Index() {
             <p>{home.heroBody}</p>
 
             <div className="home-redesign-actions">
-              <Link to="/ai-toolkit" className="home-redesign-button home-redesign-button--primary">
+              <Link to="/ai-toolkit" className="model-button model-button-primary">
                 {home.start}
               </Link>
             </div>
@@ -124,29 +115,32 @@ export default function Index() {
         </div>
       </section>
 
-      <section className="home-redesign-section" id="suite">
+      <section className="home-suite" id="suite">
         <div className="home-redesign-shell">
-          <div className="home-redesign-section__head home-redesign-section__head--center">
-            <h2>{home.generationTitle}</h2>
+          <div className="home-suite__intro">
+            <div>
+              <span>Creative workflow</span>
+              <h2>{home.generationTitle}</h2>
+            </div>
             <p>{home.generationDesc}</p>
           </div>
 
-          <div className="home-redesign-capabilities">
-            {featureCards.map(({ title, description, action, to, image, wide }) => (
+          <div className="home-suite__grid">
+            {featureCards.map(({ title, description, action, to, image }, index) => (
               <Link
                 key={title}
                 to={to}
-                className={`home-redesign-capability-card ${
-                  wide ? "home-redesign-capability-card--wide" : ""
-                }`}
+                className="home-suite-card"
               >
-                <img src={image} alt="" />
-                <div>
+                <figure>
+                  <img src={image} alt="" />
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                </figure>
+                <div className="home-suite-card__copy">
                   <small>{action}</small>
                   <h3>{title}</h3>
                   <p>{description}</p>
                 </div>
-                <ArrowRight className="home-redesign-card-arrow size-5" />
               </Link>
             ))}
           </div>
@@ -191,11 +185,6 @@ export default function Index() {
           {galleryImages.map(src => (
             <figure key={src}>
               <img src={src} alt={home.galleryImageAlt} />
-              {src === showcaseImages.video ? (
-                <span aria-hidden="true">
-                  <Play className="size-5" fill="currentColor" />
-                </span>
-              ) : null}
             </figure>
           ))}
         </div>
@@ -206,7 +195,7 @@ export default function Index() {
           <div className="home-redesign-cta">
             <h2>{home.ctaTitle}</h2>
             <p>{home.ctaDesc}</p>
-            <Link to="/ai-toolkit" className="home-redesign-button home-redesign-button--primary">
+            <Link to="/ai-toolkit" className="model-button model-button-primary">
               {home.register}
             </Link>
           </div>

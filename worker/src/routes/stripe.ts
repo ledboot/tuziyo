@@ -177,6 +177,7 @@ export async function handleCreateCheckoutSession(c: AuthenticatedContext) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
+      allow_promotion_codes: true,
       payment_method_types: ["card"],
       line_items: [
         {
