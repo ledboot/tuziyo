@@ -17,7 +17,8 @@ export function meta() {
     title,
     description,
     path: "/ai-toolkit",
-    keywords: "ai image generator, multi-model ai image studio, text to image, image editing, tuziyo",
+    keywords:
+      "ai image generator, multi-model ai image studio, text to image, image editing, tuziyo",
     schema: createWebApplicationSchema({
       name: "tuziyo AI Toolkit",
       description,
@@ -110,9 +111,11 @@ export default function AIToolkitPage() {
     setUserSelectedModel,
     setUserModelOptions,
     setUserPrompt,
+    setUserMediaType,
   } = useModelStore()
 
-  const selectedModel = userSelectedModel || (models.length > 0 ? models[0].id : "google/nano-banana-2")
+  const selectedModel =
+    userSelectedModel || (models.length > 0 ? models[0].id : "google/nano-banana-2")
   const modelOptions = userModelOptions || {}
 
   const handleSetModelOptions = (
@@ -144,10 +147,13 @@ export default function AIToolkitPage() {
     if (regenerateData.google_search) nextOptions.google_search = regenerateData.google_search
     if (regenerateData.image_search) nextOptions.image_search = regenerateData.image_search
     if (regenerateData.background) nextOptions.background = regenerateData.background
+    if (regenerateData.duration) nextOptions.duration = String(regenerateData.duration)
+    if (regenerateData.generate_audio) nextOptions.generate_audio = regenerateData.generate_audio
+    if (regenerateData.media_type) setUserMediaType(regenerateData.media_type)
 
     handleSetModelOptions(prev => ({ ...prev, ...nextOptions }))
     clearRegenerateData()
-  }, [clearRegenerateData, regenerateData, setUserPrompt, setUserSelectedModel])
+  }, [clearRegenerateData, regenerateData, setUserMediaType, setUserPrompt, setUserSelectedModel])
 
   useEffect(() => {
     fetchModels()
@@ -227,13 +233,13 @@ export default function AIToolkitPage() {
   }
 
   const masonryColumns = useMemo(
-    () => distributeMasonryItems(showcaseItems.length > 0 ? showcaseItems : SKELETON_SHOWCASE_ITEMS, masonryColumnCount),
+    () =>
+      distributeMasonryItems(
+        showcaseItems.length > 0 ? showcaseItems : SKELETON_SHOWCASE_ITEMS,
+        masonryColumnCount
+      ),
     [masonryColumnCount, showcaseItems]
   )
-
-
-
-
 
   return (
     <div className="ai-toolkit-shell">
@@ -277,7 +283,7 @@ export default function AIToolkitPage() {
             onGenerateStart={() => {
               // Now we just wait on this page while generating, UI handles spinner
             }}
-            onGenerateSuccess={(sessionId) => {
+            onGenerateSuccess={sessionId => {
               navigate(`/session/${sessionId}`)
             }}
             onGeneratePending={(sessionId, taskId, prompt) => {
@@ -288,7 +294,6 @@ export default function AIToolkitPage() {
           />
         </div>
       </div>
-
 
       {deleteSessionId && (
         <div className="modal modal-open">
@@ -342,10 +347,12 @@ function AIToolkitMasonryBackdrop({
               <figure
                 className="ai-toolkit-masonry__tile"
                 key={item.id}
-                style={{
-                  "--tile-height": getMasonryTileHeight(columnIndex, itemIndex),
-                  flexShrink: 0,
-                } as React.CSSProperties}
+                style={
+                  {
+                    "--tile-height": getMasonryTileHeight(columnIndex, itemIndex),
+                    flexShrink: 0,
+                  } as React.CSSProperties
+                }
               >
                 {/* Skeleton placeholder — always rendered, fades out once image loads */}
                 <div className="ai-toolkit-masonry__skeleton" aria-hidden="true" />

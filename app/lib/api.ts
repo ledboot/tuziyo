@@ -19,6 +19,14 @@ export interface ApiModel {
   referenceImageFormat?: "url" | "base64"
   isNew?: boolean
   options?: Record<string, ApiModelOption>
+  mediaType?: "image" | "video"
+  generationModes?: Array<"text_to_image" | "image_to_image" | "text_to_video" | "image_to_video">
+  supportsStartFrame?: boolean
+  supportsEndFrame?: boolean
+  supportsAudio?: boolean
+  pricingMode?: "fixed" | "per_second"
+  creditsPerSecond?: number
+  pollTimeoutSeconds?: number
 }
 
 export interface ApiToolkitShowcaseItem {
@@ -243,6 +251,10 @@ export const api = {
           negative_prompt: string | null
           output_format: string | null
           num_images: number | null
+          media_type: "image" | "video" | "audio"
+          generation_mode: string | null
+          duration: number | null
+          generate_audio: number | null
           google_search: number | null
           image_search: number | null
           created_at: number
@@ -257,6 +269,9 @@ export const api = {
             width: number | null
             height: number | null
             file_size: number | null
+            duration_ms: number | null
+            fps: number | null
+            has_audio: number | null
             error: string | null
             created_at: number
             updated_at: number
@@ -299,6 +314,10 @@ export const api = {
       image_search?: string | boolean
       thinking_level?: string
       reference_images?: string[]
+      media_type?: "image" | "video"
+      generation_mode?: "text_to_image" | "image_to_image" | "text_to_video" | "image_to_video"
+      duration?: number | string
+      generate_audio?: string | boolean
       [key: string]: unknown
     }) =>
       request<{
@@ -307,6 +326,9 @@ export const api = {
         sessionId?: string
         messageId?: string
         requestedCount?: number
+        mediaType?: "image" | "video"
+        generationMode?: string
+        pollTimeoutSeconds?: number
         error?: string
       }>("/api/generate", {
         method: "POST",
@@ -338,6 +360,9 @@ export const api = {
           width: number | null
           height: number | null
           file_size: number | null
+          duration_ms: number | null
+          fps: number | null
+          has_audio: number | null
           error: string | null
           created_at: number
           updated_at: number
@@ -443,6 +468,193 @@ export const api = {
         total: number
       }>("/api/favorites"),
   },
+
+  assets: {
+    list: (
+      params: {
+        kind?: "image" | "video" | "audio"
+        origin?: "generated" | "uploaded" | "stock"
+        search?: string
+        favorite?: boolean
+        hidden?: boolean
+        limit?: number
+        offset?: number
+      } = {}
+    ) => {
+      const search = new URLSearchParams()
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== "") search.set(key, String(value))
+      })
+      const query = search.toString()
+      return request<{
+        assets: LibraryAsset[]
+        total: number
+        limit: number
+        offset: number
+      }>(`/api/assets${query ? `?${query}` : ""}`)
+    },
+    get: (id: string) => request<{ asset: LibraryAsset }>(`/api/assets/${id}`),
+    update: (
+      id: string,
+      data: { name?: string; tags?: string[]; is_favorite?: boolean; is_hidden?: boolean }
+    ) =>
+      request<{ asset: LibraryAsset }>(`/api/assets/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      request<{ success: boolean }>(`/api/assets/${id}`, { method: "DELETE" }),
+    getDownloadUrl: (id: string) =>
+      request<{ url: string; expiresIn: number }>(`/api/assets/${id}/download-url`, {
+        method: "POST",
+      }),
+  },
+
+  studio: {
+    listProjects: () => request<{ projects: StudioProject[] }>("/api/studio/projects"),
+    createProject: (data: { name: string; description?: string; aspect_ratio?: string }) =>
+      request<{ projectId: string }>("/api/studio/projects", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    getProject: (id: string) => request<StudioProjectDetail>(`/api/studio/projects/${id}`),
+    updateProject: (
+      id: string,
+      data: Partial<Pick<StudioProject, "name" | "description" | "aspect_ratio" | "status">>
+    ) =>
+      request<{ success: boolean }>(`/api/studio/projects/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    deleteProject: (id: string) =>
+      request<{ success: boolean }>(`/api/studio/projects/${id}`, { method: "DELETE" }),
+    createEntity: (
+      projectId: string,
+      data: { name: string; description?: string; type?: string; asset_ids?: string[] }
+    ) =>
+      request<{ entityId: string }>(`/api/studio/projects/${projectId}/entities`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    createFrame: (
+      projectId: string,
+      data: { asset_id: string; label?: string; frame_type?: string }
+    ) =>
+      request<{ frameId: string }>(`/api/studio/projects/${projectId}/frames`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    createShot: (
+      projectId: string,
+      data: {
+        name: string
+        prompt?: string
+        asset_id?: string
+        first_frame_asset_id?: string
+        last_frame_asset_id?: string
+      }
+    ) =>
+      request<{ shotId: string }>(`/api/studio/projects/${projectId}/shots`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    addShotVersion: (shotId: string, assetId: string) =>
+      request<{ versionId: string }>(`/api/studio/shots/${shotId}/versions`, {
+        method: "POST",
+        body: JSON.stringify({ asset_id: assetId }),
+      }),
+    reorderSequence: (projectId: string, shotIds: string[]) =>
+      request<{ success: boolean }>(`/api/studio/projects/${projectId}/sequence`, {
+        method: "PATCH",
+        body: JSON.stringify({ shot_ids: shotIds }),
+      }),
+  },
+}
+
+export interface LibraryAsset {
+  id: string
+  source_output_id: string | null
+  kind: "image" | "video" | "audio"
+  origin: "generated" | "uploaded" | "stock"
+  name: string
+  content_type: string | null
+  width: number | null
+  height: number | null
+  duration_ms: number | null
+  fps: number | null
+  has_audio: number | null
+  model: string | null
+  prompt: string | null
+  tags: string[]
+  is_favorite: number
+  is_hidden: number
+  created_at: number
+  updated_at: number
+  thumbnail_url: string | null
+  display_url: string | null
+}
+
+export interface StudioProject {
+  id: string
+  name: string
+  description: string | null
+  aspect_ratio: string
+  status: "active" | "archived"
+  shot_count?: number
+  entity_count?: number
+  created_at: number
+  updated_at: number
+}
+
+export interface StudioEntity {
+  id: string
+  project_id: string
+  name: string
+  description: string | null
+  type: "character" | "location" | "object" | "style"
+}
+
+export interface StudioShot {
+  id: string
+  project_id: string
+  name: string
+  prompt: string | null
+  duration_ms: number | null
+  active_version_id: string | null
+  status: "draft" | "generating" | "ready" | "failed"
+}
+
+export interface StudioSequenceItem {
+  id: string
+  project_id: string
+  shot_id: string
+  position: number
+  transition: "cut" | "fade"
+}
+
+export interface StudioAssetLink {
+  id: string
+  shot_id?: string
+  asset_id: string
+  entity_id?: string
+  version_number?: number
+  asset: LibraryAsset
+}
+
+export interface StudioProjectDetail {
+  project: StudioProject
+  entities: StudioEntity[]
+  entityAssets: StudioAssetLink[]
+  frames: Array<{
+    id: string
+    asset_id: string
+    label: string | null
+    frame_type: string
+    asset: LibraryAsset
+  }>
+  shots: StudioShot[]
+  versions: StudioAssetLink[]
+  sequence: StudioSequenceItem[]
 }
 
 export type Api = typeof api

@@ -74,6 +74,14 @@ export interface ModelConfig {
   isNew: boolean
   options?: Record<string, ModelOption>
   credits: number
+  mediaType?: "image" | "video"
+  generationModes?: Array<"text_to_image" | "image_to_image" | "text_to_video" | "image_to_video">
+  supportsStartFrame?: boolean
+  supportsEndFrame?: boolean
+  supportsAudio?: boolean
+  pricingMode?: "fixed" | "per_second"
+  creditsPerSecond?: number
+  pollTimeoutSeconds?: number
 }
 
 export interface PreparedReferenceImage {

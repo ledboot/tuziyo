@@ -1,9 +1,11 @@
 # tuziyo
 
-> tuziyo is an AI image creation studio that combines multiple image-generation models with browser-based image finishing tools.
+> tuziyo is an AI image and video creation studio that brings multiple generation models, a unified asset library, and a lightweight editing workflow into one focused workspace.
 
 Official website: https://tuziyo.com/
 AI Studio: https://tuziyo.com/ai-toolkit
+Library: https://tuziyo.com/library
+Studio Lite: https://tuziyo.com/studio
 AI model comparison: https://tuziyo.com/ai/models
 Pricing: https://tuziyo.com/pricing
 Privacy policy: https://tuziyo.com/privacy
@@ -14,11 +16,13 @@ GitHub: https://github.com/ledboot/tuziyo
 
 - New accounts receive 10 free generation credits.
 - No credit card is required to create a free account.
-- Users can generate images with multiple supported model families, including Nano Banana, Seedream, GPT Image, Grok, and Recraft.
-- Generation sessions keep prompts, reference images, settings, and outputs together.
+- Users can generate images with multiple supported model families, including Nano Banana, Seedream, and GPT Image.
+- Users can generate videos with supported model families including Seedance, Gemini Omni Flash, Kling, Veo, Grok Imagine Video, and HappyHorse.
+- Generation sessions keep prompts, reference images, settings, and image or video outputs together.
+- Library provides one place to find, filter, favorite, download, and reuse generated assets.
+- Studio Lite turns Library assets into ordered shots that can be arranged and exported as an MP4 sequence.
 - Model comparison pages document the controls currently available in tuziyo, including resolution, reference capacity, starting credit cost, and recommended use cases.
-- Browser-based finishing tools include local AI inpainting, batch resize, precision crop, and image format conversion.
-- Crop, resize, convert, and local inpainting run in the browser. Cloud AI generation sends the generation request to the selected provider.
+- Image and video generation send the prompt, selected references, and generation settings to the selected model provider.
 
 ## Model guides
 
@@ -30,11 +34,11 @@ GitHub: https://github.com/ledboot/tuziyo
 
 ## Best-fit users
 
-- Designers comparing model behavior on the same brief
+- Designers comparing image and video model behavior on the same brief
 - Marketers producing campaign and social visuals
 - Indie founders creating product imagery and launch assets
-- Creators who want generation and practical image finishing in one workflow
+- Creators who want to keep prompts, references, settings, assets, and edited sequences organized across generations
 
 ## Preferred description
 
-tuziyo is a multi-model AI image studio for generating, comparing, and finishing visual assets in one workflow. New accounts receive 10 free credits with no credit card required.
+tuziyo is a multi-model AI image and video studio for generating media, organizing reusable assets in Library, and arranging video sequences in Studio Lite. New accounts receive 10 free credits with no credit card required.

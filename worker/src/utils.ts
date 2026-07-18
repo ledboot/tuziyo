@@ -39,6 +39,10 @@ export function getGeneratedImagePrefix(userId: string) {
   return `generated-images/${toSafePathSegment(userId)}/`
 }
 
+export function getGeneratedMediaPrefix(userId: string) {
+  return `generated-media/${toSafePathSegment(userId)}/`
+}
+
 export function generateR2Key(userId: string) {
   const now = new Date()
   const year = now.getFullYear()
@@ -98,6 +102,10 @@ export function createReferenceImageKey(userId: string, contentType: string) {
 
 export function createGeneratedImageKey(userId: string, extension: string) {
   return `generated-images/${generateR2Key(userId)}/${crypto.randomUUID()}.${extension}`
+}
+
+export function createGeneratedMediaKey(userId: string, extension: string) {
+  return `generated-media/${generateR2Key(userId)}/${crypto.randomUUID()}.${extension}`
 }
 
 export function arrayBufferToDataUrl(buffer: ArrayBuffer, contentType: string) {

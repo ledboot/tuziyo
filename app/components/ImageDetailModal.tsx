@@ -35,6 +35,7 @@ function getModelName(modelId: string): string {
     "alibaba/wan-2.6-image": "WAN 2.6",
     "bytedance/seedream-5-lite": "Seedream 5",
     "bytedance/seedream-5-pro": "Seedream 5 Pro",
+    "bytedance/seedance-2.0": "Seedance 2.0",
     "openai/gpt-image-1.5": "GPT Image 1.5",
   }
   return modelNames[modelId] || modelId
@@ -89,6 +90,7 @@ export default function ImageDetailModal({
   if (!image) return null
 
   const displayImageUrl = activeOutput?.display_url ?? null
+  const isVideo = activeOutput?.content_type === "video"
   const modalSizeClass = getModalSizeClass(image.aspect_ratio || image.image_size)
 
   const handleSelectOutput = (outputId: string) => setActiveOutputId(outputId)
@@ -117,6 +119,10 @@ export default function ImageDetailModal({
       negative_prompt: image.negative_prompt || undefined,
       google_search: image.google_search ? "true" : undefined,
       image_search: image.image_search ? "true" : undefined,
+      media_type: image.media_type === "video" ? "video" : "image",
+      generation_mode: image.generation_mode || undefined,
+      duration: image.duration || undefined,
+      generate_audio: image.generate_audio ? "true" : "false",
     })
     navigate("/ai-toolkit")
     onClose()
@@ -135,7 +141,7 @@ export default function ImageDetailModal({
       const a = document.createElement("a")
       a.href = url
       const timestamp = new Date(image.created_at * 1000).toISOString().slice(0, 10)
-      const extension = image.output_format || "png"
+      const extension = isVideo ? "mp4" : image.output_format || "png"
       a.download = `${sessionTitle}_${timestamp}.${extension}`
       document.body.appendChild(a)
       a.click()
@@ -188,18 +194,26 @@ export default function ImageDetailModal({
         {/* Left Image Area */}
         <div className="flex min-h-0 flex-1 flex-col bg-black/40 p-4 md:p-6">
           <div className="relative flex min-h-0 flex-1 items-center justify-center">
-            {displayImageUrl ? (
+            {displayImageUrl && isVideo ? (
+              <video
+                src={displayImageUrl}
+                controls
+                autoPlay
+                playsInline
+                className="size-full object-contain drop-shadow-2xl"
+              />
+            ) : displayImageUrl ? (
               <img
                 src={displayImageUrl}
                 alt="Generated image"
                 className="size-full object-contain drop-shadow-2xl"
               />
             ) : activeOutput?.status === "failed" ? (
-              <div className="text-sm text-red-300/70">This image could not be generated.</div>
+              <div className="text-sm text-red-300/70">This media could not be generated.</div>
             ) : (
               <div className="flex flex-col items-center gap-3 text-base-content/60">
                 <span className="loading loading-spinner loading-md text-white/40" />
-                <span className="text-sm">Generating image…</span>
+                <span className="text-sm">Generating media…</span>
               </div>
             )}
           </div>
@@ -334,6 +348,24 @@ export default function ImageDetailModal({
                       Resolution
                     </div>
                     <div className="text-sm text-white">{image.resolution}</div>
+                  </div>
+                )}
+
+                {image.duration && (
+                  <div>
+                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">
+                      Duration
+                    </div>
+                    <div className="text-sm text-white">{image.duration}s</div>
+                  </div>
+                )}
+
+                {image.media_type === "video" && (
+                  <div>
+                    <div className="text-[11px] text-base-content/50 mb-1.5 font-medium">Audio</div>
+                    <div className="text-sm text-white">
+                      {image.generate_audio ? "Generated" : "Muted"}
+                    </div>
                   </div>
                 )}
 

@@ -20,7 +20,7 @@ Primary 30-day targets:
 
 Core promise:
 
-> Generate, compare, and finish AI images in one workflow.
+> Create AI images with multiple models in one studio.
 
 Launch offer:
 
@@ -31,14 +31,14 @@ Primary audiences:
 1. Designers and creative technologists comparing model behavior.
 2. Indie founders and marketers producing launch, product, and social assets.
 3. AI creators who currently jump between several model websites.
-4. Creators who need practical crop, resize, convert, and inpainting tools after generation.
+4. Creators who want to preserve prompts, references, settings, and results across generation sessions.
 
 Reasons to believe:
 
 - Multiple model families are available from one studio.
 - Model guide pages document current controls and credit costs.
 - Sessions preserve prompts, references, settings, and results.
-- Browser finishing tools reduce workflow switching.
+- Reusable sessions reduce the work of rebuilding a creative brief.
 - Free credits lower the cost of the first successful result.
 
 ## 3. Channel strategy
@@ -56,7 +56,7 @@ Hacker News:
 
 - Use `Show HN: Tuziyo – Compare multiple AI image models in one studio`.
 - Lead with the working product and technical/product decisions, not marketing claims.
-- Mention the open-source repository, Cloudflare/React Router stack, local browser tools, and the clear privacy boundary between local tools and cloud generation.
+- Mention the open-source repository, Cloudflare/React Router stack, reusable session workflow, and the fact that generation requests are sent to the selected model provider.
 - Be available to answer technical questions immediately after posting.
 
 Reddit:
@@ -210,7 +210,7 @@ Avoid:
 - Identical Reddit posts across communities
 - Purchased bulk links
 - Irrelevant guest-post farms
-- Claims that all Tuziyo processing is local
+- Unsupported image-editing or local-processing claims
 - Asking Product Hunt users directly for upvotes
 
 ## 7. Immediate owner checklist

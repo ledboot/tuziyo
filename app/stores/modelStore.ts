@@ -26,6 +26,16 @@ export const ModelSchema = z.object({
   isNew: z.boolean().optional(),
   options: z.record(ModelOptionSchema).optional(),
   credits: z.number().default(0),
+  mediaType: z.enum(["image", "video"]).default("image"),
+  generationModes: z
+    .array(z.enum(["text_to_image", "image_to_image", "text_to_video", "image_to_video"]))
+    .optional(),
+  supportsStartFrame: z.boolean().optional(),
+  supportsEndFrame: z.boolean().optional(),
+  supportsAudio: z.boolean().optional(),
+  pricingMode: z.enum(["fixed", "per_second"]).default("fixed"),
+  creditsPerSecond: z.number().optional(),
+  pollTimeoutSeconds: z.number().optional(),
 })
 
 export type ModelOptionType = z.infer<typeof ModelOptionTypeSchema>
@@ -48,9 +58,11 @@ interface ModelState {
   userSelectedModel: string | null
   userModelOptions: Record<string, string> | null
   userPrompt: string | null
+  userMediaType: "image" | "video"
   setUserSelectedModel: (modelId: string) => void
   setUserModelOptions: (options: Record<string, string>) => void
   setUserPrompt: (prompt: string) => void
+  setUserMediaType: (mediaType: "image" | "video") => void
 }
 
 function getConfigurableDefault(option: ModelOption): string | null {
@@ -137,9 +149,11 @@ export const useModelStore = create<ModelState>()(
       userSelectedModel: null,
       userModelOptions: null,
       userPrompt: null,
+      userMediaType: "image",
       setUserSelectedModel: modelId => set({ userSelectedModel: modelId }),
       setUserModelOptions: options => set({ userModelOptions: options }),
       setUserPrompt: prompt => set({ userPrompt: prompt }),
+      setUserMediaType: mediaType => set({ userMediaType: mediaType }),
     }),
     {
       name: "tuziyo-model-storage",
@@ -147,6 +161,7 @@ export const useModelStore = create<ModelState>()(
         userSelectedModel: state.userSelectedModel,
         userModelOptions: state.userModelOptions,
         userPrompt: state.userPrompt,
+        userMediaType: state.userMediaType,
       }),
     }
   )

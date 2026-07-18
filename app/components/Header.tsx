@@ -46,6 +46,8 @@ export default function Header() {
       ],
     },
     { title: t.nav.aiToolkit, to: "/ai-toolkit" },
+    { title: "Library", to: "/library" },
+    { title: "Studio", to: "/studio" },
     { title: t.nav.pricing, to: "/pricing" },
   ]
 
@@ -87,7 +89,7 @@ export default function Header() {
   const navClasses = "ai-toolkit-nav-shell"
 
   const headerInnerClasses =
-    "grid grid-cols-[1fr_auto_1fr] min-h-20 max-[1023px]:min-h-[60px] w-full items-center gap-6 px-6 max-[1023px]:grid-cols-[1fr_auto]"
+    "grid grid-cols-[1fr_auto_1fr] min-h-20 max-[1119px]:min-h-[60px] w-full items-center gap-6 px-6 max-[1119px]:grid-cols-[1fr_auto]"
 
   const isSegmentedNavItemActive = (to: string) => {
     if (to === "/") return location.pathname === "/"
@@ -138,7 +140,7 @@ export default function Header() {
         </Link>
         </div>
 
-        <div className="hidden justify-center lg:flex">
+        <div className="hidden justify-center min-[1120px]:flex">
 
         <nav
           className={navClasses}
@@ -228,7 +230,7 @@ export default function Header() {
 
         {/* Right Column: Actions */}
         <div className="flex justify-end items-center gap-[0.55rem]">
-          <div className="hidden lg:flex items-center gap-[0.55rem]">
+          <div className="hidden min-[1120px]:flex items-center gap-[0.55rem]">
           <div
             className={`group dropdown dropdown-hover h-10 w-28 ${showLangMenu ? "dropdown-open" : ""}`}
           >
@@ -355,7 +357,7 @@ export default function Header() {
 
           <button
             type="button"
-            className="btn btn-circle btn-ghost btn-sm lg:hidden"
+            className="btn btn-circle btn-ghost btn-sm min-[1120px]:hidden"
             onClick={() => setShowMobileMenu(value => !value)}
             aria-label={t.nav.openMenu}
             aria-expanded={showMobileMenu}
@@ -367,12 +369,12 @@ export default function Header() {
           <>
             {/* Backdrop */}
             <div
-              className="mobile-menu-backdrop lg:hidden"
+              className="mobile-menu-backdrop min-[1120px]:hidden"
               onClick={closeMenus}
               aria-hidden="true"
             />
             {/* Drawer Panel */}
-            <div className="mobile-menu-drawer lg:hidden">
+            <div className="mobile-menu-drawer min-[1120px]:hidden">
               {/* Header row */}
               <div className="flex items-center justify-between">
                 <Link
@@ -388,7 +390,7 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={closeMenus}
-                  className="p-2 text-white/70 hover:text-white transition-all duration-200 cursor-pointer hover:scale-110 active:scale-90"
+                  className="p-2 text-white/70 hover:text-white transition-[color,transform] duration-200 cursor-pointer hover:scale-110 active:scale-90"
                   aria-label="Close menu"
                 >
                   <X className="size-6" />

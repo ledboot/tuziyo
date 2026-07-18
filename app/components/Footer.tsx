@@ -41,8 +41,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/inpainting" className="footer-link">
-                  AI Image Inpainting
+                <Link to="/library" className="footer-link">
+                  Library
+                </Link>
+              </li>
+              <li>
+                <Link to="/studio" className="footer-link">
+                  Studio
                 </Link>
               </li>
             </ul>

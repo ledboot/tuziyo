@@ -16,10 +16,8 @@ export async function loader() {
   const staticRoutes = [
     "/",
     "/ai-toolkit",
-    "/inpainting",
-    "/resize",
-    "/crop",
-    "/convert",
+    "/library",
+    "/studio",
     "/pricing",
     "/privacy",
   ]

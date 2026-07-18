@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { X, ImagePlus, Loader2, Sparkles } from "lucide-react"
+import { X, ImagePlus, Loader2, Sparkles, Image as ImageIcon, Video } from "lucide-react"
 import { toast } from "sonner"
 import { useI18n } from "~/lib/i18n"
 import { CustomSelect, type SelectOption } from "~/components/CustomSelect"
@@ -130,6 +130,18 @@ function calculateRequiredCredits(
   referenceImageCount: number
 ): number {
   if (!model) return 0
+  if (model.pricingMode === "per_second") {
+    let creditsPerSecond = model.creditsPerSecond || 0
+    if (model.options) {
+      for (const [key, option] of Object.entries(model.options)) {
+        const selectedValue = normalizedOptions[key]
+        const premium = selectedValue ? option.valueCredits?.[selectedValue] : undefined
+        if (typeof premium === "number") creditsPerSecond += premium
+      }
+    }
+    return creditsPerSecond * Math.max(1, Number(normalizedOptions.duration) || 5)
+  }
+
   const baseCredits = model.credits || 0
   let singleImageCredits = baseCredits
 
@@ -176,6 +188,8 @@ export default function PromptArea({
 
   const userPrompt = useModelStore(state => state.userPrompt)
   const setUserPrompt = useModelStore(state => state.setUserPrompt)
+  const mediaType = useModelStore(state => state.userMediaType)
+  const setMediaType = useModelStore(state => state.setUserMediaType)
 
   const [prompt, setPrompt] = useState(initialPrompt || userPrompt || "")
   const [negativePrompt, setNegativePrompt] = useState("")
@@ -211,13 +225,10 @@ export default function PromptArea({
   const shouldHide =
     !isModelsLoading && (modelError !== null || (hasStartedLoading && models.length === 0))
 
-  if (shouldHide) {
-    return null
-  }
-
+  const availableModels = models.filter(model => model.mediaType === mediaType)
   const isModelDataPending = isModelsLoading || models.length === 0
 
-  const selectedModelInfo = models.find(m => m.id === selectedModel)
+  const selectedModelInfo = availableModels.find(m => m.id === selectedModel)
   const promptMaxLength = selectedModelInfo?.promptMaxLength ?? DEFAULT_PROMPT_MAX_LENGTH
   const normalizedModelOptions = normalizeModelOptions(selectedModel, modelOptions)
   const requiredCredits = calculateRequiredCredits(
@@ -261,7 +272,7 @@ export default function PromptArea({
   const isPromptAtCharacterLimit = promptCharacterCount >= promptMaxLength
   const isUploadingImages = uploadedImages.some(image => image.status === "uploading")
   const hasFailedUploads = uploadedImages.some(image => image.status === "error")
-  const modelSelectOptions: SelectOption[] = models.map(model => {
+  const modelSelectOptions: SelectOption[] = availableModels.map(model => {
     return {
       value: model.id,
       label: model.name,
@@ -280,8 +291,11 @@ export default function PromptArea({
     onModelChange(model)
   }
 
+  const handleSelectImageMode = () => setMediaType("image")
+  const handleSelectVideoMode = () => setMediaType("video")
+
   useEffect(() => {
-    if (models.length === 0) return
+    if (availableModels.length === 0) return
 
     // If currently selected model is valid, do nothing
     if (selectedModelInfo) {
@@ -289,11 +303,11 @@ export default function PromptArea({
     }
 
     // Otherwise, select the first model
-    const firstModel = models[0]
+    const firstModel = availableModels[0]
     if (firstModel) {
       onModelChange(firstModel.id)
     }
-  }, [models, selectedModelInfo, onModelChange])
+  }, [availableModels, selectedModelInfo, onModelChange])
 
   useEffect(() => {
     if (!initialPrompt && !initialPromptVersion) return
@@ -359,14 +373,7 @@ export default function PromptArea({
       required_credits: requiredCredits,
       credit_balance_bucket: getCreditBalanceBucket(availableCredits),
     })
-  }, [
-    availableCredits,
-    hasInsufficientCredits,
-    prompt,
-    requiredCredits,
-    selectedModel,
-    user,
-  ])
+  }, [availableCredits, hasInsufficientCredits, prompt, requiredCredits, selectedModel, user])
 
   useEffect(() => {
     return () => {
@@ -523,6 +530,15 @@ export default function PromptArea({
         prompt,
         model: selectedModel,
         provider: selectedModelInfo?.provider,
+        media_type: mediaType,
+        generation_mode:
+          mediaType === "video"
+            ? uploadedImages.length > 0
+              ? "image_to_video"
+              : "text_to_video"
+            : uploadedImages.length > 0
+              ? "image_to_image"
+              : "text_to_image",
         ...normalizedModelOptions,
       }
 
@@ -571,7 +587,7 @@ export default function PromptArea({
       const isFirstGeneration = markGenerationStarted(user.userId)
       trackEvent("generate_start", {
         model_id: selectedModel,
-        media_type: "image",
+        media_type: mediaType,
         credit_cost: requiredCredits,
         requested_outputs: requestedOutputs,
         reference_image_count: referenceImages.length,
@@ -583,7 +599,7 @@ export default function PromptArea({
       if (returnedTaskId) {
         rememberGenerationTask(returnedTaskId, {
           model_id: selectedModel,
-          media_type: "image",
+          media_type: mediaType,
           credit_cost: requiredCredits,
           starting_credit_balance: availableCredits,
           requested_outputs: requestedOutputs,
@@ -616,7 +632,7 @@ export default function PromptArea({
         error_type: classifyAnalyticsError(error),
       })
       toast.error(
-        `ERROR: ${getApiErrorMessage(error, "Failed to generate image. Please try again.")}`
+        `ERROR: ${getApiErrorMessage(error, "Failed to generate media. Please try again.")}`
       )
     } finally {
       setIsGenerating(false)
@@ -723,6 +739,10 @@ export default function PromptArea({
 
     window.addEventListener("mousemove", onMove)
     window.addEventListener("mouseup", onUp)
+  }
+
+  if (shouldHide) {
+    return null
   }
 
   // ── Skeleton placeholder while data loads ──
@@ -901,7 +921,11 @@ export default function PromptArea({
                 onChange={handlePromptChange}
                 onKeyDown={handleKeyDown}
                 aria-describedby="prompt-character-limit"
-                placeholder={t.aiToolkit?.promptPlaceholder || "Describe your image..."}
+                placeholder={
+                  mediaType === "video"
+                    ? "Describe the video, camera movement, action, and sound…"
+                    : t.aiToolkit?.promptPlaceholder || "Describe your image…"
+                }
                 className="textarea textarea-ghost pt-3 pl-2 liquid-prompt-textarea w-full text-base focus:outline-none"
               />
             </div>
@@ -912,7 +936,7 @@ export default function PromptArea({
               <textarea
                 value={negativePrompt}
                 onChange={e => setNegativePrompt(e.target.value)}
-                placeholder="What to avoid..."
+                placeholder="What to avoid…"
                 className="textarea textarea-ghost textarea-sm liquid-prompt-textarea w-full resize-none focus:outline-none"
                 rows={2}
               />
@@ -939,6 +963,29 @@ export default function PromptArea({
           </div>
 
           <div className="liquid-prompt-controls flex items-center gap-2 overflow-visible">
+            <div className="liquid-media-switch" role="group" aria-label="Content type">
+              <button
+                type="button"
+                onClick={handleSelectImageMode}
+                className={mediaType === "image" ? "is-active" : ""}
+                aria-label="Image"
+                aria-pressed={mediaType === "image"}
+                title="Image"
+              >
+                <ImageIcon className="size-4" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={handleSelectVideoMode}
+                className={mediaType === "video" ? "is-active" : ""}
+                aria-label="Video"
+                aria-pressed={mediaType === "video"}
+                title="Video"
+              >
+                <Video className="size-4" aria-hidden="true" />
+              </button>
+            </div>
+
             <CustomSelect
               label="Models"
               options={modelSelectOptions}
@@ -959,7 +1006,7 @@ export default function PromptArea({
               </button>
             )}
 
-            <div className="flex-1" />
+            <div className="liquid-controls-spacer" aria-hidden="true" />
 
             {prompt.trim() && (
               <div
@@ -988,12 +1035,12 @@ export default function PromptArea({
               {isGenerating ? (
                 <>
                   <Loader2 className="size-5 animate-spin" />
-                  {t.aiToolkit?.generating || "Generating..."}
+                  {t.aiToolkit?.generating || "Generating…"}
                 </>
               ) : isUploadingImages ? (
                 <>
                   <Loader2 className="size-5 animate-spin" />
-                  Uploading...
+                  Uploading…
                 </>
               ) : hasFailedUploads ? (
                 <>Upload failed</>

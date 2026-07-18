@@ -26,7 +26,7 @@ describe("Seedream 5 Pro EvoLink integration", () => {
   })
 
   test("groups providers by sort order and sorts model names naturally", () => {
-    const models = getModels()
+    const models = getModels().filter(model => model.mediaType !== "video")
     const providers = models.map(model => model.provider)
     const providerGroups = providers.filter(
       (provider, index) => index === 0 || provider !== providers[index - 1]

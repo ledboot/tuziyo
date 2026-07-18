@@ -14,6 +14,10 @@ interface RegenerateData {
   google_search?: string
   image_search?: string
   background?: string
+  media_type?: "image" | "video"
+  generation_mode?: string
+  duration?: number
+  generate_audio?: string
 }
 
 interface GenerateState {
@@ -22,8 +26,8 @@ interface GenerateState {
   clearRegenerateData: () => void
 }
 
-export const useGenerateStore = create<GenerateState>((set) => ({
+export const useGenerateStore = create<GenerateState>(set => ({
   regenerateData: null,
-  setRegenerateData: (data) => set({ regenerateData: data }),
+  setRegenerateData: data => set({ regenerateData: data }),
   clearRegenerateData: () => set({ regenerateData: null }),
 }))

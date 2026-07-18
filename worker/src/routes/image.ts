@@ -8,19 +8,26 @@ import {
   type PreparedReferenceImage,
 } from "../types"
 import { deductCredits, getUserCredits, calculateRequiredCredits } from "./credits"
+import { getPromptCharacterLength } from "../imageModels"
 import {
-  ENABLED_IMAGE_MODEL_IDS,
+  ENABLED_MEDIA_MODEL_IDS,
   PLAN_MODELS_CONFIG,
-  getEnabledModels,
-  getImageModelPromptMaxLength,
-  getPromptCharacterLength,
-  isImageModelEnabled,
-  validateModelOptions,
-} from "../imageModels"
+  getEnabledMediaModels,
+  getMediaModel,
+  getMediaModelPromptMaxLength,
+  isMediaModelEnabled,
+  validateMediaModelOptions,
+} from "../mediaModels"
+import {
+  findVideoProviderConfig,
+  getVideoProviderModel,
+  type VideoGenerationMode,
+} from "../videoModels"
 import {
   arrayBufferToDataUrl,
   createReferenceImageKey,
   createGeneratedImageKey,
+  createGeneratedMediaKey,
   getGeneratedImagePrefix,
   getImageContentTypeFromKey,
   createPresignedGetUrl,
@@ -60,6 +67,8 @@ const EVOLINK_MODEL_MAP: Record<string, string> = {
 export interface GenerateInput {
   prompt: string
   model: string
+  media_type?: MimeType
+  generation_mode?: "text_to_image" | "image_to_image" | "text_to_video" | "image_to_video"
   provider?: string
   size?: string
   quality?: string
@@ -75,6 +84,9 @@ export interface GenerateInput {
   thinking_level?: string
   background?: string
   reference_images?: string[]
+  duration?: number | string
+  generate_audio?: string | boolean
+  mode?: string
 }
 
 type AuthenticatedContext = Context<{
@@ -87,6 +99,7 @@ interface ImageRecord {
   message_id: string
   session_id: string
   image_url: string
+  content_type: MimeType
 }
 
 interface FavoriteImageRecord {
@@ -137,6 +150,7 @@ async function setGenerationTaskProvider(
 }
 
 function getRequestedImageCount(input: GenerateInput) {
+  if (input.media_type === MIME_TYPES.VIDEO) return 1
   if (
     input.model === "bytedance/seedream-5-pro" ||
     input.model === "google/nano-banana" ||
@@ -154,9 +168,7 @@ function getRequestedImageCount(input: GenerateInput) {
   return Math.min(Math.max(Math.trunc(parsed), 1), 15)
 }
 
-export function getStoredImageDimensions(
-  input: Pick<GenerateInput, "aspect_ratio" | "size">
-) {
+export function getStoredImageDimensions(input: Pick<GenerateInput, "aspect_ratio" | "size">) {
   const aspectRatio = typeof input.aspect_ratio === "string" ? input.aspect_ratio.trim() : ""
   const size = typeof input.size === "string" ? input.size.trim() : ""
   const sizeIsAspectRatio = /^\d+(?:\.\d+)?:\d+(?:\.\d+)?$/.test(size)
@@ -362,11 +374,13 @@ function applyReferenceImages(
 async function getUserImage(c: AuthenticatedContext, imageId: string, userId: string) {
   return c.env.DB.prepare(
     `
-      SELECT mo.id, mo.message_id, m.session_id, mo.image_url
+      SELECT mo.id, mo.message_id, m.session_id, COALESCE(mo.storage_key, mo.image_url) AS image_url,
+        mo.content_type
       FROM message_outputs mo
       INNER JOIN messages m ON m.id = mo.message_id AND m.status = 1
       INNER JOIN sessions s ON s.id = m.session_id AND s.status = 1
-      WHERE mo.id = ? AND s.user_id = ? AND mo.status = 'completed' AND mo.image_url IS NOT NULL
+      WHERE mo.id = ? AND s.user_id = ? AND mo.status = 'completed'
+        AND COALESCE(mo.storage_key, mo.image_url) IS NOT NULL
       LIMIT 1
     `
   )
@@ -548,7 +562,7 @@ export async function handleSetImageFavorite(c: AuthenticatedContext) {
 
   const imageId = c.req.param("id")
   if (!imageId) {
-    return c.json({ error: "Image id is required" }, 400)
+    return c.json({ error: "Output id is required" }, 400)
   }
 
   const body = await c.req.json<FavoriteRequestBody>().catch(() => ({}))
@@ -560,23 +574,30 @@ export async function handleSetImageFavorite(c: AuthenticatedContext) {
 
   const image = await getUserImage(c, imageId, user.userId)
   if (!image) {
-    return c.json({ error: "Image not found" })
+    return c.json({ error: "Output not found" })
   }
 
   if (favorited) {
     await c.env.DB.prepare(
       `
         INSERT OR IGNORE INTO content_favorites (id, user_id, content_type, message_id, output_id, created_at)
-        VALUES (?, ?, 'image', ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
       `
     )
-      .bind(uuidv4(), user.userId, image.message_id, image.id, getCurrentTimestamp())
+      .bind(
+        uuidv4(),
+        user.userId,
+        image.content_type,
+        image.message_id,
+        image.id,
+        getCurrentTimestamp()
+      )
       .run()
   } else {
     await c.env.DB.prepare(
-      "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND output_id = ?"
+      "DELETE FROM content_favorites WHERE user_id = ? AND content_type = ? AND output_id = ?"
     )
-      .bind(user.userId, image.id)
+      .bind(user.userId, image.content_type, image.id)
       .run()
   }
 
@@ -602,7 +623,7 @@ export async function handleGetImageDownloadUrl(c: AuthenticatedContext) {
   try {
     const url = await createPresignedGetUrl(c.env, image.image_url)
     if (!url) {
-      throw new Error("Image does not have an R2 key")
+      throw new Error("Output does not have an R2 key")
     }
     c.header("Cache-Control", "no-store")
     return c.json({ url, expiresIn: 3600 })
@@ -632,8 +653,8 @@ export async function handleDeleteImage(c: AuthenticatedContext) {
   const now = getCurrentTimestamp()
   await c.env.DB.batch([
     c.env.DB.prepare(
-      "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND output_id = ?"
-    ).bind(user.userId, image.id),
+      "DELETE FROM content_favorites WHERE user_id = ? AND content_type = ? AND output_id = ?"
+    ).bind(user.userId, image.content_type, image.id),
     c.env.DB.prepare(
       "UPDATE message_outputs SET status = 'deleted', deleted_at = ?, updated_at = ? WHERE id = ?"
     ).bind(now, now, image.id),
@@ -669,14 +690,44 @@ export async function handleGenerate(c: AuthenticatedContext) {
     return c.json({ error: "prompt is required" }, 400)
   }
 
-  if (!input.model || !isImageModelEnabled(input.model)) {
+  if (!input.model || !isMediaModelEnabled(input.model)) {
     return c.json(
-      { error: `model is unavailable; enabled models: ${ENABLED_IMAGE_MODEL_IDS.join(", ")}` },
+      { error: `model is unavailable; enabled models: ${ENABLED_MEDIA_MODEL_IDS.join(", ")}` },
       400
     )
   }
 
-  const promptMaxLength = getImageModelPromptMaxLength(input.model)
+  const modelDefinition = getMediaModel(input.model)
+  const mediaType: MimeType =
+    modelDefinition.mediaType === MIME_TYPES.VIDEO ? MIME_TYPES.VIDEO : MIME_TYPES.IMAGE
+  input.media_type = mediaType
+  if (mediaType === MIME_TYPES.VIDEO) {
+    const hasReferenceImages =
+      Array.isArray(input.reference_images) && input.reference_images.length > 0
+    input.generation_mode =
+      input.generation_mode ?? (hasReferenceImages ? "image_to_video" : "text_to_video")
+    if (
+      !modelDefinition.generationModes?.includes(
+        input.generation_mode as "text_to_video" | "image_to_video"
+      )
+    ) {
+      return c.json(
+        { error: `generation mode '${input.generation_mode}' is not supported by this model` },
+        400
+      )
+    }
+    if (input.generation_mode === "image_to_video" && !hasReferenceImages) {
+      return c.json({ error: "image_to_video requires a start frame" }, 400)
+    }
+    if (input.generation_mode === "text_to_video" && hasReferenceImages) {
+      return c.json({ error: "text_to_video does not accept reference images" }, 400)
+    }
+  } else {
+    input.generation_mode =
+      input.generation_mode ?? (input.reference_images?.length ? "image_to_image" : "text_to_image")
+  }
+
+  const promptMaxLength = getMediaModelPromptMaxLength(input.model)
   if (promptMaxLength !== null && getPromptCharacterLength(input.prompt) > promptMaxLength) {
     return c.json(
       { error: `prompt must not exceed ${promptMaxLength.toLocaleString("en-US")} characters` },
@@ -732,7 +783,7 @@ export async function handleGenerate(c: AuthenticatedContext) {
     )
   }
 
-  const optionValidation = validateModelOptions(
+  const optionValidation = validateMediaModelOptions(
     input.model,
     input as unknown as Record<string, string | number | boolean>
   )
@@ -746,12 +797,12 @@ export async function handleGenerate(c: AuthenticatedContext) {
   }
 
   // Pre-check credits balance
-  const creditsPerImage = calculateRequiredCredits(input.model, input)
-  if (!creditsPerImage) {
+  const requiredCredits = calculateRequiredCredits(input.model, input)
+  if (!requiredCredits) {
     return c.json({ error: `Unknown model: ${input.model}` }, 400)
   }
   const userCredits = await getUserCredits(c.env.DB, user.userId)
-  if (userCredits.balance < creditsPerImage) {
+  if (userCredits.balance < requiredCredits) {
     return c.json({ error: "Insufficient credits" }, 402)
   }
 
@@ -807,9 +858,9 @@ export async function handleGenerate(c: AuthenticatedContext) {
         INSERT INTO messages (
           id, session_id, user_id, role, provider, model, prompt, aspect_ratio, resolution,
           google_search, image_search, image_size, quality, style, negative_prompt,
-          output_format, num_images, created_at
+          output_format, num_images, media_type, generation_mode, duration, generate_audio, created_at
         )
-        VALUES (?, ?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `
     ).bind(
       messageId,
@@ -828,6 +879,14 @@ export async function handleGenerate(c: AuthenticatedContext) {
       toDbValue(input.negative_prompt),
       toDbValue(input.output_format),
       requestedCount,
+      mediaType,
+      input.generation_mode,
+      mediaType === MIME_TYPES.VIDEO ? Number(input.duration) || 5 : null,
+      mediaType === MIME_TYPES.VIDEO
+        ? input.generate_audio === true || input.generate_audio === "true"
+          ? 1
+          : 0
+        : null,
       now
     ),
     c.env.DB.prepare(
@@ -857,7 +916,7 @@ export async function handleGenerate(c: AuthenticatedContext) {
           )
           VALUES (?, ?, ?, 'pending', ?, ?, ?)
         `
-      ).bind(uuidv4(), messageId, outputIndex, MIME_TYPES.IMAGE, now, now)
+      ).bind(uuidv4(), messageId, outputIndex, mediaType, now, now)
     ),
   ]
 
@@ -882,6 +941,9 @@ export async function handleGenerate(c: AuthenticatedContext) {
     sessionId,
     messageId,
     requestedCount,
+    mediaType,
+    generationMode: input.generation_mode,
+    pollTimeoutSeconds: modelDefinition.pollTimeoutSeconds ?? 5 * 60,
   })
 }
 
@@ -894,6 +956,42 @@ export function buildEvoLinkPayload(
   const payload: any = {
     model: evolinkModelName,
     prompt: input.prompt,
+  }
+
+  if (input.media_type === MIME_TYPES.VIDEO) {
+    const providerConfig = findVideoProviderConfig(evolinkModelName)
+    if (!providerConfig) throw new Error(`Unknown EvoLink video model: ${evolinkModelName}`)
+
+    if (providerConfig.duration && input.duration !== undefined) {
+      payload.duration = input.duration === "auto" ? "auto" : Number(input.duration)
+    }
+    if (providerConfig.quality && input.resolution) payload.quality = input.resolution
+
+    const isImageToVideo = input.generation_mode === "image_to_video"
+    if (
+      providerConfig.aspectRatio &&
+      (!isImageToVideo || providerConfig.imageToVideoAspectRatio !== false) &&
+      input.aspect_ratio
+    ) {
+      payload.aspect_ratio = input.aspect_ratio
+    }
+
+    if (providerConfig.audioField) {
+      const audioEnabled = input.generate_audio === true || input.generate_audio === "true"
+      payload[providerConfig.audioField] =
+        providerConfig.audioField === "sound" ? (audioEnabled ? "on" : "off") : audioEnabled
+    }
+    if (providerConfig.mode && input.mode) payload.mode = input.mode
+    if (providerConfig.generationType) {
+      payload.generation_type = isImageToVideo ? "FIRST&LAST" : "TEXT"
+    }
+    if (input.negative_prompt) payload.negative_prompt = input.negative_prompt
+    if (callbackUrl) payload.callback_url = callbackUrl
+    const imageUrls = referenceImages
+      .map(image => image.url)
+      .filter((url): url is string => Boolean(url))
+    if (imageUrls.length > 0) payload.image_urls = imageUrls
+    return payload
   }
 
   const nanoBananaModels = new Set([
@@ -987,7 +1085,12 @@ async function generateViaEvoLink(
   input: GenerateInput,
   referenceImages: PreparedReferenceImage[] = []
 ): Promise<string> {
-  const evolinkModelName = EVOLINK_MODEL_MAP[input.model]
+  const videoGenerationMode: VideoGenerationMode =
+    input.generation_mode === "image_to_video" ? "image_to_video" : "text_to_video"
+  const evolinkModelName =
+    input.media_type === MIME_TYPES.VIDEO
+      ? getVideoProviderModel(input.model, videoGenerationMode)
+      : EVOLINK_MODEL_MAP[input.model]
   if (!evolinkModelName) {
     throw new Error(`Unknown model: ${input.model}`)
   }
@@ -1002,7 +1105,11 @@ async function generateViaEvoLink(
   )
   console.log("[EvoLink] Calling with model", evolinkModelName, "payload", JSON.stringify(payload))
 
-  const res = await fetch("https://api.evolink.ai/v1/images/generations", {
+  const endpoint =
+    input.media_type === MIME_TYPES.VIDEO
+      ? "https://api.evolink.ai/v1/videos/generations"
+      : "https://api.evolink.ai/v1/images/generations"
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1263,7 +1370,10 @@ async function completeGenerationTask(
         mimeType,
         responseContentType
       )
-      const key = createGeneratedImageKey(userId, extension)
+      const key =
+        mimeType === MIME_TYPES.IMAGE
+          ? createGeneratedImageKey(userId, extension)
+          : createGeneratedMediaKey(userId, extension)
       const contentType =
         responseContentType ||
         getImageContentTypeFromKey(key) ||
@@ -1284,17 +1394,64 @@ async function completeGenerationTask(
         httpMetadata: { contentType },
       })
 
-      await db
-        .prepare(
-          `
+      const assetId = uuidv4()
+      const durationMs = mimeType === MIME_TYPES.VIDEO ? (Number(input.duration) || 5) * 1000 : null
+      const hasAudio =
+        mimeType === MIME_TYPES.VIDEO
+          ? input.generate_audio === true || input.generate_audio === "true"
+            ? 1
+            : 0
+          : null
+      await db.batch([
+        db
+          .prepare(
+            `
+              INSERT INTO assets (
+                id, user_id, source_output_id, kind, origin, name, storage_key, content_type,
+                width, height, duration_ms, has_audio, model, prompt, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, 'generated', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `
+          )
+          .bind(
+            assetId,
+            userId,
+            output.id,
+            mimeType,
+            input.prompt.trim().slice(0, 80) || `Generated ${mimeType}`,
+            key,
+            contentType,
+            width,
+            height,
+            durationMs,
+            hasAudio,
+            input.model,
+            input.prompt,
+            now,
+            now
+          ),
+        db
+          .prepare(
+            `
             UPDATE message_outputs
-            SET status = 'completed', image_url = ?, content_type = ?, width = ?, height = ?,
-              file_size = ?, error = NULL, updated_at = ?
+            SET status = 'completed', image_url = ?, storage_key = ?, content_type = ?, width = ?, height = ?,
+              file_size = ?, duration_ms = ?, has_audio = ?, asset_id = ?, error = NULL, updated_at = ?
             WHERE id = ?
           `
-        )
-        .bind(key, mimeType, width, height, imageBuffer.byteLength, now, output.id)
-        .run()
+          )
+          .bind(
+            key,
+            key,
+            mimeType,
+            width,
+            height,
+            imageBuffer.byteLength,
+            durationMs,
+            hasAudio,
+            assetId,
+            now,
+            output.id
+          ),
+      ])
 
       completedOutputs.push({
         id: output.id,
@@ -1317,7 +1474,7 @@ async function completeGenerationTask(
   }
 
   if (completedOutputs.length === 0) {
-    throw new Error("No generated images could be saved")
+    throw new Error("No generated media could be saved")
   }
 
   const chargedInput: GenerateInput = { ...input, num_images: completedOutputs.length }
@@ -1413,13 +1570,15 @@ async function runBackgroundGeneration(
     const aiInput = buildAiInput(input, referenceImages)
     console.log("aiInput model in bg", input.model, JSON.stringify(aiInput))
 
-    const isBytedance = input.model.startsWith("bytedance/")
-    const isEvoLinkModel = Boolean(EVOLINK_MODEL_MAP[input.model])
+    const isBytedance =
+      input.media_type !== MIME_TYPES.VIDEO && input.model.startsWith("bytedance/")
+    const isEvoLinkModel =
+      Boolean(EVOLINK_MODEL_MAP[input.model]) || input.media_type === MIME_TYPES.VIDEO
     let result: any
     let finalProvider: string = PROVIDERS.CLOUDFLARE
 
     if (isBytedance) {
-      console.log("generation by bytedance",JSON.stringify(input))
+      console.log("generation by bytedance", JSON.stringify(input))
       const resData = await generateBytedanceImage(c, taskId, input, referenceImages)
       finalProvider = resData.provider
       result = {
@@ -1432,10 +1591,10 @@ async function runBackgroundGeneration(
       await setGenerationTaskProvider(db, taskId, PROVIDERS.EVOLINK)
       const evolinkKey = c.env.EVOLINK_API_KEY
       if (!evolinkKey) {
-        throw new Error("EVOLINK_API_KEY is not configured for this image model.")
+        throw new Error("EVOLINK_API_KEY is not configured for this model.")
       }
       try {
-        console.log("generation by evolink",JSON.stringify(input))
+        console.log("generation by evolink", JSON.stringify(input))
         const providerTaskId = await generateViaEvoLink(
           c,
           taskId,
@@ -1451,11 +1610,11 @@ async function runBackgroundGeneration(
           },
         }
       } catch (err: any) {
-        throw new Error(`EvoLink image generation failed: ${err.message}`)
+        throw new Error(`EvoLink generation failed: ${err.message}`)
       }
     } else {
       // Call Cloudflare AI
-      console.log("generation by cloudflare ai",JSON.stringify(input))
+      console.log("generation by cloudflare ai", JSON.stringify(input))
       await setGenerationTaskProvider(db, taskId, PROVIDERS.CLOUDFLARE, now)
       result = (await c.env.AI.run(input.model as any, aiInput, {
         gateway: { id: "image-ai-gateway" },
@@ -1488,7 +1647,7 @@ async function runBackgroundGeneration(
         ? [resultPayload.image]
         : []
     if (imageUrls.length === 0) {
-      throw new Error("no image returned from AI")
+      throw new Error("no media returned from AI")
     }
 
     await completeGenerationTask(
@@ -1499,7 +1658,7 @@ async function runBackgroundGeneration(
       input,
       imageUrls,
       finalProvider,
-      MIME_TYPES.IMAGE
+      input.media_type ?? MIME_TYPES.IMAGE
     )
   } catch (error: any) {
     console.error("Background generation task error:", error)
@@ -1681,8 +1840,8 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
   const outputRows = taskRecord.message_id
     ? await c.env.DB.prepare(
         `
-            SELECT id, message_id, output_index, status, image_url, content_type, width, height,
-              file_size, error, created_at, updated_at
+            SELECT id, message_id, output_index, status, image_url, storage_key, content_type,
+              width, height, file_size, duration_ms, fps, has_audio, error, created_at, updated_at
             FROM message_outputs
             WHERE message_id = ? AND status != 'deleted'
             ORDER BY output_index ASC
@@ -1695,10 +1854,14 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
           output_index: number
           status: string
           image_url: string | null
+          storage_key: string | null
           content_type: MimeType
           width: number | null
           height: number | null
           file_size: number | null
+          duration_ms: number | null
+          fps: number | null
+          has_audio: number | null
           error: string | null
           created_at: number
           updated_at: number
@@ -1707,17 +1870,20 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
 
   const outputs = await Promise.all(
     (outputRows.results || []).map(async output => {
-      const { image_url: imageUrl, ...publicOutput } = output
+      const { image_url: imageUrl, storage_key: storageKey, ...publicOutput } = output
+      const objectKey = storageKey || imageUrl
       return {
         ...publicOutput,
         thumbnail_url:
           output.content_type === MIME_TYPES.IMAGE
-            ? await createSignedImageVariantUrl(c.env, imageUrl, "small")
+            ? await createSignedImageVariantUrl(c.env, objectKey, "small")
             : null,
         display_url:
           output.content_type === MIME_TYPES.IMAGE
-            ? await createSignedImageVariantUrl(c.env, imageUrl, "large")
-            : null,
+            ? await createSignedImageVariantUrl(c.env, objectKey, "large")
+            : objectKey
+              ? await createPresignedGetUrl(c.env, objectKey)
+              : null,
       }
     })
   )
@@ -1741,7 +1907,7 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
 }
 
 export function getModels(): ModelConfig[] {
-  return getEnabledModels()
+  return getEnabledMediaModels()
 }
 
 export async function handleEvoLinkTaskCheck(env: Env) {

@@ -48,15 +48,25 @@ export default function MessageImageCard({
         onClick={handleOpen}
         disabled={!displayUrl || activeOutput?.status !== "completed"}
         className="relative min-h-0 flex-1 overflow-hidden text-left disabled:cursor-default"
-        aria-label="Open image details"
+        aria-label="Open media details"
       >
         {activeOutput?.status === "completed" && displayUrl && !activeHasError ? (
           <>
-            <img
-              src={displayUrl}
-              alt={message.prompt}
-              className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.025]"
-            />
+            {activeOutput.content_type === "video" ? (
+              <video
+                src={displayUrl}
+                muted
+                playsInline
+                preload="metadata"
+                className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.025]"
+              />
+            ) : (
+              <img
+                src={displayUrl}
+                alt={message.prompt}
+                className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.025]"
+              />
+            )}
             {failedOutputs.length > 0 && (
               <span className="absolute right-2.5 top-2.5 flex items-center gap-1.5 rounded-full border border-red-300/20 bg-black/75 px-2.5 py-1 text-[11px] font-medium text-red-100 shadow-lg shadow-black/20 backdrop-blur-md">
                 <AlertTriangle className="size-3" aria-hidden="true" />

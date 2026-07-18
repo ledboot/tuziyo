@@ -59,7 +59,7 @@ describe("generated image output failures", () => {
     const output = createOutput({ status: "failed" })
 
     expect(getOutputErrorMessage(output)).toBe(
-      "The image could not be generated. Please try again."
+      "The media could not be generated. Please try again."
     )
   })
 

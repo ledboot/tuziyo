@@ -1,6 +1,10 @@
 import { v4 as uuidv4 } from "uuid"
 import type { AuthenticatedContext } from "../types"
-import { MODEL_CREDITS as CREDIT_MAP, MODEL_OPTIONS_CONFIG } from "../imageModels"
+import {
+  MEDIA_MODEL_CATALOG,
+  MODEL_CREDITS as CREDIT_MAP,
+  MODEL_OPTIONS_CONFIG,
+} from "../mediaModels"
 
 export interface CreditInfo {
   balance: number
@@ -204,6 +208,22 @@ export async function grantSubscriptionCredits(
 }
 
 export function calculateRequiredCredits(model: string, input: any): number {
+  const modelDefinition = MEDIA_MODEL_CATALOG[model]
+  if (modelDefinition?.pricingMode === "per_second") {
+    const duration = Math.max(1, Number(input.duration) || 5)
+    let creditsPerSecond = modelDefinition.creditsPerSecond || 0
+    const optionsConfig = MODEL_OPTIONS_CONFIG[model]
+    if (optionsConfig) {
+      for (const [key, option] of Object.entries(optionsConfig)) {
+        const selectedValue = input[key]
+        const premium =
+          selectedValue === undefined ? undefined : option.valueCredits?.[String(selectedValue)]
+        if (typeof premium === "number") creditsPerSecond += premium
+      }
+    }
+    return creditsPerSecond * duration
+  }
+
   const baseCredits = CREDIT_MAP[model] || 0
   if (!baseCredits) return 0
 

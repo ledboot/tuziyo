@@ -50,7 +50,8 @@ export function ModelOptions({ groups, className = "" }: ModelOptionsProps) {
       if (
         buttonRef.current?.contains(e.target as Node) ||
         dropdownRef.current?.contains(e.target as Node)
-      ) return
+      )
+        return
       setIsOpen(false)
     }
     document.addEventListener("mousedown", handleClickOutside)
@@ -65,22 +66,25 @@ export function ModelOptions({ groups, className = "" }: ModelOptionsProps) {
   const summaryText = selectGroups
     .map(g => {
       const selected = g.options.find(o => o.value === g.value)
-      return selected?.label || g.value
+      const label = selected?.label || g.value
+      return g.id === "duration" && label !== "Auto" ? `${label}s` : label
     })
-    .join(" / ")
+    .join(" · ")
 
   const toggleSummaryText = toggleGroups
     .filter(g => g.value === "true")
-    .map(g => g.label)
+    .map(g => (g.id === "generate_audio" ? "Audio" : g.label))
     .join(", ")
 
-  const displayText = summaryText + (toggleSummaryText ? ` • ${toggleSummaryText}` : "")
+  const displayText = summaryText + (toggleSummaryText ? ` · ${toggleSummaryText}` : "")
 
   const dropdown = isOpen ? (
     <div
       ref={dropdownRef}
       className="liquid-glass-dropdown rounded-box border-none"
       style={{ ...dropdownStyle, width: "max-content" }}
+      role="dialog"
+      aria-label="Model options"
     >
       <div className="p-2">
         {selectGroups.map((group, groupIdx) => (
@@ -94,6 +98,7 @@ export function ModelOptions({ groups, className = "" }: ModelOptionsProps) {
                 {group.options.map(opt => (
                   <button
                     key={opt.value}
+                    type="button"
                     onClick={() => {
                       group.onChange(opt.value)
                       setIsOpen(false)
@@ -138,16 +143,23 @@ export function ModelOptions({ groups, className = "" }: ModelOptionsProps) {
   ) : null
 
   return (
-    <div className={`relative inline-block w-max shrink-0 ${className}`}>
+    <div className={`liquid-model-options relative inline-block min-w-0 ${className}`}>
       <button
+        type="button"
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex w-max items-center gap-2 whitespace-nowrap px-3 py-2 liquid-glass rounded-lg border-none cursor-pointer hover:ring-1 hover:ring-primary transition-all"
+        className="inline-flex min-w-0 items-center gap-2 whitespace-nowrap px-3 py-2 liquid-glass rounded-lg border-none cursor-pointer hover:ring-1 hover:ring-primary focus-visible:ring-2 focus-visible:ring-white/70 transition-[box-shadow,background-color]"
+        aria-label={`Model options: ${displayText || "Select options"}`}
+        aria-expanded={isOpen}
+        aria-haspopup="dialog"
       >
-        <SlidersHorizontal size={16} className="shrink-0 text-white" />
-        <span className="text-sm whitespace-nowrap">{displayText || "Select options"}</span>
+        <SlidersHorizontal size={16} className="shrink-0 text-white" aria-hidden="true" />
+        <span className="liquid-model-options__summary text-sm">
+          {displayText || "Select options"}
+        </span>
         <ChevronDown
           className={`size-4 shrink-0 transition-transform text-white ${isOpen ? "rotate-180" : ""}`}
+          aria-hidden="true"
         />
       </button>
 

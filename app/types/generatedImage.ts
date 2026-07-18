@@ -11,6 +11,9 @@ export interface GeneratedImageOutput {
   width: number | null
   height: number | null
   file_size: number | null
+  duration_ms?: number | null
+  fps?: number | null
+  has_audio?: number | null
   error: string | null
   created_at: number
   updated_at: number
@@ -32,6 +35,10 @@ export interface GeneratedImageMessage {
   negative_prompt: string | null
   output_format: string | null
   num_images: number | null
+  media_type?: OutputMimeType
+  generation_mode?: string | null
+  duration?: number | null
+  generate_audio?: number | null
   google_search?: number | null
   image_search?: number | null
   created_at: number
@@ -64,7 +71,7 @@ export function hasOutputError(output: GeneratedImageOutput) {
 }
 
 export function getOutputErrorMessage(output: GeneratedImageOutput) {
-  return output.error?.trim() || "The image could not be generated. Please try again."
+  return output.error?.trim() || "The media could not be generated. Please try again."
 }
 
 export function mergeTaskOutputs(
