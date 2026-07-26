@@ -70,15 +70,14 @@ Title:
 
 Body:
 
-> I built Tuziyo to reduce the tool-switching around AI image work. It keeps prompts, references, settings, and outputs in reusable sessions, supports multiple image model families, and includes model pages that compare the controls and credit costs actually available in the product.
->
-> The repo is open source: https://github.com/ledboot/tuziyo
->
-> The stack is React Router, Bun, and Cloudflare Workers/D1/R2. Image generation requests are sent to the selected model provider, while sessions keep the related prompts, references, settings, and results organized.
->
-> New accounts receive 10 free credits. I am especially interested in feedback on the model comparison data and whether the session workflow makes iteration easier.
->
-> https://tuziyo.com/
+I built Tuziyo to reduce the tool-switching around AI image work. It keeps prompts, references, settings, and outputs in reusable sessions, supports multiple image model families, and includes model pages that compare the controls and credit costs actually available in the product.
+
+
+The stack is React Router, Bun, and Cloudflare Workers/D1/R2. Image generation requests are sent to the selected model provider, while sessions keep the related prompts, references, settings, and results organized.
+
+New accounts receive 10 free credits. I am especially interested in feedback on the model comparison data and whether the session workflow makes iteration easier.
+
+https://tuziyo.com/
 
 ## Reddit
 
