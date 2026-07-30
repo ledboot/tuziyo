@@ -54,10 +54,83 @@ describe("video generation catalog", () => {
     ])
   })
 
+  test("exposes Seedance 2.0 Fast with all three documented generation modes", () => {
+    const model = getModels().find(item => item.id === "bytedance/seedance-2.0-fast")
+    expect(model).toMatchObject({
+      name: "Seedance 2.0 Fast",
+      mediaType: "video",
+      supportsImage: true,
+      supportsStartFrame: true,
+      supportsEndFrame: true,
+      supportsAudio: true,
+      pricingMode: "per_second",
+      creditsPerSecond: 3,
+      pollTimeoutSeconds: 1200,
+      options: {
+        resolution: {
+          values: ["480p", "720p"],
+          defaultValue: "480p",
+          valueCredits: { "720p": 4 },
+        },
+      },
+    })
+    expect(model?.generationModes).toEqual([
+      "text_to_video",
+      "image_to_video",
+      "reference_to_video",
+    ])
+    expect(model?.videoInputModes).toEqual([
+      {
+        id: "start_end_frame",
+        label: "Start & End Frame",
+        generationMode: "image_to_video",
+        imageCount: 2,
+      },
+      {
+        id: "image_reference",
+        label: "Image Reference",
+        generationMode: "reference_to_video",
+        imageCount: 9,
+        audioCount: 3,
+        requiresImageOrVideo: true,
+        referenceTagStyle: "at",
+      },
+      {
+        id: "video_reference",
+        label: "Video Reference",
+        generationMode: "reference_to_video",
+        imageCount: 9,
+        videoCount: 3,
+        audioCount: 3,
+        requiresImageOrVideo: true,
+        referenceTagStyle: "at",
+      },
+    ])
+  })
+
+  test("requires an image or video when every Seedance 2.0 variant uses reference audio", () => {
+    for (const modelId of [
+      "bytedance/seedance-2.0",
+      "bytedance/seedance-2.0-fast",
+      "bytedance/seedance-2.0-mini",
+    ]) {
+      const model = getModels().find(item => item.id === modelId)
+      const referenceModes = model?.videoInputModes?.filter(
+        mode => mode.generationMode === "reference_to_video" && (mode.audioCount ?? 0) > 0
+      )
+
+      expect(referenceModes?.length).toBeGreaterThan(0)
+      for (const mode of referenceModes ?? []) {
+        expect(mode.requiresImageOrVideo).toBe(true)
+      }
+    }
+  })
+
   test("exposes every requested EvoLink video model through the models API", () => {
     const videoModels = getModels().filter(model => model.mediaType === "video")
     expect(videoModels.map(model => model.id)).toEqual([
       "bytedance/seedance-2.0",
+      "bytedance/seedance-2.0-fast",
       "bytedance/seedance-2.0-mini",
       "google/gemini-omni-flash",
       "kling/kling-3.0-turbo",
@@ -79,6 +152,7 @@ describe("video generation catalog", () => {
         .map(model => model.id)
     ).toEqual([
       "bytedance/seedance-2.0",
+      "bytedance/seedance-2.0-fast",
       "bytedance/seedance-2.0-mini",
       "google/gemini-omni-flash",
       "happyhorse/happyhorse-1.1",
@@ -126,6 +200,15 @@ describe("video generation catalog", () => {
   })
 
   test("maps public model IDs and generation modes to EvoLink model IDs", () => {
+    expect(getVideoProviderModel("bytedance/seedance-2.0-fast", "text_to_video")).toBe(
+      "seedance-2.0-fast-text-to-video"
+    )
+    expect(getVideoProviderModel("bytedance/seedance-2.0-fast", "image_to_video")).toBe(
+      "seedance-2.0-fast-image-to-video"
+    )
+    expect(getVideoProviderModel("bytedance/seedance-2.0-fast", "reference_to_video")).toBe(
+      "seedance-2.0-fast-reference-to-video"
+    )
     expect(getVideoProviderModel("bytedance/seedance-2.0-mini", "image_to_video")).toBe(
       "seedance-2.0-mini-image-to-video"
     )
@@ -236,6 +319,53 @@ describe("video generation catalog", () => {
       video_urls: ["https://example.com/video.mp4"],
       audio_urls: ["https://example.com/audio.mp3"],
     })
+
+    expect(
+      buildEvoLinkPayload(
+        "seedance-2.0-fast-reference-to-video",
+        {
+          ...baseInput,
+          model: "bytedance/seedance-2.0-fast",
+          prompt: "Keep @image1 while following @video1 with @audio1",
+          generation_mode: "reference_to_video",
+          resolution: "720p",
+        },
+        undefined,
+        [
+          {
+            key: "fast-image.png",
+            url: "https://example.com/fast-image.png",
+            contentType: "image/png",
+            size: 1,
+          },
+        ],
+        [
+          {
+            key: "fast-video.mp4",
+            url: "https://example.com/fast-video.mp4",
+            contentType: "video/mp4",
+            size: 1,
+          },
+        ],
+        [
+          {
+            key: "fast-audio.mp3",
+            url: "https://example.com/fast-audio.mp3",
+            contentType: "audio/mpeg",
+            size: 1,
+          },
+        ]
+      )
+    ).toMatchObject({
+      model: "seedance-2.0-fast-reference-to-video",
+      duration: 8,
+      quality: "720p",
+      aspect_ratio: "9:16",
+      generate_audio: true,
+      image_urls: ["https://example.com/fast-image.png"],
+      video_urls: ["https://example.com/fast-video.mp4"],
+      audio_urls: ["https://example.com/fast-audio.mp3"],
+    })
   })
 
   test("calculates configured video credits for model and option combinations", () => {
@@ -251,6 +381,18 @@ describe("video generation catalog", () => {
         resolution: "480p",
       })
     ).toBe(10)
+    expect(
+      calculateRequiredCredits("bytedance/seedance-2.0-fast", {
+        duration: 5,
+        resolution: "480p",
+      })
+    ).toBe(15)
+    expect(
+      calculateRequiredCredits("bytedance/seedance-2.0-fast", {
+        duration: 5,
+        resolution: "720p",
+      })
+    ).toBe(35)
     expect(
       calculateRequiredCredits("google/gemini-omni-flash", {
         duration: "auto",

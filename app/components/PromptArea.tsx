@@ -601,6 +601,11 @@ export default function PromptArea({
   const selectedVideoInputMode = selectedModelInfo?.videoInputModes?.find(
     mode => mode.id === videoInputMode
   )
+  const hasAudioOnlyReference =
+    mediaType === "video" &&
+    Boolean(selectedVideoInputMode?.requiresImageOrVideo) &&
+    uploadedImages.some(item => item.kind === "audio") &&
+    !uploadedImages.some(item => (item.kind ?? "image") === "image" || item.kind === "video")
   const isSeedanceModel = mediaType === "video" && selectedModel.startsWith("bytedance/seedance-")
   const supportsAtReferenceTags =
     isSeedanceModel || selectedVideoInputMode?.referenceTagStyle === "at"
@@ -1224,6 +1229,11 @@ export default function PromptArea({
 
     if (isPromptOverCharacterLimit) {
       toast.error(`Prompt must not exceed ${promptCharacterLimitText} characters for this model.`)
+      return
+    }
+
+    if (hasAudioOnlyReference) {
+      toast.error("Audio requires at least one reference image or video.")
       return
     }
 
@@ -2169,10 +2179,12 @@ export default function PromptArea({
               className={`liquid-prompt-hint ${
                 isPromptAtCharacterLimit ? "liquid-prompt-hint--limit" : ""
               }`}
-              role={isPromptAtCharacterLimit ? "status" : undefined}
+              role={isPromptAtCharacterLimit || hasAudioOnlyReference ? "status" : undefined}
             >
               <span>
-                {isPromptOverCharacterLimit
+                {hasAudioOnlyReference
+                  ? "Audio requires at least one reference image or video."
+                  : isPromptOverCharacterLimit
                   ? `已超出 ${promptCharacterLimitText} 字符上限`
                   : isPromptAtCharacterLimit
                     ? `已达到 ${promptCharacterLimitText} 字符上限`
@@ -2256,7 +2268,17 @@ export default function PromptArea({
             <button
               ref={generateButtonRef}
               onClick={handleGenerate}
-              disabled={!prompt.trim() || isGenerating || hasInsufficientCredits}
+              disabled={
+                !prompt.trim() ||
+                isGenerating ||
+                hasInsufficientCredits ||
+                hasAudioOnlyReference
+              }
+              title={
+                hasAudioOnlyReference
+                  ? "Add at least one reference image or video."
+                  : undefined
+              }
               className={`btn liquid-generate-button ${
                 hasInsufficientCredits ? "btn-disabled" : "btn-primary"
               }`}

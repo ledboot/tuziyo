@@ -36,6 +36,7 @@ function getModelName(modelId: string): string {
     "bytedance/seedream-5-lite": "Seedream 5",
     "bytedance/seedream-5-pro": "Seedream 5 Pro",
     "bytedance/seedance-2.0": "Seedance 2.0",
+    "bytedance/seedance-2.0-fast": "Seedance 2.0 Fast",
     "openai/gpt-image-1.5": "GPT Image 1.5",
   }
   return modelNames[modelId] || modelId

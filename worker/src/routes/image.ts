@@ -783,6 +783,12 @@ export async function handleGenerate(c: AuthenticatedContext) {
       ) {
         return c.json({ error: "Start & End Frame mode only accepts images" }, 400)
       }
+      if (resolvedInputMode.requiresImageOrVideo && !hasReferenceImages && !hasReferenceVideos) {
+        return c.json(
+          { error: "Audio cannot be provided alone; add at least one reference image or video" },
+          400
+        )
+      }
       if (resolvedInputMode.id === "image_reference" && !hasReferenceImages) {
         return c.json({ error: "Image Reference mode requires at least one image" }, 400)
       }
@@ -806,9 +812,6 @@ export async function handleGenerate(c: AuthenticatedContext) {
           { error: `This mode supports at most ${resolvedInputMode.audioCount ?? 0} audio files` },
           400
         )
-      }
-      if (resolvedInputMode.requiresImageOrVideo && !hasReferenceImages && !hasReferenceVideos) {
-        return c.json({ error: "Reference mode requires at least one image or video" }, 400)
       }
       input.video_input_mode = resolvedInputMode.id
       input.generation_mode = resolvedInputMode.generationMode
