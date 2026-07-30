@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS messages (
     output_format TEXT,
     num_images INTEGER,
     media_type TEXT NOT NULL DEFAULT 'image' CHECK(media_type IN ('image', 'video', 'audio')),
-    generation_mode TEXT CHECK(generation_mode IN ('text_to_image', 'image_to_image', 'text_to_video', 'image_to_video')),
+    generation_mode TEXT CHECK(generation_mode IN ('text_to_image', 'image_to_image', 'text_to_video', 'image_to_video', 'reference_to_video')),
     duration INTEGER,
     generate_audio INTEGER,
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),

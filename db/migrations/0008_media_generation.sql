@@ -1,5 +1,5 @@
 ALTER TABLE messages ADD COLUMN media_type TEXT NOT NULL DEFAULT 'image' CHECK(media_type IN ('image', 'video', 'audio'));
-ALTER TABLE messages ADD COLUMN generation_mode TEXT CHECK(generation_mode IN ('text_to_image', 'image_to_image', 'text_to_video', 'image_to_video'));
+ALTER TABLE messages ADD COLUMN generation_mode TEXT CHECK(generation_mode IN ('text_to_image', 'image_to_image', 'text_to_video', 'image_to_video', 'reference_to_video'));
 ALTER TABLE messages ADD COLUMN duration INTEGER;
 ALTER TABLE messages ADD COLUMN generate_audio INTEGER;
 

@@ -43,19 +43,30 @@ export function ModelOptions({ groups, className = "" }: ModelOptionsProps) {
     })
   }, [isOpen])
 
-  // Close on outside click
+  // Keep the menu open while interacting with its trigger or portaled content.
   useEffect(() => {
     if (!isOpen) return
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        buttonRef.current?.contains(e.target as Node) ||
-        dropdownRef.current?.contains(e.target as Node)
-      )
-        return
+
+    const isWithinMenu = (target: EventTarget | null) =>
+      target instanceof Node &&
+      (buttonRef.current?.contains(target) || dropdownRef.current?.contains(target))
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isWithinMenu(event.target)) return
       setIsOpen(false)
     }
+
+    const handleFocusOutside = (event: FocusEvent) => {
+      if (isWithinMenu(event.target)) return
+      setIsOpen(false)
+    }
+
     document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
+    document.addEventListener("focusin", handleFocusOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("focusin", handleFocusOutside)
+    }
   }, [isOpen])
 
   if (groups.length === 0) return null
@@ -99,10 +110,7 @@ export function ModelOptions({ groups, className = "" }: ModelOptionsProps) {
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => {
-                      group.onChange(opt.value)
-                      setIsOpen(false)
-                    }}
+                    onClick={() => group.onChange(opt.value)}
                     className={`w-max whitespace-nowrap px-2 py-1.5 text-sm rounded-lg transition-colors cursor-pointer text-center ${
                       group.value === opt.value
                         ? "text-primary font-semibold underline underline-offset-4 decoration-2"

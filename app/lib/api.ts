@@ -5,6 +5,7 @@ export interface ApiModelOption {
   type: "select" | "checkbox" | "textarea"
   values: string[]
   defaultValue?: string
+  valueCredits?: Record<string, number>
 }
 
 export interface ApiModel {
@@ -19,13 +20,30 @@ export interface ApiModel {
   referenceImageFormat?: "url" | "base64"
   isNew?: boolean
   options?: Record<string, ApiModelOption>
+  credits: number
   mediaType?: "image" | "video"
-  generationModes?: Array<"text_to_image" | "image_to_image" | "text_to_video" | "image_to_video">
+  generationModes?: Array<
+    "text_to_image" | "image_to_image" | "text_to_video" | "image_to_video" | "reference_to_video"
+  >
+  videoInputModes?: Array<{
+    id: "start_end_frame" | "image_reference" | "video_reference"
+    label: string
+    generationMode: "image_to_video" | "reference_to_video"
+    imageCount?: number
+    videoCount?: number
+    audioCount?: number
+    requiresImageOrVideo?: boolean
+    referenceTagStyle?: "at" | "character"
+  }>
   supportsStartFrame?: boolean
   supportsEndFrame?: boolean
   supportsAudio?: boolean
   pricingMode?: "fixed" | "per_second"
   creditsPerSecond?: number
+  creditOverrides?: Array<{
+    when: Record<string, string>
+    creditsPerSecond: number
+  }>
   pollTimeoutSeconds?: number
 }
 
@@ -147,19 +165,24 @@ export const api = {
       contentType: string
       size: number
       model: string
+      kind?: "image" | "video" | "audio"
     }) =>
       request<ReferenceImageUpload>("/api/uploads/reference-image/presign", {
         method: "POST",
         body: JSON.stringify(params),
       }),
-    referenceImage: async (file: File, model: string): Promise<UploadedReferenceImage> => {
+    referenceMedia: async (
+      file: File,
+      model: string,
+      kind: "image" | "video" | "audio" = "image"
+    ): Promise<UploadedReferenceImage> => {
       const upload = await api.uploads.createReferenceImageUpload({
         fileName: file.name,
         contentType: file.type,
         size: file.size,
         model,
+        kind,
       })
-      console.log("aaaaa", upload.headers)
 
       const response = await fetch(upload.uploadUrl, {
         method: "PUT",
@@ -169,7 +192,7 @@ export const api = {
 
       if (!response.ok) {
         const message = await response.text().catch(() => "")
-        throw new Error(message || "Failed to upload reference image")
+        throw new Error(message || `Failed to upload reference ${kind}`)
       }
 
       return {
@@ -179,6 +202,15 @@ export const api = {
         size: file.size,
       }
     },
+    resolveReferenceMedia: (keys: string[]) =>
+      request<{ items: Array<{ key: string; url: string }>; expiresIn: number }>(
+        "/api/uploads/reference-media/resolve",
+        {
+          method: "POST",
+          body: JSON.stringify({ keys }),
+        }
+      ),
+    referenceImage: (file: File, model: string) => api.uploads.referenceMedia(file, model, "image"),
   },
 
   credits: {
@@ -315,9 +347,17 @@ export const api = {
       thinking_level?: string
       reference_images?: string[]
       media_type?: "image" | "video"
-      generation_mode?: "text_to_image" | "image_to_image" | "text_to_video" | "image_to_video"
+      generation_mode?:
+        | "text_to_image"
+        | "image_to_image"
+        | "text_to_video"
+        | "image_to_video"
+        | "reference_to_video"
+      video_input_mode?: "start_end_frame" | "image_reference" | "video_reference"
       duration?: number | string
       generate_audio?: string | boolean
+      reference_videos?: string[]
+      reference_audios?: string[]
       [key: string]: unknown
     }) =>
       request<{

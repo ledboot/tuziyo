@@ -210,17 +210,23 @@ export async function grantSubscriptionCredits(
 export function calculateRequiredCredits(model: string, input: any): number {
   const modelDefinition = MEDIA_MODEL_CATALOG[model]
   if (modelDefinition?.pricingMode === "per_second") {
-    const duration = Math.max(1, Number(input.duration) || 5)
-    let creditsPerSecond = modelDefinition.creditsPerSecond || 0
     const optionsConfig = MODEL_OPTIONS_CONFIG[model]
+    const durationValue = input.duration ?? optionsConfig?.duration?.defaultValue ?? 5
+    const duration = durationValue === "auto" ? 10 : Math.max(1, Number(durationValue) || 5)
+    let creditsPerSecond = modelDefinition.creditsPerSecond || 0
+    const selectedOptions: Record<string, string> = {}
     if (optionsConfig) {
       for (const [key, option] of Object.entries(optionsConfig)) {
-        const selectedValue = input[key]
-        const premium =
-          selectedValue === undefined ? undefined : option.valueCredits?.[String(selectedValue)]
+        const selectedValue = input[key] ?? option.defaultValue
+        if (selectedValue !== undefined) selectedOptions[key] = String(selectedValue)
+        const premium = option.valueCredits?.[String(selectedValue)]
         if (typeof premium === "number") creditsPerSecond += premium
       }
     }
+    const override = modelDefinition.creditOverrides?.find(rule =>
+      Object.entries(rule.when).every(([key, value]) => selectedOptions[key] === value)
+    )
+    if (override) creditsPerSecond = override.creditsPerSecond
     return creditsPerSecond * duration
   }
 

@@ -32,14 +32,18 @@ import {
   getImageContentTypeFromKey,
   createPresignedGetUrl,
   getReferenceImagePrefix,
+  getReferenceMediaPrefix,
   isAllowedReferenceImageContentType,
+  isAllowedReferenceMediaContentType,
   normalizeContentType,
 } from "../utils"
 import {
   EVOLINK_TASK_OBJECTS,
   MIME_TYPES,
   PROVIDERS,
+  REFERENCE_AUDIO_MAX_BYTES,
   REFERENCE_IMAGE_MAX_BYTES,
+  REFERENCE_VIDEO_MAX_BYTES,
   getEvoLinkTaskMimeType,
   type MimeType,
 } from "../const"
@@ -68,7 +72,13 @@ export interface GenerateInput {
   prompt: string
   model: string
   media_type?: MimeType
-  generation_mode?: "text_to_image" | "image_to_image" | "text_to_video" | "image_to_video"
+  generation_mode?:
+    | "text_to_image"
+    | "image_to_image"
+    | "text_to_video"
+    | "image_to_video"
+    | "reference_to_video"
+  video_input_mode?: "start_end_frame" | "image_reference" | "video_reference"
   provider?: string
   size?: string
   quality?: string
@@ -84,6 +94,8 @@ export interface GenerateInput {
   thinking_level?: string
   background?: string
   reference_images?: string[]
+  reference_videos?: string[]
+  reference_audios?: string[]
   duration?: number | string
   generate_audio?: string | boolean
   mode?: string
@@ -348,6 +360,8 @@ function applyReferenceImages(
     case "google/nano-banana-pro":
     case "google/nano-banana-2":
     case "google/nano-banana-2-lite":
+    case "bytedance/seedream-4.0":
+    case "bytedance/seedream-4.5":
     case "bytedance/seedream-5-lite":
     case "bytedance/seedream-5-pro":
       aiInput.image_input = referenceImages
@@ -472,6 +486,46 @@ async function prepareReferenceImages(
   }
 
   return { images: preparedImages }
+}
+
+async function prepareReferenceMedia(
+  c: AuthenticatedContext,
+  keys: string[],
+  kind: "video" | "audio",
+  user: UserPayload
+): Promise<{ media: PreparedReferenceImage[]; error?: never } | { media?: never; error: string }> {
+  if (keys.length === 0) return { media: [] }
+  if (!Array.isArray(keys)) return { error: `reference_${kind}s must be an array` }
+
+  const prefix = getReferenceMediaPrefix(user.userId)
+  const maxBytes = kind === "video" ? REFERENCE_VIDEO_MAX_BYTES : REFERENCE_AUDIO_MAX_BYTES
+  const prepared: PreparedReferenceImage[] = []
+
+  for (const rawKey of keys) {
+    if (typeof rawKey !== "string" || rawKey.length === 0) {
+      return { error: `Invalid reference ${kind}` }
+    }
+
+    const key = rawKey.replace(/^\/+/, "")
+    if (!key.startsWith(prefix) || !key.includes(`/${kind}-`)) {
+      return { error: `Invalid reference ${kind}` }
+    }
+
+    const object = await c.env.R2.head(key)
+    if (!object) return { error: `Reference ${kind} upload was not found` }
+
+    const contentType = normalizeContentType(object.httpMetadata?.contentType || "")
+    if (!isAllowedReferenceMediaContentType(kind, contentType)) {
+      return { error: `Unsupported reference ${kind} format` }
+    }
+    if (object.size > maxBytes) return { error: `Reference ${kind} is too large` }
+
+    const url = await createPresignedGetUrl(c.env, key)
+    if (!url) return { error: `Failed to create reference ${kind} URL` }
+    prepared.push({ key, url, contentType, size: object.size })
+  }
+
+  return { media: prepared }
 }
 
 export async function handleGetFavorites(c: AuthenticatedContext) {
@@ -704,11 +758,64 @@ export async function handleGenerate(c: AuthenticatedContext) {
   if (mediaType === MIME_TYPES.VIDEO) {
     const hasReferenceImages =
       Array.isArray(input.reference_images) && input.reference_images.length > 0
-    input.generation_mode =
-      input.generation_mode ?? (hasReferenceImages ? "image_to_video" : "text_to_video")
+    const hasReferenceVideos =
+      Array.isArray(input.reference_videos) && input.reference_videos.length > 0
+    const hasReferenceAudios =
+      Array.isArray(input.reference_audios) && input.reference_audios.length > 0
+    const hasAnyReference = hasReferenceImages || hasReferenceVideos || hasReferenceAudios
+    const selectedInputMode = modelDefinition.videoInputModes?.find(
+      mode => mode.id === input.video_input_mode
+    )
+
+    if (!hasAnyReference) {
+      input.generation_mode = "text_to_video"
+      input.video_input_mode = undefined
+    } else {
+      const resolvedInputMode =
+        selectedInputMode ??
+        modelDefinition.videoInputModes?.find(mode => mode.id === "start_end_frame")
+      if (!resolvedInputMode) {
+        return c.json({ error: "This model does not support reference materials" }, 400)
+      }
+      if (
+        resolvedInputMode.id === "start_end_frame" &&
+        (!hasReferenceImages || hasReferenceVideos || hasReferenceAudios)
+      ) {
+        return c.json({ error: "Start & End Frame mode only accepts images" }, 400)
+      }
+      if (resolvedInputMode.id === "image_reference" && !hasReferenceImages) {
+        return c.json({ error: "Image Reference mode requires at least one image" }, 400)
+      }
+      if (resolvedInputMode.id === "video_reference" && !hasReferenceVideos) {
+        return c.json({ error: "Video Reference mode requires at least one video" }, 400)
+      }
+      if ((input.reference_images?.length ?? 0) > (resolvedInputMode.imageCount ?? 0)) {
+        return c.json(
+          { error: `This mode supports at most ${resolvedInputMode.imageCount ?? 0} images` },
+          400
+        )
+      }
+      if ((input.reference_videos?.length ?? 0) > (resolvedInputMode.videoCount ?? 0)) {
+        return c.json(
+          { error: `This mode supports at most ${resolvedInputMode.videoCount ?? 0} videos` },
+          400
+        )
+      }
+      if ((input.reference_audios?.length ?? 0) > (resolvedInputMode.audioCount ?? 0)) {
+        return c.json(
+          { error: `This mode supports at most ${resolvedInputMode.audioCount ?? 0} audio files` },
+          400
+        )
+      }
+      if (resolvedInputMode.requiresImageOrVideo && !hasReferenceImages && !hasReferenceVideos) {
+        return c.json({ error: "Reference mode requires at least one image or video" }, 400)
+      }
+      input.video_input_mode = resolvedInputMode.id
+      input.generation_mode = resolvedInputMode.generationMode
+    }
     if (
       !modelDefinition.generationModes?.includes(
-        input.generation_mode as "text_to_video" | "image_to_video"
+        input.generation_mode as "text_to_video" | "image_to_video" | "reference_to_video"
       )
     ) {
       return c.json(
@@ -716,11 +823,8 @@ export async function handleGenerate(c: AuthenticatedContext) {
         400
       )
     }
-    if (input.generation_mode === "image_to_video" && !hasReferenceImages) {
-      return c.json({ error: "image_to_video requires a start frame" }, 400)
-    }
-    if (input.generation_mode === "text_to_video" && hasReferenceImages) {
-      return c.json({ error: "text_to_video does not accept reference images" }, 400)
+    if (input.generation_mode === "text_to_video" && hasAnyReference) {
+      return c.json({ error: "text_to_video does not accept reference materials" }, 400)
     }
   } else {
     input.generation_mode =
@@ -828,6 +932,24 @@ export async function handleGenerate(c: AuthenticatedContext) {
   if (referenceImageResult.error) {
     return c.json({ error: referenceImageResult.error }, 400)
   }
+  const referenceVideoResult = await prepareReferenceMedia(
+    c,
+    input.reference_videos ?? [],
+    "video",
+    user
+  )
+  if (referenceVideoResult.error) {
+    return c.json({ error: referenceVideoResult.error }, 400)
+  }
+  const referenceAudioResult = await prepareReferenceMedia(
+    c,
+    input.reference_audios ?? [],
+    "audio",
+    user
+  )
+  if (referenceAudioResult.error) {
+    return c.json({ error: referenceAudioResult.error }, 400)
+  }
 
   // Generate task ID and insert task as pending
   const taskId = uuidv4()
@@ -931,7 +1053,9 @@ export async function handleGenerate(c: AuthenticatedContext) {
       sessionId,
       messageId,
       input,
-      referenceImageResult.images || []
+      referenceImageResult.images || [],
+      referenceVideoResult.media || [],
+      referenceAudioResult.media || []
     )
   )
 
@@ -951,7 +1075,9 @@ export function buildEvoLinkPayload(
   evolinkModelName: string,
   input: GenerateInput,
   callbackUrl?: string,
-  referenceImages: PreparedReferenceImage[] = []
+  referenceImages: PreparedReferenceImage[] = [],
+  referenceVideos: PreparedReferenceImage[] = [],
+  referenceAudios: PreparedReferenceImage[] = []
 ): Record<string, any> {
   const payload: any = {
     model: evolinkModelName,
@@ -990,7 +1116,22 @@ export function buildEvoLinkPayload(
     const imageUrls = referenceImages
       .map(image => image.url)
       .filter((url): url is string => Boolean(url))
-    if (imageUrls.length > 0) payload.image_urls = imageUrls
+    if (imageUrls.length > 0) {
+      if (isImageToVideo && providerConfig.imageInputFields === "start_end") {
+        payload.image_start = imageUrls[0]
+        if (imageUrls[1]) payload.image_end = imageUrls[1]
+      } else {
+        payload.image_urls = imageUrls
+      }
+    }
+    const videoUrls = referenceVideos
+      .map(video => video.url)
+      .filter((url): url is string => Boolean(url))
+    if (videoUrls.length > 0) payload.video_urls = videoUrls
+    const audioUrls = referenceAudios
+      .map(audio => audio.url)
+      .filter((url): url is string => Boolean(url))
+    if (audioUrls.length > 0) payload.audio_urls = audioUrls
     return payload
   }
 
@@ -1037,6 +1178,11 @@ export function buildEvoLinkPayload(
     payload.model_params = { output_format: outputFormat }
   }
 
+  if (evolinkModelName === "doubao-seedream-4.5") {
+    payload.size = input.aspect_ratio || "auto"
+    payload.quality = input.resolution || "2K"
+  }
+
   if (nanoBananaModels.has(evolinkModelName)) {
     payload.size = input.aspect_ratio || "auto"
 
@@ -1065,6 +1211,8 @@ export function buildEvoLinkPayload(
   }
 
   if (
+    evolinkModelName === "doubao-seedream-4.0" ||
+    evolinkModelName === "doubao-seedream-4.5" ||
     evolinkModelName === "doubao-seedream-5.0-lite" ||
     evolinkModelName === "doubao-seedream-5.0-pro" ||
     nanoBananaModels.has(evolinkModelName)
@@ -1083,10 +1231,16 @@ async function generateViaEvoLink(
   dbTaskId: string,
   apiKey: string,
   input: GenerateInput,
-  referenceImages: PreparedReferenceImage[] = []
+  referenceImages: PreparedReferenceImage[] = [],
+  referenceVideos: PreparedReferenceImage[] = [],
+  referenceAudios: PreparedReferenceImage[] = []
 ): Promise<string> {
   const videoGenerationMode: VideoGenerationMode =
-    input.generation_mode === "image_to_video" ? "image_to_video" : "text_to_video"
+    input.generation_mode === "reference_to_video"
+      ? "reference_to_video"
+      : input.generation_mode === "image_to_video"
+        ? "image_to_video"
+        : "text_to_video"
   const evolinkModelName =
     input.media_type === MIME_TYPES.VIDEO
       ? getVideoProviderModel(input.model, videoGenerationMode)
@@ -1101,7 +1255,9 @@ async function generateViaEvoLink(
     evolinkModelName,
     input,
     c.env.EVOLINK_CALLBACK_URL,
-    referenceImages
+    referenceImages,
+    referenceVideos,
+    referenceAudios
   )
   console.log("[EvoLink] Calling with model", evolinkModelName, "payload", JSON.stringify(payload))
 
@@ -1140,7 +1296,11 @@ async function generateViaEvoLink(
   return taskId
 }
 
-async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promise<string[]> {
+async function generateViaBytePlus(
+  apiKey: string,
+  input: GenerateInput,
+  referenceImages: PreparedReferenceImage[] = []
+): Promise<string[]> {
   const byteplusModelName = BYTEPLUS_MODEL_MAP[input.model]
   if (!byteplusModelName) {
     throw new Error(`BytePlus fallback does not support model: ${input.model}`)
@@ -1154,6 +1314,13 @@ async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promis
     size: input.resolution,
     stream: false,
     watermark: false,
+  }
+
+  const referenceImageUrls = referenceImages
+    .map(image => image.url)
+    .filter((url): url is string => Boolean(url))
+  if (referenceImageUrls.length > 0) {
+    payload.image = referenceImageUrls.length === 1 ? referenceImageUrls[0] : referenceImageUrls
   }
 
   if (byteplusModelName === "seedream-5-0-260128") {
@@ -1233,7 +1400,7 @@ async function generateBytedanceImage(
   }
 
   try {
-    const imageUrls = await generateViaBytePlus(arkKey, input)
+    const imageUrls = await generateViaBytePlus(arkKey, input, referenceImages)
     return { imageUrls, provider: PROVIDERS.BYTEPLUS }
   } catch (err: any) {
     throw new Error(
@@ -1555,7 +1722,9 @@ async function runBackgroundGeneration(
   sessionId: string,
   messageId: string,
   input: GenerateInput,
-  referenceImages: PreparedReferenceImage[]
+  referenceImages: PreparedReferenceImage[],
+  referenceVideos: PreparedReferenceImage[] = [],
+  referenceAudios: PreparedReferenceImage[] = []
 ) {
   const db = c.env.DB
   const now = Math.floor(Date.now() / 1000)
@@ -1600,7 +1769,9 @@ async function runBackgroundGeneration(
           taskId,
           evolinkKey,
           input,
-          referenceImages
+          referenceImages,
+          referenceVideos,
+          referenceAudios
         )
         finalProvider = PROVIDERS.EVOLINK
         result = {

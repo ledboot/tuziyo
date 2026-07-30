@@ -294,7 +294,7 @@ export const translations: Record<Language, Translations> = {
       total: "Total",
     },
     nav: {
-      aiToolkit: "AI Studio",
+      aiToolkit: "AI Toolkit",
       pricing: "Pricing",
       login: "Log in",
       register: "Register free",

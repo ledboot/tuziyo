@@ -50,6 +50,25 @@ export interface ModelOption {
   valueCredits?: Record<string, number>
 }
 
+export interface ModelCreditOverride {
+  when: Record<string, string>
+  creditsPerSecond: number
+}
+
+export type VideoGenerationMode = "text_to_video" | "image_to_video" | "reference_to_video"
+export type VideoInputMode = "start_end_frame" | "image_reference" | "video_reference"
+
+export interface VideoInputModeConfig {
+  id: VideoInputMode
+  label: string
+  generationMode: Exclude<VideoGenerationMode, "text_to_video">
+  imageCount?: number
+  videoCount?: number
+  audioCount?: number
+  requiresImageOrVideo?: boolean
+  referenceTagStyle?: "at" | "character"
+}
+
 export enum ModelOptionType {
   SELECT = "select",
   CHECKBOX = "checkbox",
@@ -75,12 +94,16 @@ export interface ModelConfig {
   options?: Record<string, ModelOption>
   credits: number
   mediaType?: "image" | "video"
-  generationModes?: Array<"text_to_image" | "image_to_image" | "text_to_video" | "image_to_video">
+  generationModes?: Array<
+    "text_to_image" | "image_to_image" | "text_to_video" | "image_to_video" | "reference_to_video"
+  >
+  videoInputModes?: VideoInputModeConfig[]
   supportsStartFrame?: boolean
   supportsEndFrame?: boolean
   supportsAudio?: boolean
   pricingMode?: "fixed" | "per_second"
   creditsPerSecond?: number
+  creditOverrides?: ModelCreditOverride[]
   pollTimeoutSeconds?: number
 }
 

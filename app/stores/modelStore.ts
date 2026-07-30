@@ -13,6 +13,22 @@ export const ModelOptionSchema = z.object({
   valueCredits: z.record(z.number()).optional(),
 })
 
+export const ModelCreditOverrideSchema = z.object({
+  when: z.record(z.string()),
+  creditsPerSecond: z.number().nonnegative(),
+})
+
+export const VideoInputModeSchema = z.object({
+  id: z.enum(["start_end_frame", "image_reference", "video_reference"]),
+  label: z.string(),
+  generationMode: z.enum(["image_to_video", "reference_to_video"]),
+  imageCount: z.number().int().nonnegative().optional(),
+  videoCount: z.number().int().nonnegative().optional(),
+  audioCount: z.number().int().nonnegative().optional(),
+  requiresImageOrVideo: z.boolean().optional(),
+  referenceTagStyle: z.enum(["at", "character"]).optional(),
+})
+
 export const ModelSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -28,13 +44,23 @@ export const ModelSchema = z.object({
   credits: z.number().default(0),
   mediaType: z.enum(["image", "video"]).default("image"),
   generationModes: z
-    .array(z.enum(["text_to_image", "image_to_image", "text_to_video", "image_to_video"]))
+    .array(
+      z.enum([
+        "text_to_image",
+        "image_to_image",
+        "text_to_video",
+        "image_to_video",
+        "reference_to_video",
+      ])
+    )
     .optional(),
+  videoInputModes: z.array(VideoInputModeSchema).optional(),
   supportsStartFrame: z.boolean().optional(),
   supportsEndFrame: z.boolean().optional(),
   supportsAudio: z.boolean().optional(),
   pricingMode: z.enum(["fixed", "per_second"]).default("fixed"),
   creditsPerSecond: z.number().optional(),
+  creditOverrides: z.array(ModelCreditOverrideSchema).optional(),
   pollTimeoutSeconds: z.number().optional(),
 })
 
@@ -42,6 +68,18 @@ export type ModelOptionType = z.infer<typeof ModelOptionTypeSchema>
 export type ModelOption = z.infer<typeof ModelOptionSchema>
 export type ModelOptionsConfig = Record<string, ModelOption>
 export type Model = z.infer<typeof ModelSchema>
+
+export interface PersistedReferenceMedia {
+  id: string
+  ownerUserId: string
+  key: string
+  url: string
+  contentType?: string
+  size?: number
+  kind: "image" | "video" | "audio"
+  role: "start_frame" | "end_frame" | "reference"
+  fileName?: string
+}
 
 interface ModelState {
   models: Model[]
@@ -59,10 +97,12 @@ interface ModelState {
   userModelOptions: Record<string, string> | null
   userPrompt: string | null
   userMediaType: "image" | "video"
+  referenceMedia: PersistedReferenceMedia[]
   setUserSelectedModel: (modelId: string) => void
   setUserModelOptions: (options: Record<string, string>) => void
   setUserPrompt: (prompt: string) => void
   setUserMediaType: (mediaType: "image" | "video") => void
+  setReferenceMedia: (media: PersistedReferenceMedia[]) => void
 }
 
 function getConfigurableDefault(option: ModelOption): string | null {
@@ -150,10 +190,12 @@ export const useModelStore = create<ModelState>()(
       userModelOptions: null,
       userPrompt: null,
       userMediaType: "image",
+      referenceMedia: [],
       setUserSelectedModel: modelId => set({ userSelectedModel: modelId }),
       setUserModelOptions: options => set({ userModelOptions: options }),
       setUserPrompt: prompt => set({ userPrompt: prompt }),
       setUserMediaType: mediaType => set({ userMediaType: mediaType }),
+      setReferenceMedia: media => set({ referenceMedia: media }),
     }),
     {
       name: "tuziyo-model-storage",
@@ -162,6 +204,7 @@ export const useModelStore = create<ModelState>()(
         userModelOptions: state.userModelOptions,
         userPrompt: state.userPrompt,
         userMediaType: state.userMediaType,
+        referenceMedia: state.referenceMedia,
       }),
     }
   )

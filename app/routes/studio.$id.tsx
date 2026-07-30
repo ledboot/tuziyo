@@ -1,17 +1,26 @@
 import { useEffect, useMemo, useState } from "react"
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
+  ChevronDown,
+  Clapperboard,
   Download,
   Film,
+  FolderOpen,
   Image as ImageIcon,
   Loader2,
   Plus,
+  SlidersHorizontal,
   Sparkles,
+  Star,
   Users,
+  Video,
+  Volume2,
+  WandSparkles,
   X,
 } from "lucide-react"
-import { useParams } from "react-router"
+import { Link, useParams } from "react-router"
 import { toast } from "sonner"
 import { api, type LibraryAsset, type StudioProjectDetail } from "~/lib/api"
 import { exportSequenceToMp4 } from "~/lib/studioExport"
@@ -28,13 +37,20 @@ export default function StudioProjectPage() {
   const [picker, setPicker] = useState<"shot" | "frame" | "entity" | null>(null)
   const [activeShotId, setActiveShotId] = useState<string | null>(null)
   const [exportProgress, setExportProgress] = useState<number | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const refresh = async () => setData(await api.studio.getProject(id))
+
   useEffect(() => {
+    setLoadError(null)
     void Promise.all([
       refresh(),
       api.assets.list({ limit: 100 }).then(result => setLibrary(result.assets)),
-    ]).catch(error => toast.error(error.message))
+    ]).catch(error => {
+      const message = error instanceof Error ? error.message : "Could not load this project"
+      setLoadError(message)
+      toast.error(message)
+    })
   }, [id])
 
   const orderedShots = useMemo(() => {
@@ -43,6 +59,7 @@ export default function StudioProjectPage() {
       .map(item => data.shots.find(shot => shot.id === item.shot_id))
       .filter(Boolean) as StudioProjectDetail["shots"]
   }, [data])
+
   const activeShot = orderedShots.find(shot => shot.id === activeShotId) || orderedShots[0]
   const versionFor = (shotId: string) =>
     data?.versions.find(
@@ -51,27 +68,34 @@ export default function StudioProjectPage() {
   const activeAsset = activeShot ? versionFor(activeShot.id)?.asset : null
 
   const addAsset = async (asset: LibraryAsset) => {
-    if (picker === "shot")
-      await api.studio.createShot(id, {
-        name: `Shot ${orderedShots.length + 1}`,
-        prompt: asset.prompt || undefined,
-        asset_id: asset.id,
-      })
-    if (picker === "frame")
-      await api.studio.createFrame(id, {
-        asset_id: asset.id,
-        label: asset.name,
-        frame_type: "storyboard",
-      })
-    if (picker === "entity")
-      await api.studio.createEntity(id, {
-        name: asset.name,
-        description: asset.prompt || undefined,
-        type: "character",
-        asset_ids: [asset.id],
-      })
-    setPicker(null)
-    await refresh()
+    try {
+      if (picker === "shot") {
+        await api.studio.createShot(id, {
+          name: `Shot ${orderedShots.length + 1}`,
+          prompt: asset.prompt || undefined,
+          asset_id: asset.id,
+        })
+      }
+      if (picker === "frame") {
+        await api.studio.createFrame(id, {
+          asset_id: asset.id,
+          label: asset.name,
+          frame_type: "storyboard",
+        })
+      }
+      if (picker === "entity") {
+        await api.studio.createEntity(id, {
+          name: asset.name,
+          description: asset.prompt || undefined,
+          type: "character",
+          asset_ids: [asset.id],
+        })
+      }
+      setPicker(null)
+      await refresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not add this asset")
+    }
   }
 
   const moveShot = async (shotId: string, direction: -1 | 1) => {
@@ -105,247 +129,345 @@ export default function StudioProjectPage() {
     }
   }
 
-  if (!data)
+  if (loadError) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#08090d] text-white">
-        <Loader2 className="size-8 animate-spin text-violet-300" />
+      <main className="studio-workbench studio-workbench-state">
+        <Clapperboard className="size-8" />
+        <h1>Project unavailable</h1>
+        <p>{loadError}</p>
+        <Link to="/studio/projects">Back to My Projects</Link>
       </main>
     )
+  }
+
+  if (!data) {
+    return (
+      <main className="studio-workbench studio-workbench-state">
+        <Loader2 className="size-8 animate-spin" aria-label="Loading project" />
+      </main>
+    )
+  }
 
   return (
-    <main className="flex h-screen flex-col overflow-hidden bg-[#08090d] pt-20 text-white">
-      <header className="flex h-16 shrink-0 items-center gap-4 border-b border-white/10 px-5">
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-violet-300">
-            Studio Lite
-          </p>
-          <h1 className="truncate text-lg font-semibold">{data.project.name}</h1>
+    <main className="studio-workbench">
+      <header className="studio-workbench-header">
+        <Link to="/studio/projects" className="studio-workbench-brand">
+          <span>tuziyo</span> Studio <small>Beta</small>
+        </Link>
+        <Link to="/studio/projects" className="studio-workbench-project-switcher">
+          {data.project.name}
+          <ChevronDown className="size-4" />
+        </Link>
+        <div className="studio-workbench-header__actions">
+          <Link to="/pricing">Pricing</Link>
+          <span>{data.project.aspect_ratio}</span>
+          <button
+            type="button"
+            disabled={exportProgress !== null || !orderedShots.length}
+            onClick={() => void exportMp4()}
+          >
+            {exportProgress !== null ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                {Math.round(exportProgress * 100)}%
+              </>
+            ) : (
+              <>
+                <Download className="size-4" />
+                Export MP4
+              </>
+            )}
+          </button>
         </div>
-        <span className="rounded-full bg-white/[0.06] px-3 py-1.5 text-xs text-white/45">
-          {data.project.aspect_ratio}
-        </span>
-        <button
-          disabled={exportProgress !== null || !orderedShots.length}
-          onClick={() => void exportMp4()}
-          className="btn btn-primary rounded-full px-5"
-        >
-          {exportProgress !== null ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              {Math.round(exportProgress * 100)}%
-            </>
-          ) : (
-            <>
-              <Download className="size-4" />
-              Export MP4
-            </>
-          )}
-        </button>
       </header>
-      <div className="grid min-h-0 flex-1 grid-cols-[240px_1fr_300px]">
-        <aside className="overflow-y-auto border-r border-white/10 bg-[#0d0f14] p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-              Project bible
-            </h2>
-          </div>
-          <button
-            onClick={() => setPicker("entity")}
-            className="flex w-full items-center gap-2 rounded-xl border border-dashed border-white/12 px-3 py-3 text-sm text-white/45 hover:border-white/25 hover:text-white"
-          >
-            <Users className="size-4" />
-            Add entity
+
+      <div className="studio-workbench-body">
+        <nav className="studio-workbench-rail" aria-label="Project tools">
+          <button type="button" className="is-active" aria-label="Shots">
+            <Video className="size-5" />
           </button>
-          <div className="mt-3 space-y-2">
-            {data.entities.map(entity => (
-              <div key={entity.id} className="rounded-xl bg-white/[0.05] p-3">
-                <p className="text-sm font-medium">{entity.name}</p>
-                <p className="mt-1 text-[10px] uppercase tracking-wider text-white/30">
-                  {entity.type}
-                </p>
-              </div>
+          <span />
+          <button type="button" onClick={() => setPicker("entity")} aria-label="Characters">
+            <Users className="size-5" />
+          </button>
+          <button type="button" onClick={() => setPicker("frame")} aria-label="Reference frames">
+            <ImageIcon className="size-5" />
+          </button>
+          <span />
+          <button type="button" onClick={() => setPicker("shot")} aria-label="Add a shot">
+            <Clapperboard className="size-5" />
+          </button>
+        </nav>
+
+        <aside className="studio-directing-panel">
+          <div className="studio-directing-toolbar">
+            <Link to="/studio/projects" aria-label="Back to projects">
+              <ArrowLeft className="size-4" />
+            </Link>
+            <div>
+              <span>Sequence</span>
+              <strong>{orderedShots.length} shots</strong>
+            </div>
+            <SlidersHorizontal className="size-4" />
+          </div>
+
+          <div className="studio-directing-tabs">
+            <span>Framing</span>
+            <button type="button">Directing</button>
+          </div>
+
+          <div className="studio-directing-context">
+            <button
+              type="button"
+              onClick={() => setPicker("frame")}
+              aria-label="Add reference frame"
+            >
+              <ImageIcon className="size-4" />
+            </button>
+            {data.entities.slice(0, 2).map(entity => (
+              <span key={entity.id}>
+                <Users className="size-3.5" />
+                {entity.name}
+              </span>
             ))}
-          </div>
-          <h2 className="mb-3 mt-7 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-            Frames
-          </h2>
-          <button
-            onClick={() => setPicker("frame")}
-            className="flex w-full items-center gap-2 rounded-xl border border-dashed border-white/12 px-3 py-3 text-sm text-white/45 hover:text-white"
-          >
-            <ImageIcon className="size-4" />
-            Add frame
-          </button>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {data.frames.map(frame => (
-              <div key={frame.id} className="aspect-square overflow-hidden rounded-lg bg-black">
-                {frame.asset.thumbnail_url && (
-                  <img src={frame.asset.thumbnail_url} alt="" className="size-full object-cover" />
+            {data.frames.slice(0, 2).map(frame => (
+              <span key={frame.id} className="is-image">
+                {frame.asset.thumbnail_url ? (
+                  <img src={frame.asset.thumbnail_url} alt="" />
+                ) : (
+                  <ImageIcon className="size-3.5" />
                 )}
-              </div>
+              </span>
             ))}
+            <button
+              type="button"
+              onClick={() => setPicker("entity")}
+              aria-label="Add project entity"
+            >
+              <Plus className="size-4" />
+            </button>
+          </div>
+
+          <section className="studio-directing-copy">
+            <div>
+              <Star className="size-4" />
+              <span>{activeShot ? activeShot.name : "No active shot"}</span>
+              <WandSparkles className="size-4" />
+            </div>
+            <p>
+              {activeShot?.prompt ||
+                "Choose a video from your Library to create a shot, then keep the visual direction beside the frame."}
+            </p>
+          </section>
+
+          <div className="studio-directing-meta">
+            <span>
+              {activeShot?.duration_ms ? `${activeShot.duration_ms / 1000} sec` : "4 sec"}
+            </span>
+            <span>
+              <Video className="size-3.5" />
+              Motion
+            </span>
+            <span>
+              <Volume2 className="size-3.5" />
+              Auto Voice
+            </span>
+          </div>
+
+          <div className="studio-directing-actions">
+            <div>
+              <button
+                type="button"
+                onClick={() => activeShot && void moveShot(activeShot.id, -1)}
+                disabled={!activeShot}
+              >
+                <ArrowUp className="size-4" />
+                Earlier
+              </button>
+              <button
+                type="button"
+                onClick={() => activeShot && void moveShot(activeShot.id, 1)}
+                disabled={!activeShot}
+              >
+                <ArrowDown className="size-4" />
+                Later
+              </button>
+            </div>
+            <button type="button" onClick={() => setPicker("shot")} className="is-primary">
+              <Plus className="size-5" />
+              Add shot
+            </button>
           </div>
         </aside>
-        <section className="flex min-w-0 flex-col bg-black/40">
-          <div className="grid min-h-0 flex-1 place-items-center p-8">
+
+        <section className="studio-monitor">
+          <div className="studio-monitor-viewer">
             {activeAsset?.display_url ? (
-              <video
-                key={activeAsset.id}
-                src={activeAsset.display_url}
-                controls
-                autoPlay
-                playsInline
-                className="max-h-full max-w-full rounded-xl shadow-2xl"
-              />
+              activeAsset.kind === "video" ? (
+                <video
+                  key={activeAsset.id}
+                  src={activeAsset.display_url}
+                  controls
+                  autoPlay
+                  playsInline
+                />
+              ) : (
+                <img src={activeAsset.display_url} alt={activeAsset.name} />
+              )
             ) : (
-              <div className="text-center text-white/30">
-                <Film className="mx-auto size-14" />
-                <p className="mt-4">Add a video from Library to create the first shot.</p>
-                <button
-                  onClick={() => setPicker("shot")}
-                  className="btn btn-primary mt-5 rounded-full"
-                >
+              <div className="studio-monitor-empty">
+                <Film className="size-10" />
+                <h2>Build the first shot.</h2>
+                <p>Add a video from your Library to start directing this sequence.</p>
+                <button type="button" onClick={() => setPicker("shot")}>
                   <Plus className="size-4" />
                   Add shot
                 </button>
               </div>
             )}
           </div>
-          <div className="shrink-0 border-t border-white/10 bg-[#0b0d12] p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                Sequence · {orderedShots.length} shots
-              </h2>
-              <button onClick={() => setPicker("shot")} className="btn btn-xs rounded-full">
-                <Plus className="size-3" />
-                Add
-              </button>
+
+          <div className="studio-monitor-timeline">
+            <div className="studio-monitor-timeline__ticks">
+              <span>0</span>
+              <span>1</span>
+              <span>2</span>
+              <span>3</span>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-1">
+            <div className="studio-monitor-timeline__track">
+              {orderedShots.length ? (
+                orderedShots.map(shot => {
+                  const asset = versionFor(shot.id)?.asset
+                  return (
+                    <button
+                      key={shot.id}
+                      type="button"
+                      onClick={() => setActiveShotId(shot.id)}
+                      className={activeShot?.id === shot.id ? "is-active" : ""}
+                      aria-label={`Select ${shot.name}`}
+                    >
+                      {asset?.kind === "video" && asset.display_url ? (
+                        <video src={asset.display_url} muted playsInline preload="metadata" />
+                      ) : asset?.thumbnail_url ? (
+                        <img src={asset.thumbnail_url} alt="" />
+                      ) : (
+                        <Film className="size-5" />
+                      )}
+                    </button>
+                  )
+                })
+              ) : (
+                <span className="studio-monitor-timeline__empty">
+                  Your timeline will appear here.
+                </span>
+              )}
+            </div>
+          </div>
+
+          <section className="studio-shots-folder">
+            <header>
+              <div>
+                <FolderOpen className="size-4" />
+                <strong>Shots</strong>
+                <span>{orderedShots.length}</span>
+              </div>
+              <button type="button" onClick={() => setPicker("shot")}>
+                <Plus className="size-4" />
+                New Shot
+              </button>
+            </header>
+            <div className="studio-shots-folder__list">
               {orderedShots.map((shot, index) => {
                 const asset = versionFor(shot.id)?.asset
                 return (
                   <button
                     key={shot.id}
+                    type="button"
                     onClick={() => setActiveShotId(shot.id)}
-                    className={`group relative w-36 shrink-0 overflow-hidden rounded-xl border text-left ${activeShot?.id === shot.id ? "border-violet-400" : "border-white/10"}`}
+                    className={activeShot?.id === shot.id ? "is-active" : ""}
                   >
-                    <div className="aspect-video bg-black">
-                      {asset?.display_url && (
-                        <video
-                          src={asset.display_url}
-                          muted
-                          playsInline
-                          preload="metadata"
-                          className="size-full object-cover"
-                        />
+                    <div>
+                      {asset?.kind === "video" && asset.display_url ? (
+                        <video src={asset.display_url} muted playsInline preload="metadata" />
+                      ) : asset?.thumbnail_url ? (
+                        <img src={asset.thumbnail_url} alt="" />
+                      ) : (
+                        <Film className="size-6" />
                       )}
                     </div>
-                    <div className="p-2">
-                      <p className="truncate text-xs font-medium">
-                        {index + 1}. {shot.name}
-                      </p>
-                      <p className="mt-0.5 text-[10px] text-white/30">
-                        {shot.duration_ms ? `${shot.duration_ms / 1000}s` : shot.status}
-                      </p>
-                    </div>
+                    <span>{shot.name || `Shot ${index + 1}`}</span>
+                    <small>{shot.duration_ms ? `${shot.duration_ms / 1000}s` : shot.status}</small>
                   </button>
                 )
               })}
-            </div>
-          </div>
-        </section>
-        <aside className="overflow-y-auto border-l border-white/10 bg-[#0d0f14] p-5">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-            <Sparkles className="size-3.5" />
-            Shot inspector
-          </div>
-          {activeShot ? (
-            <div className="mt-6">
-              <h2 className="text-xl font-semibold">{activeShot.name}</h2>
-              <p className="mt-3 text-sm leading-6 text-white/45">
-                {activeShot.prompt || "No prompt metadata for this shot."}
-              </p>
-              <div className="mt-6 grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => void moveShot(activeShot.id, -1)}
-                  className="btn btn-ghost rounded-full"
-                >
-                  <ArrowUp className="size-4" />
-                  Earlier
-                </button>
-                <button
-                  onClick={() => void moveShot(activeShot.id, 1)}
-                  className="btn btn-ghost rounded-full"
-                >
-                  <ArrowDown className="size-4" />
-                  Later
-                </button>
-              </div>
-              <button onClick={() => setPicker("shot")} className="btn mt-3 w-full rounded-full">
-                <Plus className="size-4" />
-                Add another shot
+              <button type="button" onClick={() => setPicker("shot")} className="is-new">
+                <Plus className="size-5" />
+                <span>New Shot</span>
               </button>
             </div>
-          ) : (
-            <p className="mt-6 text-sm text-white/35">Select a shot to inspect it.</p>
-          )}
-        </aside>
+          </section>
+        </section>
       </div>
+
       {picker && (
-        <div
-          className="fixed inset-0 z-[220] bg-black/75 p-8 backdrop-blur-xl"
-          onClick={() => setPicker(null)}
-        >
-          <div
-            className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#11131a]"
-            onClick={e => e.stopPropagation()}
+        <div className="studio-picker-backdrop" onMouseDown={() => setPicker(null)}>
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="studio-picker-title"
+            className="studio-picker"
+            onMouseDown={event => event.stopPropagation()}
           >
-            <header className="flex items-center justify-between border-b border-white/10 p-5">
+            <header>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300">
-                  Library picker
-                </p>
-                <h2 className="mt-1 text-xl font-semibold">
-                  Choose {picker === "shot" ? "a video" : "an asset"}
+                <span>Library picker</span>
+                <h2 id="studio-picker-title">
+                  Choose{" "}
+                  {picker === "shot"
+                    ? "a video"
+                    : picker === "entity"
+                      ? "a character reference"
+                      : "a frame"}
                 </h2>
               </div>
               <button
+                type="button"
                 onClick={() => setPicker(null)}
-                className="rounded-full p-2 hover:bg-white/10"
+                aria-label="Close Library picker"
               >
                 <X className="size-5" />
               </button>
             </header>
-            <div className="grid flex-1 grid-cols-3 gap-4 overflow-y-auto p-5 md:grid-cols-5">
+            <div className="studio-picker-grid">
               {library
                 .filter(asset =>
                   picker === "shot" ? asset.kind === "video" : asset.kind === "image"
                 )
                 .map(asset => (
-                  <button
-                    key={asset.id}
-                    onClick={() => void addAsset(asset)}
-                    className="group overflow-hidden rounded-2xl border border-white/10 bg-black text-left hover:border-violet-400"
-                  >
-                    <div className="aspect-[4/5]">
+                  <button key={asset.id} type="button" onClick={() => void addAsset(asset)}>
+                    <div>
                       {asset.kind === "video" && asset.display_url ? (
-                        <video
-                          src={asset.display_url}
-                          muted
-                          playsInline
-                          preload="metadata"
-                          className="size-full object-cover"
-                        />
+                        <video src={asset.display_url} muted playsInline preload="metadata" />
                       ) : asset.thumbnail_url ? (
-                        <img src={asset.thumbnail_url} alt="" className="size-full object-cover" />
-                      ) : null}
+                        <img src={asset.thumbnail_url} alt="" />
+                      ) : (
+                        <ImageIcon className="size-8" />
+                      )}
                     </div>
-                    <p className="truncate p-3 text-xs">{asset.name}</p>
+                    <span>{asset.name}</span>
                   </button>
                 ))}
+              {!library.some(asset =>
+                picker === "shot" ? asset.kind === "video" : asset.kind === "image"
+              ) && (
+                <div className="studio-picker-empty">
+                  <FolderOpen className="size-7" />
+                  <p>No compatible assets in your Library yet.</p>
+                  <Link to="/ai-toolkit">Create assets in AI Toolkit</Link>
+                </div>
+              )}
             </div>
-          </div>
+          </section>
         </div>
       )}
     </main>

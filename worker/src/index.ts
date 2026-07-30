@@ -35,7 +35,7 @@ import {
   handleUpdateSession,
   handleCreateMessage,
 } from "./routes/sessions"
-import { handleCreateReferenceImageUpload } from "./routes/uploads"
+import { handleCreateReferenceImageUpload, handleResolveReferenceMediaUrls } from "./routes/uploads"
 import { handleServeMediaVariant } from "./routes/media"
 import {
   handleDeleteAsset,
@@ -126,6 +126,7 @@ protectedRoutes.post("/api/evolink/tasks/check", async c => {
   }
 })
 protectedRoutes.post("/api/uploads/reference-image/presign", handleCreateReferenceImageUpload)
+protectedRoutes.post("/api/uploads/reference-media/resolve", handleResolveReferenceMediaUrls)
 protectedRoutes.get("/api/credits", handleGetCredits)
 protectedRoutes.get("/api/transactions", handleGetTransactions)
 protectedRoutes.get("/api/favorites", handleGetFavorites)

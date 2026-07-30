@@ -6,6 +6,18 @@ const REFERENCE_IMAGE_CONTENT_TYPES: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
 }
+const REFERENCE_VIDEO_CONTENT_TYPES: Record<string, string> = {
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
+}
+const REFERENCE_AUDIO_CONTENT_TYPES: Record<string, string> = {
+  "audio/mpeg": "mp3",
+  "audio/mp3": "mp3",
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+}
+
+export type ReferenceMediaKind = "image" | "video" | "audio"
 
 export function normalizeContentType(contentType: string) {
   return contentType.split(";")[0]?.trim().toLowerCase() ?? ""
@@ -27,12 +39,23 @@ export function isAllowedReferenceImageContentType(contentType: string) {
   return Object.hasOwn(REFERENCE_IMAGE_CONTENT_TYPES, normalizeContentType(contentType))
 }
 
+export function isAllowedReferenceMediaContentType(kind: ReferenceMediaKind, contentType: string) {
+  const normalized = normalizeContentType(contentType)
+  if (kind === "video") return Object.hasOwn(REFERENCE_VIDEO_CONTENT_TYPES, normalized)
+  if (kind === "audio") return Object.hasOwn(REFERENCE_AUDIO_CONTENT_TYPES, normalized)
+  return Object.hasOwn(REFERENCE_IMAGE_CONTENT_TYPES, normalized)
+}
+
 function toSafePathSegment(value: string) {
   return value.replace(/[^a-zA-Z0-9_-]/g, "_")
 }
 
 export function getReferenceImagePrefix(userId: string) {
   return `reference-images/${toSafePathSegment(userId)}/`
+}
+
+export function getReferenceMediaPrefix(userId: string) {
+  return `reference-media/${toSafePathSegment(userId)}/`
 }
 
 export function getGeneratedImagePrefix(userId: string) {
@@ -98,6 +121,22 @@ export function createReferenceImageKey(userId: string, contentType: string) {
     throw new Error("Invalid content type")
   }
   return `reference-images/${generateR2Key(userId)}/${crypto.randomUUID()}.${extension}`
+}
+
+export function createReferenceMediaKey(
+  userId: string,
+  kind: ReferenceMediaKind,
+  contentType: string
+) {
+  const normalized = normalizeContentType(contentType)
+  const extension =
+    kind === "video"
+      ? REFERENCE_VIDEO_CONTENT_TYPES[normalized]
+      : kind === "audio"
+        ? REFERENCE_AUDIO_CONTENT_TYPES[normalized]
+        : REFERENCE_IMAGE_CONTENT_TYPES[normalized]
+  if (!extension) throw new Error("Invalid reference media content type")
+  return `reference-media/${generateR2Key(userId)}/${kind}-${crypto.randomUUID()}.${extension}`
 }
 
 export function createGeneratedImageKey(userId: string, extension: string) {

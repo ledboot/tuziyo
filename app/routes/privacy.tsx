@@ -15,7 +15,7 @@ import {
   UserRoundCheck,
 } from "lucide-react"
 import { createSeoMeta } from "~/lib/seo"
-import "./privacy.css"
+import "../styles/privacy.css"
 
 export function meta() {
   return createSeoMeta({

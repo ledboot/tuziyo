@@ -17,10 +17,41 @@ describe("video generation catalog", () => {
       supportsEndFrame: true,
       supportsAudio: true,
       pricingMode: "per_second",
-      creditsPerSecond: 8,
+      creditsPerSecond: 4,
       pollTimeoutSeconds: 1200,
     })
-    expect(model?.generationModes).toEqual(["text_to_video", "image_to_video"])
+    expect(model?.generationModes).toEqual([
+      "text_to_video",
+      "image_to_video",
+      "reference_to_video",
+    ])
+    expect(model?.videoInputModes).toEqual([
+      {
+        id: "start_end_frame",
+        label: "Start & End Frame",
+        generationMode: "image_to_video",
+        imageCount: 2,
+      },
+      {
+        id: "image_reference",
+        label: "Image Reference",
+        generationMode: "reference_to_video",
+        imageCount: 9,
+        audioCount: 3,
+        requiresImageOrVideo: true,
+        referenceTagStyle: "at",
+      },
+      {
+        id: "video_reference",
+        label: "Video Reference",
+        generationMode: "reference_to_video",
+        imageCount: 9,
+        videoCount: 3,
+        audioCount: 3,
+        requiresImageOrVideo: true,
+        referenceTagStyle: "at",
+      },
+    ])
   })
 
   test("exposes every requested EvoLink video model through the models API", () => {
@@ -31,36 +62,100 @@ describe("video generation catalog", () => {
       "google/gemini-omni-flash",
       "kling/kling-3.0-turbo",
       "kling/kling-3.0",
-      "google/veo-3.1",
+      "google/veo-3.1-pro",
+      "google/veo-3.1-fast",
       "xai/grok-imagine-video",
       "happyhorse/happyhorse-1.1",
     ])
     for (const model of videoModels) {
-      expect(model.generationModes).toEqual(["text_to_video", "image_to_video"])
+      expect(model.generationModes).toContain("text_to_video")
+      expect(model.generationModes).toContain("image_to_video")
       expect(model.options?.duration?.values.length).toBeGreaterThan(0)
       expect(model).not.toHaveProperty("providerConfig")
     }
+    expect(
+      videoModels
+        .filter(model => model.generationModes?.includes("reference_to_video"))
+        .map(model => model.id)
+    ).toEqual([
+      "bytedance/seedance-2.0",
+      "bytedance/seedance-2.0-mini",
+      "google/gemini-omni-flash",
+      "happyhorse/happyhorse-1.1",
+    ])
+  })
+
+  test("publishes video option credit metadata to the frontend", () => {
+    const models = getModels()
+    expect(models.find(model => model.id === "google/veo-3.1-pro")).toMatchObject({
+      name: "Veo 3.1 Pro",
+      creditsPerSecond: 8,
+      options: {
+        resolution: {
+          defaultValue: "720p",
+          valueCredits: { "4k": 7 },
+        },
+        generate_audio: {
+          defaultValue: "true",
+          valueCredits: { true: 7 },
+        },
+      },
+    })
+    expect(models.find(model => model.id === "google/veo-3.1-fast")).toMatchObject({
+      name: "Veo 3.1 Fast",
+      creditsPerSecond: 4,
+      options: {
+        resolution: {
+          defaultValue: "720p",
+          valueCredits: { "4k": 7 },
+        },
+        generate_audio: {
+          defaultValue: "true",
+          valueCredits: { true: 2 },
+        },
+      },
+    })
+    expect(models.find(model => model.id === "kling/kling-3.0")).toMatchObject({
+      creditOverrides: [
+        {
+          when: { resolution: "4k", generate_audio: "true" },
+          creditsPerSecond: 17,
+        },
+      ],
+    })
   })
 
   test("maps public model IDs and generation modes to EvoLink model IDs", () => {
     expect(getVideoProviderModel("bytedance/seedance-2.0-mini", "image_to_video")).toBe(
       "seedance-2.0-mini-image-to-video"
     )
+    expect(getVideoProviderModel("bytedance/seedance-2.0", "reference_to_video")).toBe(
+      "seedance-2.0-reference-to-video"
+    )
     expect(getVideoProviderModel("google/gemini-omni-flash", "text_to_video")).toBe(
       "gemini-omni-flash-text-to-video"
+    )
+    expect(getVideoProviderModel("google/gemini-omni-flash", "reference_to_video")).toBe(
+      "gemini-omni-flash-reference-to-video"
     )
     expect(getVideoProviderModel("kling/kling-3.0-turbo", "image_to_video")).toBe(
       "kling-v3-turbo-image-to-video"
     )
     expect(getVideoProviderModel("kling/kling-3.0", "text_to_video")).toBe("kling-v3-text-to-video")
-    expect(getVideoProviderModel("google/veo-3.1", "image_to_video")).toBe(
+    expect(getVideoProviderModel("google/veo-3.1-pro", "image_to_video")).toBe(
       "veo-3.1-generate-preview"
+    )
+    expect(getVideoProviderModel("google/veo-3.1-fast", "text_to_video")).toBe(
+      "veo-3.1-fast-generate-preview"
     )
     expect(getVideoProviderModel("xai/grok-imagine-video", "text_to_video")).toBe(
       "grok-imagine-text-to-video-beta"
     )
     expect(getVideoProviderModel("happyhorse/happyhorse-1.1", "image_to_video")).toBe(
       "happyhorse-1.1-image-to-video"
+    )
+    expect(getVideoProviderModel("happyhorse/happyhorse-1.1", "reference_to_video")).toBe(
+      "happyhorse-1.1-reference-to-video"
     )
   })
 
@@ -100,15 +195,121 @@ describe("video generation catalog", () => {
         ]
       ).image_urls
     ).toEqual(["https://example.com/reference.png"])
+
+    expect(
+      buildEvoLinkPayload(
+        "seedance-2.0-reference-to-video",
+        {
+          ...baseInput,
+          prompt: "Use @image1, movement from @video1, and music from @audio1",
+          generation_mode: "reference_to_video",
+        },
+        undefined,
+        [
+          {
+            key: "image.png",
+            url: "https://example.com/image.png",
+            contentType: "image/png",
+            size: 1,
+          },
+        ],
+        [
+          {
+            key: "video.mp4",
+            url: "https://example.com/video.mp4",
+            contentType: "video/mp4",
+            size: 1,
+          },
+        ],
+        [
+          {
+            key: "audio.mp3",
+            url: "https://example.com/audio.mp3",
+            contentType: "audio/mpeg",
+            size: 1,
+          },
+        ]
+      )
+    ).toMatchObject({
+      model: "seedance-2.0-reference-to-video",
+      image_urls: ["https://example.com/image.png"],
+      video_urls: ["https://example.com/video.mp4"],
+      audio_urls: ["https://example.com/audio.mp3"],
+    })
   })
 
-  test("calculates video credits per second and resolution premium", () => {
+  test("calculates configured video credits for model and option combinations", () => {
     expect(
       calculateRequiredCredits("bytedance/seedance-2.0", { duration: 5, resolution: "720p" })
-    ).toBe(40)
+    ).toBe(45)
     expect(
       calculateRequiredCredits("bytedance/seedance-2.0", { duration: "5", resolution: "1080p" })
+    ).toBe(110)
+    expect(
+      calculateRequiredCredits("bytedance/seedance-2.0-mini", {
+        duration: 5,
+        resolution: "480p",
+      })
+    ).toBe(10)
+    expect(
+      calculateRequiredCredits("google/gemini-omni-flash", {
+        duration: "auto",
+      })
+    ).toBe(50)
+    expect(
+      calculateRequiredCredits("kling/kling-3.0", {
+        duration: 5,
+        resolution: "1080p",
+        generate_audio: "true",
+      })
+    ).toBe(35)
+    expect(
+      calculateRequiredCredits("kling/kling-3.0", {
+        duration: 5,
+        resolution: "4k",
+        generate_audio: "true",
+      })
+    ).toBe(85)
+    expect(
+      calculateRequiredCredits("google/veo-3.1-pro", {
+        duration: 4,
+        resolution: "720p",
+        generate_audio: "true",
+      })
     ).toBe(60)
+    expect(
+      calculateRequiredCredits("google/veo-3.1-pro", {
+        duration: 4,
+        resolution: "4k",
+        generate_audio: "true",
+      })
+    ).toBe(88)
+    expect(
+      calculateRequiredCredits("google/veo-3.1-fast", {
+        duration: 4,
+        resolution: "720p",
+        generate_audio: "false",
+      })
+    ).toBe(16)
+    expect(
+      calculateRequiredCredits("google/veo-3.1-fast", {
+        duration: 4,
+        resolution: "4k",
+        generate_audio: "true",
+      })
+    ).toBe(52)
+    expect(
+      calculateRequiredCredits("xai/grok-imagine-video", {
+        duration: 6,
+        resolution: "720p",
+      })
+    ).toBe(12)
+    expect(
+      calculateRequiredCredits("happyhorse/happyhorse-1.1", {
+        duration: 5,
+        resolution: "1080p",
+      })
+    ).toBe(40)
   })
 
   test("converts unified controls to model-specific EvoLink video fields", () => {
@@ -129,9 +330,33 @@ describe("video generation catalog", () => {
       sound: "on",
     })
     expect(
+      buildEvoLinkPayload(
+        "kling-v3-image-to-video",
+        { ...commonInput, generation_mode: "image_to_video" },
+        undefined,
+        [
+          {
+            key: "start.png",
+            url: "https://example.com/start.png",
+            contentType: "image/png",
+            size: 1,
+          },
+          {
+            key: "end.png",
+            url: "https://example.com/end.png",
+            contentType: "image/png",
+            size: 1,
+          },
+        ]
+      )
+    ).toMatchObject({
+      image_start: "https://example.com/start.png",
+      image_end: "https://example.com/end.png",
+    })
+    expect(
       buildEvoLinkPayload("veo-3.1-generate-preview", {
         ...commonInput,
-        model: "google/veo-3.1",
+        model: "google/veo-3.1-pro",
         generation_mode: "image_to_video",
         duration: "8",
         negative_prompt: "blurry",
@@ -142,6 +367,20 @@ describe("video generation catalog", () => {
       quality: "1080p",
       generate_audio: true,
       negative_prompt: "blurry",
+    })
+    expect(
+      buildEvoLinkPayload("veo-3.1-fast-generate-preview", {
+        ...commonInput,
+        model: "google/veo-3.1-fast",
+        generation_mode: "text_to_video",
+        duration: "4",
+      })
+    ).toMatchObject({
+      model: "veo-3.1-fast-generate-preview",
+      generation_type: "TEXT",
+      duration: 4,
+      quality: "1080p",
+      generate_audio: true,
     })
     expect(
       buildEvoLinkPayload("grok-imagine-text-to-video-beta", {

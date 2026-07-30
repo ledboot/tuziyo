@@ -8,6 +8,7 @@ export default [
   route("session/:id", "routes/session.$id.tsx"),
   route("library", "routes/library.tsx"),
   route("studio", "routes/studio.tsx"),
+  route("studio/projects", "routes/studio.projects.tsx"),
   route("studio/:id", "routes/studio.$id.tsx"),
   route("inpainting", "routes/inpainting.tsx"),
   route("resize", "routes/resize.tsx"),

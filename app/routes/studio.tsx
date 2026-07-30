@@ -1,161 +1,175 @@
-import { useEffect, useState } from "react"
-import { ArrowRight, Clapperboard, Plus, Sparkles } from "lucide-react"
-import { useNavigate } from "react-router"
-import { toast } from "sonner"
-import { api, type StudioProject } from "~/lib/api"
-import { useUserStore } from "~/stores/userStore"
-import { createNoIndexMeta } from "~/lib/seo"
+import { ArrowUpRight, Clapperboard, FolderKanban, Play, Sparkles } from "lucide-react"
+import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo"
+
+const STUDIO_DESCRIPTION =
+  "Turn generated images and videos into organized visual projects, build shot sequences, and export a finished MP4 in tuziyo Studio."
 
 export function meta() {
-  return createNoIndexMeta("Studio | tuziyo")
+  return createSeoMeta({
+    title: "AI Video Project Workspace & Shot Sequencer | tuziyo Studio",
+    description: STUDIO_DESCRIPTION,
+    path: "/studio",
+    keywords:
+      "AI video workspace, AI video storyboard, shot sequencer, visual project manager, AI video editor",
+    socialImage: "/showcase/case351.jpg",
+    socialImageAlt: "tuziyo Studio visual project workspace",
+    schema: createWebApplicationSchema({
+      name: "tuziyo Studio",
+      description: STUDIO_DESCRIPTION,
+      path: "/studio",
+    }),
+  })
 }
 
-export default function StudioPage() {
-  const navigate = useNavigate()
-  const user = useUserStore(state => state.user)
-  const [projects, setProjects] = useState<StudioProject[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showCreate, setShowCreate] = useState(false)
-  const [name, setName] = useState("")
+const workflow = [
+  {
+    number: "01",
+    title: "Collect the visual world",
+    body: "Bring generated images and video clips together with characters, locations, and reference frames.",
+  },
+  {
+    number: "02",
+    title: "Direct every shot",
+    body: "Shape prompts, compare takes, and keep the intent of each scene next to the footage it controls.",
+  },
+  {
+    number: "03",
+    title: "Sequence the story",
+    body: "Arrange shots into a clear timeline, review the pacing, and export one production-ready MP4.",
+  },
+]
 
-  useEffect(() => {
-    if (!user) {
-      setLoading(false)
-      return
-    }
-    api.studio
-      .listProjects()
-      .then(result => setProjects(result.projects))
-      .catch(error => toast.error(error.message))
-      .finally(() => setLoading(false))
-  }, [user])
-
-  const createProject = async () => {
-    if (!name.trim()) return
-    const result = await api.studio.createProject({ name: name.trim() })
-    navigate(`/studio/${result.projectId}`)
-  }
-
-  if (!user && !loading) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-[#07080b] text-white">
-        <div className="text-center">
-          <Clapperboard className="mx-auto size-12 text-violet-300" />
-          <h1 className="mt-5 text-3xl font-semibold">Studio Lite</h1>
-          <p className="mt-2 text-white/45">Sign in to turn your Library into a sequence.</p>
-          <button
-            className="btn btn-primary mt-6 rounded-full"
-            onClick={() => window.dispatchEvent(new CustomEvent("openLoginModal"))}
-          >
-            Sign in
-          </button>
-        </div>
-      </main>
-    )
-  }
-
+export default function StudioLandingPage() {
   return (
-    <main className="min-h-screen bg-[#07080b] px-6 pb-16 pt-28 text-white md:px-10">
-      <div className="mx-auto max-w-7xl">
-        <header className="flex flex-col gap-6 border-b border-white/10 pb-8 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.26em] text-violet-300">
-              <Sparkles className="size-3.5" />
-              Studio Lite
-            </div>
-            <h1 className="mt-3 text-5xl font-semibold tracking-tight">
-              Build a story, shot by shot.
-            </h1>
-            <p className="mt-3 max-w-xl text-white/45">
-              Organize references, compare generations, arrange a sequence, and export one MP4.
-            </p>
+    <main className="studio-landing">
+      <section className="studio-landing-hero">
+        <div className="studio-landing-hero__image" aria-hidden="true">
+          <img src="/showcase/case351.jpg" alt="" />
+        </div>
+        <div className="studio-landing-hero__veil" />
+        <div className="studio-landing-shell studio-landing-hero__content">
+          <div className="studio-landing-kicker">
+            <Clapperboard className="size-4" />
+            tuziyo Studio
+            <span>Beta</span>
           </div>
-          <button onClick={() => setShowCreate(true)} className="btn btn-primary rounded-full px-6">
-            <Plus className="size-4" />
-            New project
-          </button>
-        </header>
-        {loading ? (
-          <div className="grid grid-cols-1 gap-5 py-8 md:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div className="skeleton h-56 rounded-3xl opacity-20" key={i} />
+          <h1>
+            Your visual story.
+            <br />
+            One focused workspace.
+          </h1>
+          <p>
+            Move from scattered generations to a directed sequence. Organize projects, develop
+            shots, and keep every visual decision in context.
+          </p>
+          <div className="studio-landing-actions">
+            <a
+              href="/studio/projects"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="studio-landing-primary"
+            >
+              Go To Your Projects
+              <ArrowUpRight className="size-4" />
+            </a>
+            <a href="#workflow" className="studio-landing-secondary">
+              <Play className="size-3.5 fill-current" />
+              See how it works
+            </a>
+          </div>
+          <div className="studio-landing-proof">
+            <span>
+              <FolderKanban className="size-4" /> Multiple projects
+            </span>
+            <span>
+              <Sparkles className="size-4" /> Shot-by-shot direction
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section className="studio-landing-workflow" id="workflow">
+        <div className="studio-landing-shell">
+          <div className="studio-landing-section-heading">
+            <span>From generation to sequence</span>
+            <h2>A workspace that thinks in scenes, not loose files.</h2>
+          </div>
+          <div className="studio-landing-workflow__grid">
+            {workflow.map(item => (
+              <article key={item.number}>
+                <span>{item.number}</span>
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </article>
             ))}
           </div>
-        ) : projects.length ? (
-          <div className="grid grid-cols-1 gap-5 py-8 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project, index) => (
-              <button
-                key={project.id}
-                onClick={() => navigate(`/studio/${project.id}`)}
-                className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#171922] to-[#0c0e13] p-6 text-left transition hover:-translate-y-1 hover:border-white/25"
-              >
-                <div
-                  className={`absolute inset-x-0 top-0 h-1 ${index % 3 === 0 ? "bg-violet-400" : index % 3 === 1 ? "bg-cyan-400" : "bg-amber-300"}`}
-                />
-                <div className="flex items-start justify-between">
-                  <Clapperboard className="size-8 text-white/25" />
-                  <ArrowRight className="size-5 text-white/25 transition group-hover:translate-x-1 group-hover:text-white" />
-                </div>
-                <h2 className="mt-12 text-xl font-semibold">{project.name}</h2>
-                <p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-white/40">
-                  {project.description || "A new visual story waiting for its first shot."}
-                </p>
-                <div className="mt-6 flex gap-4 text-xs text-white/35">
-                  <span>{project.shot_count || 0} shots</span>
-                  <span>{project.entity_count || 0} entities</span>
-                  <span>{project.aspect_ratio}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowCreate(true)}
-            className="mt-8 grid min-h-[360px] w-full place-items-center rounded-3xl border border-dashed border-white/12 bg-white/[0.02] text-center hover:border-white/25"
-          >
-            <div>
-              <Plus className="mx-auto size-10 text-white/20" />
-              <p className="mt-4 text-lg font-medium">Create your first project</p>
-              <p className="mt-1 text-sm text-white/35">Start with a name. Add assets next.</p>
-            </div>
-          </button>
-        )}
-      </div>
-      {showCreate && (
-        <div
-          className="fixed inset-0 z-[200] grid place-items-center bg-black/80 p-5 backdrop-blur-xl"
-          onClick={() => setShowCreate(false)}
-        >
-          <div
-            className="w-full max-w-md rounded-3xl border border-white/10 bg-[#14161d] p-7"
-            onClick={e => e.stopPropagation()}
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-300">
-              New project
+        </div>
+      </section>
+
+      <section className="studio-landing-editor">
+        <div className="studio-landing-shell studio-landing-editor__grid">
+          <div className="studio-landing-editor__copy">
+            <span>Built for visual continuity</span>
+            <h2>Keep the direction beside the frame.</h2>
+            <p>
+              Each project connects its cast, references, prompts, active take, and shot order. You
+              can move from the big picture to a single moment without losing the thread.
             </p>
-            <h2 className="mt-2 text-2xl font-semibold">What are you making?</h2>
-            <input
-              autoFocus
-              value={name}
-              onChange={e => setName(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && void createProject()}
-              placeholder="Project name"
-              className="mt-6 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 outline-none focus:border-violet-400"
-            />
-            <div className="mt-6 flex justify-end gap-2">
-              <button className="btn btn-ghost rounded-full" onClick={() => setShowCreate(false)}>
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary rounded-full px-6"
-                onClick={() => void createProject()}
-              >
-                Create
-              </button>
+            <a
+              href="/studio/projects"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="studio-landing-text-link"
+            >
+              Open your workspace <ArrowUpRight className="size-4" />
+            </a>
+          </div>
+          <div className="studio-landing-editor__mockup" aria-label="Studio editor preview">
+            <div className="studio-landing-editor__rail">
+              <Clapperboard className="size-5" />
+              <span />
+              <FolderKanban className="size-5" />
+            </div>
+            <div className="studio-landing-editor__brief">
+              <small>DIRECTING · SHOT 04</small>
+              <h3>Hold on the quiet before the reveal.</h3>
+              <p>
+                Static camera. Low eye line. Let the doorway stay dark for the first beat, then
+                bring the subject into the warm edge light.
+              </p>
+              <div>
+                <span>4 sec</span>
+                <span>16:9</span>
+                <span>Motion</span>
+              </div>
+            </div>
+            <div className="studio-landing-editor__monitor">
+              <img src="/showcase/case250.jpg" alt="Cinematic visual preview in tuziyo Studio" />
+              <div className="studio-landing-editor__timeline">
+                {[351, 250, 324, 6].map(image => (
+                  <img key={image} src={`/showcase/case${image}.jpg`} alt="" />
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      )}
+      </section>
+
+      <section className="studio-landing-final">
+        <div className="studio-landing-shell">
+          <p>YOUR PROJECTS ARE WAITING</p>
+          <h2>Give every idea a place to become a story.</h2>
+          <a
+            href="/studio/projects"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="studio-landing-primary"
+          >
+            Go To Your Projects
+            <ArrowUpRight className="size-4" />
+          </a>
+        </div>
+      </section>
     </main>
   )
 }
