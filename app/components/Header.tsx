@@ -37,7 +37,10 @@ export default function Header() {
   const hasStoredAuth = Boolean(user || token)
   const isAiToolkit = location.pathname.startsWith("/ai-toolkit")
   const isAiImage =
-    location.pathname === "/ai/models" || location.pathname.startsWith("/ai/models/")
+    location.pathname === "/ai/models" ||
+    location.pathname.startsWith("/ai/models/") ||
+    location.pathname.startsWith("/ai/compare/") ||
+    location.pathname.startsWith("/prompts/")
 
   const navItems: NavItem[] = [
     { title: t.nav.home, to: "/" },
@@ -47,6 +50,8 @@ export default function Header() {
             title: "AI Image",
             children: [
               { title: "All AI image models", to: "/ai/models" },
+              { title: "AI image prompts", to: "/prompts/ai-image-prompts" },
+              { title: "Prompt examples", to: "/prompts/ai-image-prompts-examples" },
               ...AI_IMAGE_MODEL_SLUGS.map(slug => ({
                 title: AI_IMAGE_MODELS[slug].name,
                 to: `/ai/models/${slug}`,

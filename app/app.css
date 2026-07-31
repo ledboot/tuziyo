@@ -5105,6 +5105,565 @@ select {
   text-underline-offset: 0.25rem;
 }
 
+/* Search-focused comparison and prompt landing pages */
+.seo-page {
+  overflow: hidden;
+  color: white;
+  background: #0b0c0b;
+}
+
+.seo-hero {
+  position: relative;
+  min-height: 92svh;
+  padding: 7.5rem 0 4rem;
+  background:
+    radial-gradient(circle at 78% 18%, rgba(0, 194, 184, 0.13), transparent 31rem),
+    linear-gradient(180deg, #111310, #090a09);
+}
+
+.seo-hero::before {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 4rem 4rem;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+  content: "";
+  pointer-events: none;
+}
+
+.seo-hero-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-height: calc(92svh - 12rem);
+  grid-template-columns: minmax(0, 0.9fr) minmax(30rem, 1.1fr);
+  gap: clamp(3rem, 7vw, 8rem);
+  align-items: center;
+  padding-top: 3rem;
+}
+
+.seo-hero-copy > span,
+.seo-examples-heading > span,
+.seo-prompt-card > span {
+  color: var(--color-primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.seo-hero-copy h1,
+.seo-examples-heading h1 {
+  max-width: 13ch;
+  margin: 1.2rem 0 1.5rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.4rem, 6.2vw, 7rem);
+  font-weight: 400;
+  letter-spacing: -0.065em;
+  line-height: 0.9;
+}
+
+.seo-hero-copy > p,
+.seo-examples-heading > p {
+  max-width: 45rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: clamp(1rem, 1.35vw, 1.18rem);
+  line-height: 1.75;
+}
+
+.seo-hero-images {
+  display: grid;
+  height: min(68svh, 48rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.seo-hero-images figure {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+  background: #181a17;
+}
+
+.seo-hero-images-2 figure:first-child {
+  margin-top: 4rem;
+}
+
+.seo-hero-images-2 figure:last-child {
+  margin-bottom: 4rem;
+}
+
+.seo-hero-images-4 {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.seo-hero-images img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.seo-hero-images figcaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 3rem 1rem 1rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.78));
+  font-family: Georgia, serif;
+  font-size: 1.1rem;
+}
+
+.seo-hero-images figcaption span {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--color-primary);
+  font-family: sans-serif;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.seo-verdict,
+.seo-comparison,
+.seo-decisions,
+.seo-method,
+.seo-scenarios,
+.seo-related,
+.prompt-example-section {
+  padding: clamp(5rem, 10vw, 9rem) 0;
+}
+
+.seo-verdict {
+  background: var(--color-primary);
+}
+
+.seo-verdict-grid {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: 3rem;
+  align-items: start;
+}
+
+.seo-verdict-grid > span {
+  padding-top: 0.75rem;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.seo-verdict-grid p {
+  max-width: 44ch;
+  margin: 0;
+  color: #061311;
+  font-family: Georgia, serif;
+  font-size: clamp(2rem, 4.5vw, 5.2rem);
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.seo-comparison {
+  background: #0b0c0b;
+}
+
+.seo-comparison .model-compare-scroll tbody th {
+  color: white;
+  font-family: Georgia, serif;
+  font-size: 1.12rem;
+  font-weight: 400;
+}
+
+.seo-decisions {
+  background: #111310;
+}
+
+.seo-decision-grid,
+.prompt-principle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.seo-decision-grid article,
+.prompt-principle-grid article {
+  display: flex;
+  min-height: 25rem;
+  flex-direction: column;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.seo-decision-grid article > span {
+  color: var(--color-primary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.seo-decision-grid h3,
+.prompt-principle-grid h3 {
+  max-width: 16ch;
+  margin: 3rem 0 1rem;
+  font-family: Georgia, serif;
+  font-size: clamp(2rem, 3vw, 3.3rem);
+  font-weight: 400;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+}
+
+.seo-decision-grid p,
+.prompt-principle-grid p {
+  max-width: 38rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.53);
+  line-height: 1.7;
+}
+
+.seo-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin-top: auto;
+  padding-top: 2rem;
+}
+
+.seo-card-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-underline-offset: 0.25rem;
+}
+
+.seo-method {
+  background: #090a09;
+}
+
+.seo-method-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seo-method-grid li {
+  min-height: 24rem;
+  padding: 1.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-right: 0;
+}
+
+.seo-method-grid li:last-child {
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.seo-method-grid li > span {
+  color: var(--color-primary);
+  font-family: Georgia, serif;
+  font-style: italic;
+}
+
+.seo-method-grid h3 {
+  margin: 5rem 0 1rem;
+  font-family: Georgia, serif;
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.seo-method-grid p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.65;
+}
+
+.seo-scenarios {
+  background: #121411;
+}
+
+.seo-scenario-list {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.seo-scenario-list article {
+  display: grid;
+  grid-template-columns: 2rem minmax(12rem, 0.7fr) minmax(12rem, 0.5fr) minmax(16rem, 1fr);
+  gap: 1.5rem;
+  align-items: center;
+  padding: 1.6rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.seo-scenario-list svg,
+.prompt-principle-grid svg {
+  color: var(--color-primary);
+}
+
+.seo-scenario-list h3 {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-size: 1.55rem;
+  font-weight: 400;
+}
+
+.seo-scenario-list strong {
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.seo-scenario-list p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.6;
+}
+
+.seo-related {
+  background: #10110f;
+}
+
+.seo-related .model-related-grid > a > svg:first-child {
+  position: static;
+  margin-bottom: 0.5rem;
+  color: var(--color-primary);
+}
+
+.seo-prompt-hero-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-height: calc(92svh - 12rem);
+  grid-template-columns: minmax(0, 1fr) minmax(24rem, 0.7fr);
+  gap: clamp(4rem, 10vw, 11rem);
+  align-items: center;
+  padding-top: 3rem;
+}
+
+.seo-prompt-card {
+  position: relative;
+  padding: clamp(2rem, 4vw, 4rem);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background:
+    radial-gradient(circle at 100% 0, rgba(0, 194, 184, 0.17), transparent 20rem),
+    rgba(255, 255, 255, 0.035);
+}
+
+.seo-prompt-card p {
+  margin: 4rem 0 0;
+  font-family: Georgia, serif;
+  font-size: clamp(1.7rem, 3vw, 3.1rem);
+  letter-spacing: -0.035em;
+  line-height: 1.18;
+}
+
+.seo-prompt-card mark {
+  padding: 0;
+  color: var(--color-primary);
+  background: transparent;
+}
+
+.prompt-formula-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  list-style: none;
+}
+
+.prompt-formula-grid li {
+  min-height: 23rem;
+  padding: 1.5rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.prompt-formula-grid li > span {
+  color: var(--color-primary);
+  font-family: Georgia, serif;
+  font-style: italic;
+}
+
+.prompt-formula-grid h3 {
+  margin: 4rem 0 1rem;
+  font-family: Georgia, serif;
+  font-size: 1.7rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.prompt-formula-grid p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.6;
+}
+
+.prompt-principle-grid article {
+  min-height: 22rem;
+}
+
+.prompt-principle-grid svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.prompt-checklist {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  list-style: none;
+}
+
+.prompt-checklist li {
+  display: flex;
+  min-height: 9rem;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.72);
+  font-family: Georgia, serif;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
+.prompt-checklist svg {
+  flex: 0 0 auto;
+  color: var(--color-primary);
+}
+
+.seo-examples-hero {
+  min-height: 74svh;
+}
+
+.seo-examples-heading {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-height: 55svh;
+  align-content: end;
+  padding: 5rem 0 1rem;
+}
+
+.seo-examples-heading h1 {
+  max-width: 15ch;
+}
+
+.prompt-example-section {
+  background: #0b0c0b;
+}
+
+.prompt-example-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.prompt-example-card {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 55%);
+}
+
+.prompt-example-card header {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr) auto;
+  gap: 1.5rem;
+  align-items: start;
+  padding: 1.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.prompt-example-card header > span {
+  color: var(--color-primary);
+  font-family: Georgia, serif;
+  font-size: 1.3rem;
+  font-style: italic;
+}
+
+.prompt-example-card header p,
+.prompt-example-card header h2 {
+  margin: 0;
+}
+
+.prompt-example-card header p,
+.prompt-example-card header > strong {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.prompt-example-card header h2 {
+  margin-top: 0.4rem;
+  font-family: Georgia, serif;
+  font-size: clamp(1.7rem, 3vw, 3rem);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+}
+
+.prompt-example-card blockquote {
+  max-width: 72rem;
+  margin: 0;
+  padding: clamp(2rem, 5vw, 4rem);
+  color: rgba(255, 255, 255, 0.78);
+  font-family: Georgia, serif;
+  font-size: clamp(1.2rem, 2vw, 1.8rem);
+  line-height: 1.55;
+}
+
+.prompt-example-card footer {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.prompt-example-card footer p {
+  display: flex;
+  max-width: 52rem;
+  gap: 0.65rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.55;
+}
+
+.prompt-example-card footer svg {
+  flex: 0 0 auto;
+  margin-top: 0.2rem;
+  color: var(--color-primary);
+}
+
+.prompt-example-card footer a {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 @media (max-width: 900px) {
   .model-hero-grid {
     grid-template-columns: 1fr;
@@ -5161,6 +5720,34 @@ select {
   }
   .model-steps li:last-child {
     border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  }
+  .seo-hero-grid,
+  .seo-prompt-hero-grid {
+    min-height: auto;
+    grid-template-columns: 1fr;
+    padding-top: 4rem;
+  }
+  .seo-hero-images {
+    height: 42rem;
+  }
+  .seo-decision-grid,
+  .prompt-principle-grid,
+  .prompt-checklist {
+    grid-template-columns: 1fr;
+  }
+  .seo-method-grid,
+  .prompt-formula-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .seo-method-grid li {
+    border-right: 1px solid rgba(255, 255, 255, 0.14);
+  }
+  .seo-scenario-list article {
+    grid-template-columns: 2rem 1fr;
+  }
+  .seo-scenario-list strong,
+  .seo-scenario-list p {
+    grid-column: 2;
   }
 }
 
@@ -5257,6 +5844,52 @@ select {
   }
   .model-index-guide-grid article {
     min-height: 19rem;
+  }
+  .seo-hero {
+    min-height: 0;
+    padding-top: 5.5rem;
+  }
+  .seo-hero-copy h1,
+  .seo-examples-heading h1 {
+    font-size: clamp(3rem, 15vw, 5rem);
+  }
+  .seo-hero-images {
+    height: 34rem;
+  }
+  .seo-hero-images-4 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .seo-hero-images-2 figure:first-child {
+    margin-top: 2rem;
+  }
+  .seo-hero-images-2 figure:last-child {
+    margin-bottom: 2rem;
+  }
+  .seo-verdict-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .seo-decision-grid,
+  .seo-method-grid,
+  .prompt-formula-grid {
+    grid-template-columns: 1fr;
+  }
+  .seo-decision-grid article {
+    min-height: 22rem;
+  }
+  .seo-method-grid li,
+  .prompt-formula-grid li {
+    min-height: 17rem;
+  }
+  .prompt-example-card header {
+    grid-template-columns: 2.5rem 1fr;
+  }
+  .prompt-example-card header > strong {
+    grid-column: 2;
+  }
+  .prompt-example-card footer {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

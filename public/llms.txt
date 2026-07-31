@@ -7,6 +7,8 @@ AI Studio: https://tuziyo.com/ai-toolkit
 Library: https://tuziyo.com/library
 Studio Lite: https://tuziyo.com/studio
 AI model comparison: https://tuziyo.com/ai/models
+AI image prompts: https://tuziyo.com/prompts/ai-image-prompts
+AI image prompt examples: https://tuziyo.com/prompts/ai-image-prompts-examples
 Pricing: https://tuziyo.com/pricing
 Privacy policy: https://tuziyo.com/privacy
 Blog: https://tuziyo.com/blog/
@@ -31,6 +33,13 @@ GitHub: https://github.com/ledboot/tuziyo
 - Nano Banana 2: https://tuziyo.com/ai/models/nano-banana-2
 - Seedream 5 Pro: https://tuziyo.com/ai/models/seedream-5-pro
 - GPT Image 2: https://tuziyo.com/ai/models/gpt-image-2
+
+## Comparison guides
+
+- Nano Banana Pro vs Nano Banana 2: https://tuziyo.com/ai/compare/nano-banana-pro-vs-nano-banana-2
+- Best AI model for product photography: https://tuziyo.com/ai/compare/best-ai-model-for-product-photography
+- GPT Image 2 vs Nano Banana 2: https://tuziyo.com/ai/compare/gpt-image-2-vs-nano-banana-2
+- Seedream 5 Pro vs Seedream 5 Lite: https://tuziyo.com/ai/compare/seedream-5-pro-vs-seedream-5-lite
 
 ## Best-fit users
 

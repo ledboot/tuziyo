@@ -74,8 +74,31 @@ export default function Footer() {
           <div className="footer-links-col">
             <h4 className="footer-links-title">Resources</h4>
             <ul className="footer-links-list">
-              <li><Link to="/pricing" className="footer-link">{t.nav.pricing}</Link></li>
-              <li><Link to="/privacy" className="footer-link">Privacy Policy</Link></li>
+              <li>
+                <Link to="/prompts/ai-image-prompts" className="footer-link">
+                  AI image prompts
+                </Link>
+              </li>
+              <li>
+                <Link to="/prompts/ai-image-prompts-examples" className="footer-link">
+                  Prompt examples
+                </Link>
+              </li>
+              <li>
+                <Link to="/ai/compare/nano-banana-pro-vs-nano-banana-2" className="footer-link">
+                  Model comparisons
+                </Link>
+              </li>
+              <li>
+                <Link to="/pricing" className="footer-link">
+                  {t.nav.pricing}
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="footer-link">
+                  Privacy Policy
+                </Link>
+              </li>
             </ul>
           </div>
 
