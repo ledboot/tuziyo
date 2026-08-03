@@ -40,16 +40,6 @@ export default function Footer() {
                   {t.nav.aiToolkit}
                 </Link>
               </li>
-              <li>
-                <Link to="/library" className="footer-link">
-                  Library
-                </Link>
-              </li>
-              <li>
-                <Link to="/studio" className="footer-link">
-                  Studio
-                </Link>
-              </li>
             </ul>
           </div>
 

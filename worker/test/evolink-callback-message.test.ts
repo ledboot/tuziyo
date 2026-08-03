@@ -389,13 +389,65 @@ describe("EvoLink callback message association", () => {
     )
     expect(sessionsResponse.status).toBe(200)
     const sessionsBody = (await sessionsResponse.json()) as {
-      sessions: Array<{ preview_image: string | null }>
+      sessions: Array<{
+        preview_image: string | null
+        preview_video: string | null
+        preview_content_type: "image" | "video" | null
+      }>
     }
     const previewUrl = new URL(String(sessionsBody.sessions[0]?.preview_image))
     expect(previewUrl.origin).toBe("http://localhost:8787")
     expect(previewUrl.pathname).toBe(
       "/api/media/image/small/generated-images/user-1/session-output.png"
     )
+    expect(sessionsBody.sessions[0]?.preview_video).toBeNull()
+    expect(sessionsBody.sessions[0]?.preview_content_type).toBe("image")
+  })
+
+  test("video-only sessions expose a signed video preview", async () => {
+    const { sqlite, env } = setup()
+    sqlite.exec(`
+      UPDATE messages SET media_type = 'video' WHERE id = 'original-message';
+      UPDATE message_outputs
+      SET status = 'completed', image_url = NULL,
+        storage_key = 'generated-video/user-1/session-output.mp4', content_type = 'video'
+      WHERE id = 'output-1';
+    `)
+
+    const token = await sign(
+      {
+        userId: "user-1",
+        email: "user@example.com",
+        name: "User",
+        userType: "free",
+        credits: 1000,
+        exp: Math.floor(Date.now() / 1000) + 60,
+      },
+      JWT_SECRET,
+      "HS256"
+    )
+    const response = await app.request(
+      "/api/sessions",
+      { headers: { Authorization: `Bearer ${token}` } },
+      env
+    )
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as {
+      sessions: Array<{
+        preview_image: string | null
+        preview_video: string | null
+        preview_content_type: "image" | "video" | null
+      }>
+    }
+    const previewUrl = new URL(String(body.sessions[0]?.preview_video))
+    expect(previewUrl.origin).toBe("https://test-account-id.r2.cloudflarestorage.com")
+    expect(previewUrl.pathname).toBe(
+      "/tuziyo-test/generated-video/user-1/session-output.mp4"
+    )
+    expect(previewUrl.searchParams.get("X-Amz-Expires")).toBe("3600")
+    expect(body.sessions[0]?.preview_image).toBeNull()
+    expect(body.sessions[0]?.preview_content_type).toBe("video")
   })
 
   test("download URL endpoint returns a fresh original R2 presigned URL", async () => {

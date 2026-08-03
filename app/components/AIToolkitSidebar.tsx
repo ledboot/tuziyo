@@ -14,6 +14,7 @@ interface Session {
   updated_at?: number
   pinned?: boolean
   preview_image?: string | null
+  preview_video?: string | null
 }
 
 interface AIToolkitSidebarProps {
@@ -123,13 +124,13 @@ function SessionItem({
   setDeleteSessionId,
   showSidebar,
 }: any) {
-  const [imgError, setImgError] = React.useState(false)
+  const [previewError, setPreviewError] = React.useState(false)
   const [isPinning, setIsPinning] = React.useState(false)
   const isPinned = s.pinned ?? Boolean(s.is_pinned)
 
   React.useEffect(() => {
-    setImgError(false)
-  }, [s.preview_image])
+    setPreviewError(false)
+  }, [s.preview_image, s.preview_video])
 
   const handleTogglePin = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
@@ -167,12 +168,22 @@ function SessionItem({
         <div
           className={`w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden transition-all duration-300 ${showSidebar ? "mr-3" : "mr-0"}`}
         >
-          {s.preview_image && !imgError ? (
+          {s.preview_image && !previewError ? (
             <img
               src={s.preview_image}
               alt=""
               className="w-full h-full object-cover"
-              onError={() => setImgError(true)}
+              onError={() => setPreviewError(true)}
+            />
+          ) : s.preview_video && !previewError ? (
+            <video
+              src={s.preview_video}
+              muted
+              playsInline
+              preload="metadata"
+              aria-label={`${s.title || "Untitled Session"} video preview`}
+              className="w-full h-full object-cover"
+              onError={() => setPreviewError(true)}
             />
           ) : (
             <div className="skeleton w-full h-full flex items-center justify-center"></div>

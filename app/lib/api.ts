@@ -255,6 +255,8 @@ export const api = {
           title: string
           is_pinned: number
           preview_image: string | null
+          preview_video: string | null
+          preview_content_type: "image" | "video" | null
           created_at: number
           updated_at: number
         }>
@@ -266,6 +268,8 @@ export const api = {
           title: string
           is_pinned: number
           preview_image: string | null
+          preview_video?: string | null
+          preview_content_type?: "image" | "video" | null
           created_at: number
           updated_at: number
         }

@@ -8,7 +8,9 @@ interface SessionListRecord {
   id: string
   title: string
   is_pinned: number
-  preview_image: string | null
+  preview_key: string | null
+  preview_poster_key: string | null
+  preview_content_type: MimeType | null
   created_at: number
   updated_at: number
 }
@@ -65,17 +67,35 @@ export async function handleGetSessions(c: AuthenticatedContext) {
 
   const sessions = await c.env.DB.prepare(
     `
-      SELECT s.id, s.title, s.is_pinned, s.created_at, s.updated_at,
-        (
-          SELECT mo.image_url
-          FROM message_outputs mo
-          INNER JOIN messages m ON m.id = mo.message_id
-          WHERE m.session_id = s.id AND m.status = 1 AND mo.status = 'completed'
-            AND mo.content_type = 'image' AND mo.image_url IS NOT NULL
-          ORDER BY m.created_at ASC, mo.output_index ASC
-          LIMIT 1
-        ) AS preview_image
+      WITH ranked_previews AS (
+        SELECT
+          m.session_id,
+          COALESCE(mo.storage_key, mo.image_url) AS preview_key,
+          mo.poster_key AS preview_poster_key,
+          mo.content_type AS preview_content_type,
+          ROW_NUMBER() OVER (
+            PARTITION BY m.session_id
+            ORDER BY m.created_at ASC, mo.output_index ASC
+          ) AS preview_rank
+        FROM message_outputs mo
+        INNER JOIN messages m ON m.id = mo.message_id
+        WHERE m.status = 1
+          AND mo.status = 'completed'
+          AND mo.content_type IN ('image', 'video')
+          AND COALESCE(mo.storage_key, mo.image_url) IS NOT NULL
+      )
+      SELECT
+        s.id,
+        s.title,
+        s.is_pinned,
+        s.created_at,
+        s.updated_at,
+        preview.preview_key,
+        preview.preview_poster_key,
+        preview.preview_content_type
       FROM sessions s
+      LEFT JOIN ranked_previews preview
+        ON preview.session_id = s.id AND preview.preview_rank = 1
       WHERE s.user_id = ? AND s.status = 1
       ORDER BY s.is_pinned DESC, s.updated_at DESC
       LIMIT 50
@@ -85,10 +105,24 @@ export async function handleGetSessions(c: AuthenticatedContext) {
     .all()
 
   const results = await Promise.all(
-    (sessions.results as unknown as SessionListRecord[]).map(async session => ({
-      ...session,
-      preview_image: await createSignedImageVariantUrl(c.env, session.preview_image, "small"),
-    }))
+    (sessions.results as unknown as SessionListRecord[]).map(async session => {
+      const { preview_key: previewKey, preview_poster_key: previewPosterKey, ...publicSession } =
+        session
+      const isImage = session.preview_content_type === MIME_TYPES.IMAGE
+      const isVideo = session.preview_content_type === MIME_TYPES.VIDEO
+
+      return {
+        ...publicSession,
+        preview_image:
+          isImage || (isVideo && previewPosterKey)
+            ? await createSignedImageVariantUrl(c.env, previewPosterKey || previewKey, "small")
+            : null,
+        preview_video:
+          isVideo && !previewPosterKey && previewKey
+            ? await createPresignedGetUrl(c.env, previewKey)
+            : null,
+      }
+    })
   )
 
   return c.json({ sessions: results })

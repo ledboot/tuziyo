@@ -38,6 +38,8 @@ interface Session {
   title: string
   is_pinned: number
   preview_image: string | null
+  preview_video?: string | null
+  preview_content_type?: "image" | "video" | null
   created_at: number
   updated_at: number
 }
@@ -331,6 +333,7 @@ export default function SessionDetailPage() {
     lastModified: s.updated_at,
     pinned: Boolean(s.is_pinned),
     preview_image: s.preview_image ?? undefined,
+    preview_video: s.preview_video ?? undefined,
   }))
 
   const currentSidebarSession = session
@@ -339,6 +342,7 @@ export default function SessionDetailPage() {
         title: session.title,
         lastModified: session.updated_at,
         preview_image: session.preview_image ?? undefined,
+        preview_video: session.preview_video ?? undefined,
       }
     : null
 

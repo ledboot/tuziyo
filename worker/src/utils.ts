@@ -54,16 +54,20 @@ export function getReferenceImagePrefix(userId: string) {
   return `reference-images/${toSafePathSegment(userId)}/`
 }
 
-export function getReferenceMediaPrefix(userId: string) {
-  return `reference-media/${toSafePathSegment(userId)}/`
+export function getReferenceMediaPrefix(userId: string, kind: "video" | "audio") {
+  return `reference-${kind}/${toSafePathSegment(userId)}/`
 }
 
 export function getGeneratedImagePrefix(userId: string) {
   return `generated-images/${toSafePathSegment(userId)}/`
 }
 
-export function getGeneratedMediaPrefix(userId: string) {
-  return `generated-media/${toSafePathSegment(userId)}/`
+export function getGeneratedVideoPrefix(userId: string) {
+  return `generated-video/${toSafePathSegment(userId)}/`
+}
+
+export function getGeneratedAudioPrefix(userId: string) {
+  return `generated-audio/${toSafePathSegment(userId)}/`
 }
 
 export function generateR2Key(userId: string) {
@@ -125,26 +129,28 @@ export function createReferenceImageKey(userId: string, contentType: string) {
 
 export function createReferenceMediaKey(
   userId: string,
-  kind: ReferenceMediaKind,
+  kind: "video" | "audio",
   contentType: string
 ) {
   const normalized = normalizeContentType(contentType)
   const extension =
     kind === "video"
       ? REFERENCE_VIDEO_CONTENT_TYPES[normalized]
-      : kind === "audio"
-        ? REFERENCE_AUDIO_CONTENT_TYPES[normalized]
-        : REFERENCE_IMAGE_CONTENT_TYPES[normalized]
+      : REFERENCE_AUDIO_CONTENT_TYPES[normalized]
   if (!extension) throw new Error("Invalid reference media content type")
-  return `reference-media/${generateR2Key(userId)}/${kind}-${crypto.randomUUID()}.${extension}`
+  return `reference-${kind}/${generateR2Key(userId)}/${crypto.randomUUID()}.${extension}`
 }
 
 export function createGeneratedImageKey(userId: string, extension: string) {
   return `generated-images/${generateR2Key(userId)}/${crypto.randomUUID()}.${extension}`
 }
 
-export function createGeneratedMediaKey(userId: string, extension: string) {
-  return `generated-media/${generateR2Key(userId)}/${crypto.randomUUID()}.${extension}`
+export function createGeneratedVideoKey(userId: string, extension: string) {
+  return `generated-video/${generateR2Key(userId)}/${crypto.randomUUID()}.${extension}`
+}
+
+export function createGeneratedAudioKey(userId: string, extension: string) {
+  return `generated-audio/${generateR2Key(userId)}/${crypto.randomUUID()}.${extension}`
 }
 
 export function arrayBufferToDataUrl(buffer: ArrayBuffer, contentType: string) {

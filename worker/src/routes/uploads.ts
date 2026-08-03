@@ -130,7 +130,8 @@ export async function handleResolveReferenceMediaUrls(c: AuthenticatedContext) {
 
   const allowedPrefixes = [
     getReferenceImagePrefix(user.userId),
-    getReferenceMediaPrefix(user.userId),
+    getReferenceMediaPrefix(user.userId, "video"),
+    getReferenceMediaPrefix(user.userId, "audio"),
   ]
   const normalizedKeys = keys.map(key => (typeof key === "string" ? key.replace(/^\/+/, "") : ""))
   if (normalizedKeys.some(key => !key || !allowedPrefixes.some(prefix => key.startsWith(prefix)))) {

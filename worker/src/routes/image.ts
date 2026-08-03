@@ -26,8 +26,9 @@ import {
 import {
   arrayBufferToDataUrl,
   createReferenceImageKey,
+  createGeneratedAudioKey,
   createGeneratedImageKey,
-  createGeneratedMediaKey,
+  createGeneratedVideoKey,
   getGeneratedImagePrefix,
   getImageContentTypeFromKey,
   createPresignedGetUrl,
@@ -497,7 +498,7 @@ async function prepareReferenceMedia(
   if (keys.length === 0) return { media: [] }
   if (!Array.isArray(keys)) return { error: `reference_${kind}s must be an array` }
 
-  const prefix = getReferenceMediaPrefix(user.userId)
+  const prefix = getReferenceMediaPrefix(user.userId, kind)
   const maxBytes = kind === "video" ? REFERENCE_VIDEO_MAX_BYTES : REFERENCE_AUDIO_MAX_BYTES
   const prepared: PreparedReferenceImage[] = []
 
@@ -507,7 +508,7 @@ async function prepareReferenceMedia(
     }
 
     const key = rawKey.replace(/^\/+/, "")
-    if (!key.startsWith(prefix) || !key.includes(`/${kind}-`)) {
+    if (!key.startsWith(prefix)) {
       return { error: `Invalid reference ${kind}` }
     }
 
@@ -1543,7 +1544,9 @@ async function completeGenerationTask(
       const key =
         mimeType === MIME_TYPES.IMAGE
           ? createGeneratedImageKey(userId, extension)
-          : createGeneratedMediaKey(userId, extension)
+          : mimeType === MIME_TYPES.VIDEO
+            ? createGeneratedVideoKey(userId, extension)
+            : createGeneratedAudioKey(userId, extension)
       const contentType =
         responseContentType ||
         getImageContentTypeFromKey(key) ||
