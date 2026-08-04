@@ -14,6 +14,7 @@ export interface Env {
   R2_SECRET_ACCESS_KEY: string
   GOOGLE_CLIENT_ID: string
   GOOGLE_CLIENT_SECRET: string
+  ENABLE_NEW_USER_CREDITS: string
   STRIPE_SECRET_KEY: string
   STRIPE_WEBHOOK_SECRET: string
   FRONTEND_URL: string

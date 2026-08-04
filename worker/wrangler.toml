@@ -15,6 +15,7 @@ GOOGLE_CLIENT_ID = "794506003702-okvrvsrss0s1slu4u56e6ilplks9f93r.apps.googleuse
 R2_ACCOUNT_ID = "2b00eb739bd84104c948e47541a47b2a"
 R2_BUCKET_NAME = "tuziyo-preview"
 EVOLINK_CALLBACK_URL = "https://api-preview.tuziyo.com/api/evolink/callback"
+ENABLE_NEW_USER_CREDITS = "false"
 
 [env.local.ai]
 binding = "AI"
@@ -63,6 +64,7 @@ GOOGLE_CLIENT_ID = "794506003702-okvrvsrss0s1slu4u56e6ilplks9f93r.apps.googleuse
 R2_ACCOUNT_ID = "2b00eb739bd84104c948e47541a47b2a"
 R2_BUCKET_NAME = "tuziyo-preview"
 EVOLINK_CALLBACK_URL = "https://api-preview.tuziyo.com/api/evolink/callback"
+ENABLE_NEW_USER_CREDITS = "true"
 
 [env.preview.ai]
 binding = "AI"
@@ -111,6 +113,7 @@ GOOGLE_CLIENT_ID = "794506003702-okvrvsrss0s1slu4u56e6ilplks9f93r.apps.googleuse
 R2_ACCOUNT_ID = "2b00eb739bd84104c948e47541a47b2a"
 R2_BUCKET_NAME = "tuziyo"
 EVOLINK_CALLBACK_URL = "https://api.tuziyo.com/api/evolink/callback"
+ENABLE_NEW_USER_CREDITS = "true"
 
 [env.prod.ai]
 binding = "AI"
