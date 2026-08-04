@@ -696,7 +696,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     supportsAudio: true,
     referenceImageCount: 9,
     referenceImageFormat: ReferenceImageFormat.URL,
-    isNew: false,
+    isNew: true,
     credits: 0,
     creditsPerSecond: 6,
     referenceCredits: {

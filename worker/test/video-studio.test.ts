@@ -232,7 +232,7 @@ describe("video generation catalog", () => {
       "minimax/minimax-h3",
     ])
     for (const model of videoModels) {
-      expect(model.isNew).toBe(false)
+      expect(model.isNew).toBe(model.id === "minimax/minimax-h3")
       expect(model.generationModes).toContain("text_to_video")
       expect(model.generationModes).toContain("image_to_video")
       expect(model.options?.duration?.values.length).toBeGreaterThan(0)
