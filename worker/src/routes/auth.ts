@@ -18,6 +18,12 @@ interface GoogleTokenErrorResponse {
   error_description?: string
 }
 
+const NEW_USER_CREDITS = 10
+
+export function shouldGrantNewUserCredits(value: string | undefined): boolean {
+  return value?.trim().toLowerCase() === "true"
+}
+
 export async function handleGoogleCallback(c: Context<{ Bindings: Env }>) {
   const { code, code_verifier } = await c.req.json<GoogleCallbackBody>()
 
@@ -106,8 +112,9 @@ export async function handleGoogleCallback(c: Context<{ Bindings: Env }>) {
         .bind(accountId, userId, "google", profile.id, timestamp, timestamp)
         .run()
 
-      const NEW_USER_CREDITS = 10
-      await addCredits(c.env.DB, userId, NEW_USER_CREDITS, "onboarding", "New user sign-up bonus")
+      if (shouldGrantNewUserCredits(c.env.ENABLE_NEW_USER_CREDITS)) {
+        await addCredits(c.env.DB, userId, NEW_USER_CREDITS, "onboarding", "New user sign-up bonus")
+      }
 
       user = (await c.env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(userId).first()) as
         | { id: string; email: string; name: string; avatar_url: string | null; user_type: string }
@@ -137,7 +144,10 @@ export async function handleGoogleCallback(c: Context<{ Bindings: Env }>) {
     return c.json({
       token: jwt,
       isNewUser,
-      onboardingCredits: isNewUser ? 10 : 0,
+      onboardingCredits:
+        isNewUser && shouldGrantNewUserCredits(c.env.ENABLE_NEW_USER_CREDITS)
+          ? NEW_USER_CREDITS
+          : 0,
       user: {
         userId: user.id,
         email: user.email,
