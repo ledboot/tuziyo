@@ -41,7 +41,6 @@ Alternatives:
 Name:
 
 > Tuziyo
-
 Tagline:
 
 > Generate, compare, and finish AI images in one workflow

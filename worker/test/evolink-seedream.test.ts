@@ -2,6 +2,73 @@ import { describe, expect, test } from "bun:test"
 import { buildAiInput, buildEvoLinkPayload, getModels } from "../src/routes/image"
 import { IMAGE_MODEL_CATALOG, isImageModelEnabled } from "../src/imageModels"
 
+describe("Seedream 4.0 reference-image integration", () => {
+  test("exposes reference-image support and its provider limit", () => {
+    const model = getModels().find(item => item.id === "bytedance/seedream-4.0")
+
+    expect(model?.supportsImage).toBe(true)
+    expect(model?.referenceImageCount).toBe(14)
+  })
+
+  test("sends uploaded references to EvoLink", () => {
+    const payload = buildEvoLinkPayload(
+      "doubao-seedream-4.0",
+      {
+        model: "bytedance/seedream-4.0",
+        prompt: "Keep the product and change the background",
+      },
+      undefined,
+      [
+        {
+          key: "references/product.png",
+          url: "https://cdn.example.com/product.png",
+          contentType: "image/png",
+          size: 123,
+        },
+      ]
+    )
+
+    expect(payload.image_urls).toEqual(["https://cdn.example.com/product.png"])
+  })
+})
+
+describe("Seedream 4.5 reference-image integration", () => {
+  test("exposes reference-image support and its provider limit", () => {
+    const model = getModels().find(item => item.id === "bytedance/seedream-4.5")
+
+    expect(model?.supportsImage).toBe(true)
+    expect(model?.referenceImageCount).toBe(14)
+  })
+
+  test("sends references and image options to EvoLink", () => {
+    const payload = buildEvoLinkPayload(
+      "doubao-seedream-4.5",
+      {
+        model: "bytedance/seedream-4.5",
+        prompt: "Keep the subject and change the lighting",
+        aspect_ratio: "16:9",
+        resolution: "4K",
+      },
+      undefined,
+      [
+        {
+          key: "references/subject.png",
+          url: "https://cdn.example.com/subject.png",
+          contentType: "image/png",
+          size: 123,
+        },
+      ]
+    )
+
+    expect(payload).toMatchObject({
+      model: "doubao-seedream-4.5",
+      size: "16:9",
+      quality: "4K",
+      image_urls: ["https://cdn.example.com/subject.png"],
+    })
+  })
+})
+
 describe("Seedream 5 Pro EvoLink integration", () => {
   test("exposes the model with the supported reference-image limit", () => {
     const model = getModels().find(item => item.id === "bytedance/seedream-5-pro")
@@ -26,7 +93,7 @@ describe("Seedream 5 Pro EvoLink integration", () => {
   })
 
   test("groups providers by sort order and sorts model names naturally", () => {
-    const models = getModels()
+    const models = getModels().filter(model => model.mediaType !== "video")
     const providers = models.map(model => model.provider)
     const providerGroups = providers.filter(
       (provider, index) => index === 0 || provider !== providers[index - 1]

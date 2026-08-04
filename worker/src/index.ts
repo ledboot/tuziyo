@@ -35,9 +35,28 @@ import {
   handleUpdateSession,
   handleCreateMessage,
 } from "./routes/sessions"
-import { handleCreateReferenceImageUpload } from "./routes/uploads"
+import { handleCreateReferenceImageUpload, handleResolveReferenceMediaUrls } from "./routes/uploads"
 import { handleServeMediaVariant } from "./routes/media"
-import { PLAN_MODELS_CONFIG } from "./imageModels"
+import {
+  handleDeleteAsset,
+  handleGetAsset,
+  handleGetAssetDownloadUrl,
+  handleGetAssets,
+  handleUpdateAsset,
+} from "./routes/library"
+import { PLAN_MODELS_CONFIG } from "./mediaModels"
+import {
+  handleAddStudioShotVersion,
+  handleCreateStudioEntity,
+  handleCreateStudioFrame,
+  handleCreateStudioProject,
+  handleCreateStudioShot,
+  handleDeleteStudioProject,
+  handleGetStudioProject,
+  handleGetStudioProjects,
+  handleReorderStudioSequence,
+  handleUpdateStudioProject,
+} from "./routes/studio"
 import type { AppVariables, Env } from "./types"
 
 export const app = new Hono<{ Bindings: Env }>()
@@ -107,12 +126,28 @@ protectedRoutes.post("/api/evolink/tasks/check", async c => {
   }
 })
 protectedRoutes.post("/api/uploads/reference-image/presign", handleCreateReferenceImageUpload)
+protectedRoutes.post("/api/uploads/reference-media/resolve", handleResolveReferenceMediaUrls)
 protectedRoutes.get("/api/credits", handleGetCredits)
 protectedRoutes.get("/api/transactions", handleGetTransactions)
 protectedRoutes.get("/api/favorites", handleGetFavorites)
 protectedRoutes.patch("/api/images/:id/favorite", handleSetImageFavorite)
 protectedRoutes.post("/api/images/:id/download-url", handleGetImageDownloadUrl)
 protectedRoutes.delete("/api/images/:id", handleDeleteImage)
+protectedRoutes.get("/api/assets", handleGetAssets)
+protectedRoutes.get("/api/assets/:id", handleGetAsset)
+protectedRoutes.patch("/api/assets/:id", handleUpdateAsset)
+protectedRoutes.delete("/api/assets/:id", handleDeleteAsset)
+protectedRoutes.post("/api/assets/:id/download-url", handleGetAssetDownloadUrl)
+protectedRoutes.get("/api/studio/projects", handleGetStudioProjects)
+protectedRoutes.post("/api/studio/projects", handleCreateStudioProject)
+protectedRoutes.get("/api/studio/projects/:id", handleGetStudioProject)
+protectedRoutes.patch("/api/studio/projects/:id", handleUpdateStudioProject)
+protectedRoutes.delete("/api/studio/projects/:id", handleDeleteStudioProject)
+protectedRoutes.post("/api/studio/projects/:id/entities", handleCreateStudioEntity)
+protectedRoutes.post("/api/studio/projects/:id/frames", handleCreateStudioFrame)
+protectedRoutes.post("/api/studio/projects/:id/shots", handleCreateStudioShot)
+protectedRoutes.post("/api/studio/shots/:shotId/versions", handleAddStudioShotVersion)
+protectedRoutes.patch("/api/studio/projects/:id/sequence", handleReorderStudioSequence)
 protectedRoutes.get("/api/sessions", handleGetSessions)
 protectedRoutes.get("/api/sessions/:id", handleGetSession)
 protectedRoutes.delete("/api/sessions/:id", handleDeleteSession)

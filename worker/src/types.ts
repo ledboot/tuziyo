@@ -48,6 +48,87 @@ export interface ModelOption {
   values: string[]
   defaultValue?: string
   valueCredits?: Record<string, number>
+  uiControl?: "slider"
+  min?: number
+  max?: number
+  step?: number
+}
+
+export interface ModelCreditOverride {
+  when: Record<string, string>
+  creditsPerSecond: number
+}
+
+export interface ReferenceCreditPricing {
+  imagePerItem?: number
+  imagePerItemAfterCount?: { count: number; credits: number }
+  videoPerSecond?: number
+  videoPerSecondByResolution?: Record<string, number>
+  audioPerSecond?: number
+}
+
+export interface PromptLimitRule {
+  max: number
+  unit: "characters" | "words"
+  exclusive?: boolean
+}
+
+export interface PromptLimits {
+  default: PromptLimitRule
+  chinese?: PromptLimitRule
+}
+
+export type VideoGenerationMode = "text_to_video" | "image_to_video" | "reference_to_video"
+export type VideoInputMode = "start_end_frame" | "image_reference" | "video_reference"
+
+export interface VideoInputModeConfig {
+  id: VideoInputMode
+  label: string
+  generationMode: Exclude<VideoGenerationMode, "text_to_video">
+  imageCount?: number
+  videoCount?: number
+  audioCount?: number
+  requiresImageOrVideo?: boolean
+  requiresVideo?: boolean
+  allowsEndFrameWithoutStart?: boolean
+  referenceTagStyle?: "at" | "character" | "numbered"
+}
+
+export interface ReferenceImageConstraints {
+  mimeTypes: string[]
+  maxBytes: number
+  minWidth: number
+  maxWidth?: number
+  minHeight: number
+  maxHeight?: number
+  minAspectRatio: number
+  maxAspectRatio: number
+}
+
+export interface ReferenceVideoConstraints extends ReferenceImageConstraints {
+  minDurationSeconds: number
+  maxDurationSeconds: number
+  maxTotalDurationSeconds: number
+  minFramePixels: number
+  maxFramePixels: number
+  minFps: number
+  maxFps: number
+}
+
+export interface ReferenceAudioConstraints {
+  mimeTypes: string[]
+  maxBytes: number
+  minDurationSeconds: number
+  maxDurationSeconds: number
+  maxTotalDurationSeconds: number
+}
+
+export interface ReferenceMediaConstraints {
+  totalMaxBytes: number
+  maxItems?: number
+  image: ReferenceImageConstraints
+  video: ReferenceVideoConstraints
+  audio: ReferenceAudioConstraints
 }
 
 export enum ModelOptionType {
@@ -66,6 +147,7 @@ export interface ModelConfig {
   name: string
   provider: string
   promptMaxLength: number
+  promptLimits?: PromptLimits
   sortOrder: number
   icon: string
   supportsImage: boolean
@@ -74,6 +156,21 @@ export interface ModelConfig {
   isNew: boolean
   options?: Record<string, ModelOption>
   credits: number
+  mediaType?: "image" | "video"
+  generationModes?: Array<
+    "text_to_image" | "image_to_image" | "text_to_video" | "image_to_video" | "reference_to_video"
+  >
+  videoInputModes?: VideoInputModeConfig[]
+  supportsStartFrame?: boolean
+  supportsEndFrame?: boolean
+  supportsAudio?: boolean
+  pricingMode?: "fixed" | "per_second"
+  creditsPerSecond?: number
+  creditOverrides?: ModelCreditOverride[]
+  referenceCredits?: ReferenceCreditPricing
+  pollTimeoutSeconds?: number
+  referenceImageConstraints?: ReferenceImageConstraints
+  referenceMediaConstraints?: ReferenceMediaConstraints
 }
 
 export interface PreparedReferenceImage {
@@ -82,6 +179,10 @@ export interface PreparedReferenceImage {
   contentType: string
   size: number
   dataUrl?: string
+  width?: number
+  height?: number
+  durationSeconds?: number
+  fps?: number
 }
 
 export interface PlanModelItem {

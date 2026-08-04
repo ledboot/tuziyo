@@ -26,7 +26,7 @@ function ImageThumbnail({ output, active, compact, hoverShadow, onSelect }: Imag
   const handleClick = () => onSelect(output.id)
   const sizeClass = compact ? "size-12" : "size-14 md:size-16"
   const hoverShadowClass = hoverShadow ? "hover:shadow-lg hover:shadow-black/30" : ""
-  const thumbnailUrl = output.thumbnail_url
+  const thumbnailUrl = output.thumbnail_url || output.display_url
   const outputHasError = hasOutputError(output)
   const errorMessage = outputHasError ? getOutputErrorMessage(output) : null
 
@@ -48,7 +48,17 @@ function ImageThumbnail({ output, active, compact, hoverShadow, onSelect }: Imag
       title={errorMessage ?? undefined}
     >
       {output.status === "completed" && thumbnailUrl && !outputHasError ? (
-        <img src={thumbnailUrl} alt="" className="size-full object-cover" loading="lazy" />
+        output.content_type === "video" ? (
+          <video
+            src={thumbnailUrl}
+            muted
+            playsInline
+            preload="metadata"
+            className="size-full object-cover"
+          />
+        ) : (
+          <img src={thumbnailUrl} alt="" className="size-full object-cover" loading="lazy" />
+        )
       ) : outputHasError ? (
         <span className="flex size-full items-center justify-center bg-red-950/40 text-red-300">
           <AlertTriangle className="size-4" aria-hidden="true" />

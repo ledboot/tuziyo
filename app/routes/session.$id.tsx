@@ -31,13 +31,15 @@ type ModelId = string
 type Message = GeneratedImageMessage
 
 const TASK_POLL_INTERVAL_MS = 5_000
-const TASK_POLL_TIMEOUT_MS = 5 * 60 * 1_000
+const TASK_POLL_TIMEOUT_MS = 20 * 60 * 1_000
 
 interface Session {
   id: string
   title: string
   is_pinned: number
   preview_image: string | null
+  preview_video?: string | null
+  preview_content_type?: "image" | "video" | null
   created_at: number
   updated_at: number
 }
@@ -86,6 +88,7 @@ export default function SessionDetailPage() {
     userModelOptions,
     setUserSelectedModel,
     setUserModelOptions,
+    setUserMediaType,
   } = useModelStore()
   const [isGenerating, setIsGenerating] = useState(false)
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
@@ -279,8 +282,13 @@ export default function SessionDetailPage() {
     if (image.num_images) nextOptions.num_images = String(image.num_images)
     if (image.google_search) nextOptions.google_search = "true"
     if (image.image_search) nextOptions.image_search = "true"
+    if (image.duration) nextOptions.duration = String(image.duration)
+    if (image.media_type === "video") {
+      nextOptions.generate_audio = image.generate_audio ? "true" : "false"
+    }
 
     setUserSelectedModel(image.model)
+    setUserMediaType(image.media_type === "video" ? "video" : "image")
     setUserModelOptions({ ...modelOptions, ...nextOptions })
     setRecreatePrompt(image.prompt)
     setRecreateNegativePrompt(image.negative_prompt ?? "")
@@ -325,6 +333,7 @@ export default function SessionDetailPage() {
     lastModified: s.updated_at,
     pinned: Boolean(s.is_pinned),
     preview_image: s.preview_image ?? undefined,
+    preview_video: s.preview_video ?? undefined,
   }))
 
   const currentSidebarSession = session
@@ -333,6 +342,7 @@ export default function SessionDetailPage() {
         title: session.title,
         lastModified: session.updated_at,
         preview_image: session.preview_image ?? undefined,
+        preview_video: session.preview_video ?? undefined,
       }
     : null
 
@@ -428,7 +438,7 @@ export default function SessionDetailPage() {
           {images.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-base-content/60">
-                <p className="text-lg">No images generated yet</p>
+                <p className="text-lg">No media generated yet</p>
               </div>
             </div>
           ) : (

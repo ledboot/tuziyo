@@ -11,6 +11,73 @@ export const ModelOptionSchema = z.object({
   values: z.array(z.string()).default([]),
   defaultValue: z.string().optional(),
   valueCredits: z.record(z.number()).optional(),
+  uiControl: z.enum(["slider"]).optional(),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  step: z.number().positive().optional(),
+})
+
+export const ModelCreditOverrideSchema = z.object({
+  when: z.record(z.string()),
+  creditsPerSecond: z.number().nonnegative(),
+})
+
+const ReferenceCreditPricingSchema = z.object({
+  imagePerItem: z.number().nonnegative().optional(),
+  imagePerItemAfterCount: z
+    .object({ count: z.number().int().nonnegative(), credits: z.number().nonnegative() })
+    .optional(),
+  videoPerSecond: z.number().nonnegative().optional(),
+  videoPerSecondByResolution: z.record(z.number().nonnegative()).optional(),
+  audioPerSecond: z.number().nonnegative().optional(),
+})
+
+const PromptLimitRuleSchema = z.object({
+  max: z.number().int().positive(),
+  unit: z.enum(["characters", "words"]),
+  exclusive: z.boolean().optional(),
+})
+
+export const VideoInputModeSchema = z.object({
+  id: z.enum(["start_end_frame", "image_reference", "video_reference"]),
+  label: z.string(),
+  generationMode: z.enum(["image_to_video", "reference_to_video"]),
+  imageCount: z.number().int().nonnegative().optional(),
+  videoCount: z.number().int().nonnegative().optional(),
+  audioCount: z.number().int().nonnegative().optional(),
+  requiresImageOrVideo: z.boolean().optional(),
+  requiresVideo: z.boolean().optional(),
+  allowsEndFrameWithoutStart: z.boolean().optional(),
+  referenceTagStyle: z.enum(["at", "character", "numbered"]).optional(),
+})
+
+const ReferenceImageConstraintsSchema = z.object({
+  mimeTypes: z.array(z.string()),
+  maxBytes: z.number().positive(),
+  minWidth: z.number().positive(),
+  maxWidth: z.number().positive().optional(),
+  minHeight: z.number().positive(),
+  maxHeight: z.number().positive().optional(),
+  minAspectRatio: z.number().positive(),
+  maxAspectRatio: z.number().positive(),
+})
+
+const ReferenceVideoConstraintsSchema = ReferenceImageConstraintsSchema.extend({
+  minDurationSeconds: z.number().positive(),
+  maxDurationSeconds: z.number().positive(),
+  maxTotalDurationSeconds: z.number().positive(),
+  minFramePixels: z.number().positive(),
+  maxFramePixels: z.number().positive(),
+  minFps: z.number().positive(),
+  maxFps: z.number().positive(),
+})
+
+const ReferenceAudioConstraintsSchema = z.object({
+  mimeTypes: z.array(z.string()),
+  maxBytes: z.number().positive(),
+  minDurationSeconds: z.number().positive(),
+  maxDurationSeconds: z.number().positive(),
+  maxTotalDurationSeconds: z.number().positive(),
 })
 
 export const ModelSchema = z.object({
@@ -18,6 +85,12 @@ export const ModelSchema = z.object({
   name: z.string(),
   provider: z.string(),
   promptMaxLength: z.number().int().positive(),
+  promptLimits: z
+    .object({
+      default: PromptLimitRuleSchema,
+      chinese: PromptLimitRuleSchema.optional(),
+    })
+    .optional(),
   sortOrder: z.number(),
   icon: z.string(),
   supportsImage: z.boolean().optional(),
@@ -26,12 +99,59 @@ export const ModelSchema = z.object({
   isNew: z.boolean().optional(),
   options: z.record(ModelOptionSchema).optional(),
   credits: z.number().default(0),
+  mediaType: z.enum(["image", "video"]).default("image"),
+  generationModes: z
+    .array(
+      z.enum([
+        "text_to_image",
+        "image_to_image",
+        "text_to_video",
+        "image_to_video",
+        "reference_to_video",
+      ])
+    )
+    .optional(),
+  videoInputModes: z.array(VideoInputModeSchema).optional(),
+  supportsStartFrame: z.boolean().optional(),
+  supportsEndFrame: z.boolean().optional(),
+  supportsAudio: z.boolean().optional(),
+  pricingMode: z.enum(["fixed", "per_second"]).default("fixed"),
+  creditsPerSecond: z.number().optional(),
+  creditOverrides: z.array(ModelCreditOverrideSchema).optional(),
+  referenceCredits: ReferenceCreditPricingSchema.optional(),
+  pollTimeoutSeconds: z.number().optional(),
+  referenceImageConstraints: ReferenceImageConstraintsSchema.optional(),
+  referenceMediaConstraints: z
+    .object({
+      totalMaxBytes: z.number().positive(),
+      maxItems: z.number().int().positive().optional(),
+      image: ReferenceImageConstraintsSchema,
+      video: ReferenceVideoConstraintsSchema,
+      audio: ReferenceAudioConstraintsSchema,
+    })
+    .optional(),
 })
 
 export type ModelOptionType = z.infer<typeof ModelOptionTypeSchema>
 export type ModelOption = z.infer<typeof ModelOptionSchema>
 export type ModelOptionsConfig = Record<string, ModelOption>
 export type Model = z.infer<typeof ModelSchema>
+
+export interface PersistedReferenceMedia {
+  id: string
+  ownerUserId: string
+  key: string
+  url: string
+  contentType?: string
+  size?: number
+  kind: "image" | "video" | "audio"
+  role: "start_frame" | "end_frame" | "reference"
+  fileName?: string
+  width?: number
+  height?: number
+  durationSeconds?: number
+  fps?: number
+}
 
 interface ModelState {
   models: Model[]
@@ -48,9 +168,13 @@ interface ModelState {
   userSelectedModel: string | null
   userModelOptions: Record<string, string> | null
   userPrompt: string | null
+  userMediaType: "image" | "video"
+  referenceMedia: PersistedReferenceMedia[]
   setUserSelectedModel: (modelId: string) => void
   setUserModelOptions: (options: Record<string, string>) => void
   setUserPrompt: (prompt: string) => void
+  setUserMediaType: (mediaType: "image" | "video") => void
+  setReferenceMedia: (media: PersistedReferenceMedia[]) => void
 }
 
 function getConfigurableDefault(option: ModelOption): string | null {
@@ -137,9 +261,13 @@ export const useModelStore = create<ModelState>()(
       userSelectedModel: null,
       userModelOptions: null,
       userPrompt: null,
+      userMediaType: "image",
+      referenceMedia: [],
       setUserSelectedModel: modelId => set({ userSelectedModel: modelId }),
       setUserModelOptions: options => set({ userModelOptions: options }),
       setUserPrompt: prompt => set({ userPrompt: prompt }),
+      setUserMediaType: mediaType => set({ userMediaType: mediaType }),
+      setReferenceMedia: media => set({ referenceMedia: media }),
     }),
     {
       name: "tuziyo-model-storage",
@@ -147,6 +275,8 @@ export const useModelStore = create<ModelState>()(
         userSelectedModel: state.userSelectedModel,
         userModelOptions: state.userModelOptions,
         userPrompt: state.userPrompt,
+        userMediaType: state.userMediaType,
+        referenceMedia: state.referenceMedia,
       }),
     }
   )

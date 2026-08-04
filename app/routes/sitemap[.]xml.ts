@@ -1,4 +1,5 @@
 import { AI_IMAGE_MODELS, AI_IMAGE_MODEL_SLUGS } from "~/data/aiImageModels"
+import { COMPARISON_PAGES, SEO_PAGE_UPDATED_AT } from "~/data/seoLandingPages"
 
 const baseUrl = "https://tuziyo.com"
 
@@ -9,20 +10,15 @@ interface SitemapRoute {
 }
 
 function escapeXml(value: string) {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;")
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
 }
 
 export async function loader() {
-  const staticRoutes = [
-    "/",
-    "/ai-toolkit",
-    "/inpainting",
-    "/resize",
-    "/crop",
-    "/convert",
-    "/pricing",
-    "/privacy",
-  ]
+  const staticRoutes = ["/", "/ai-toolkit", "/studio", "/pricing", "/privacy"]
   const modelRoutes: SitemapRoute[] = AI_IMAGE_MODEL_SLUGS.map(slug => {
     const model = AI_IMAGE_MODELS[slug]
     return {
@@ -35,24 +31,57 @@ export async function loader() {
       },
     }
   })
+  const comparisonRoutes: SitemapRoute[] = Object.values(COMPARISON_PAGES).map(page => ({
+    path: `/ai/compare/${page.slug}`,
+    lastmod: SEO_PAGE_UPDATED_AT,
+    image: {
+      loc: `${baseUrl}${page.candidates[0].image}`,
+      title: page.title,
+      caption: page.candidates[0].imageAlt,
+    },
+  }))
 
   const routes: SitemapRoute[] = [
     ...staticRoutes.map(path => ({ path })),
     { path: "/ai/models", lastmod: "2026-07-16" },
+    {
+      path: "/ai/video-models/minimax-h3",
+      lastmod: "2026-08-04",
+      image: {
+        loc: `${baseUrl}/showcase/case324.jpg`,
+        title: "MiniMax H3 (Hailuo 3) AI video generator and prompt guide",
+        caption: "Cinematic visual reference for a MiniMax H3 video prompt guide",
+      },
+    },
     ...modelRoutes,
+    ...comparisonRoutes,
+    { path: "/prompts/ai-image-prompts", lastmod: SEO_PAGE_UPDATED_AT },
+    { path: "/prompts/ai-image-prompts-examples", lastmod: SEO_PAGE_UPDATED_AT },
   ]
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-${routes.map(route => `  <url>
-    <loc>${baseUrl}${route.path}</loc>${route.lastmod ? `
-    <lastmod>${route.lastmod}</lastmod>` : ""}${"image" in route && route.image ? `
+${routes
+  .map(
+    route => `  <url>
+    <loc>${baseUrl}${route.path}</loc>${
+      route.lastmod
+        ? `
+    <lastmod>${route.lastmod}</lastmod>`
+        : ""
+    }${
+      "image" in route && route.image
+        ? `
     <image:image>
       <image:loc>${escapeXml(route.image.loc)}</image:loc>
       <image:title>${escapeXml(route.image.title)}</image:title>
       <image:caption>${escapeXml(route.image.caption)}</image:caption>
-    </image:image>` : ""}
-  </url>`).join("\n")}
+    </image:image>`
+        : ""
+    }
+  </url>`
+  )
+  .join("\n")}
 </urlset>`
 
   return new Response(sitemap, {

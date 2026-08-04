@@ -40,11 +40,6 @@ export default function Footer() {
                   {t.nav.aiToolkit}
                 </Link>
               </li>
-              <li>
-                <Link to="/inpainting" className="footer-link">
-                  AI Image Inpainting
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -53,7 +48,12 @@ export default function Footer() {
             <ul className="footer-links-list">
               <li>
                 <Link to="/ai/models" className="footer-link">
-                  Compare all models
+                  Compare image models
+                </Link>
+              </li>
+              <li>
+                <Link to="/ai/video-models/minimax-h3" className="footer-link">
+                  MiniMax H3 (Hailuo 3)
                 </Link>
               </li>
               {AI_IMAGE_MODEL_SLUGS.map(slug => (
@@ -69,8 +69,31 @@ export default function Footer() {
           <div className="footer-links-col">
             <h4 className="footer-links-title">Resources</h4>
             <ul className="footer-links-list">
-              <li><Link to="/pricing" className="footer-link">{t.nav.pricing}</Link></li>
-              <li><Link to="/privacy" className="footer-link">Privacy Policy</Link></li>
+              <li>
+                <Link to="/prompts/ai-image-prompts" className="footer-link">
+                  AI image prompts
+                </Link>
+              </li>
+              <li>
+                <Link to="/prompts/ai-image-prompts-examples" className="footer-link">
+                  Prompt examples
+                </Link>
+              </li>
+              <li>
+                <Link to="/ai/compare/nano-banana-pro-vs-nano-banana-2" className="footer-link">
+                  Model comparisons
+                </Link>
+              </li>
+              <li>
+                <Link to="/pricing" className="footer-link">
+                  {t.nav.pricing}
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="footer-link">
+                  Privacy Policy
+                </Link>
+              </li>
             </ul>
           </div>
 

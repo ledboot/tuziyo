@@ -85,7 +85,11 @@ export default function App() {
   }, [location.pathname])
 
   const isSpecialPage =
-    location.pathname.startsWith("/ai-toolkit") || location.pathname.startsWith("/session")
+    location.pathname.startsWith("/ai-toolkit") ||
+    location.pathname.startsWith("/session") ||
+    location.pathname.startsWith("/studio/")
+  const isStudioProjectPage =
+    location.pathname.startsWith("/studio/") && location.pathname !== "/studio/projects"
 
   return (
     <I18nProvider>
@@ -114,15 +118,34 @@ export default function App() {
               yChannelSelector="G"
             />
           </filter>
-          <filter id="liquid_glass_filter" x="0%" y="0%" width="100%" height="100%" filterUnits="objectBoundingBox">
-            <feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="2" seed="7" result="noise"/>
-            <feGaussianBlur in="noise" stdDeviation="1.2" result="map"/>
-            <feDisplacementMap in="SourceGraphic" in2="map" scale="110" xChannelSelector="R" yChannelSelector="G"/>
+          <filter
+            id="liquid_glass_filter"
+            x="0%"
+            y="0%"
+            width="100%"
+            height="100%"
+            filterUnits="objectBoundingBox"
+          >
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.003"
+              numOctaves="2"
+              seed="7"
+              result="noise"
+            />
+            <feGaussianBlur in="noise" stdDeviation="1.2" result="map" />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="map"
+              scale="110"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
           </filter>
         </defs>
       </svg>
       <div className={`min-h-screen bg-base-100 flex flex-col transition-colors duration-300`}>
-        <Header />
+        {!isStudioProjectPage && <Header />}
         <main className={`flex-1 ${isSpecialPage ? "" : "overflow-y-auto"}`}>
           <Outlet />
         </main>

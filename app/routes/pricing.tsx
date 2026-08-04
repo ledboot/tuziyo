@@ -406,7 +406,7 @@ export default function PricingPage() {
             "border-primary bg-primary/5 shadow-2xl shadow-primary/5 ring-1 ring-primary/20",
           badgeBg: "bg-primary text-accent-content",
           btnClass:
-            "bg-primary hover:opacity-90 text-primary-content border-none shadow-lg shadow-primary/20",
+            "bg-primary hover:opacity-90 text-white border-none shadow-lg shadow-primary/20",
           creditsText: "text-primary",
           glowShadow: "hover:shadow-3xl hover:shadow-primary/15",
           accentColor: "primary",

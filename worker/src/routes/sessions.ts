@@ -1,14 +1,16 @@
 import { v4 as uuidv4 } from "uuid"
 import type { AuthenticatedContext } from "../types"
 import { MIME_TYPES, type MimeType } from "../const"
-import { getGeneratedImagePrefix } from "../utils"
+import { createPresignedGetUrl, getGeneratedImagePrefix } from "../utils"
 import { createSignedImageVariantUrl } from "./media"
 
 interface SessionListRecord {
   id: string
   title: string
   is_pinned: number
-  preview_image: string | null
+  preview_key: string | null
+  preview_poster_key: string | null
+  preview_content_type: MimeType | null
   created_at: number
   updated_at: number
 }
@@ -27,6 +29,10 @@ interface SessionMessageRecord {
   negative_prompt: string | null
   output_format: string | null
   num_images: number | null
+  media_type: MimeType
+  generation_mode: string | null
+  duration: number | null
+  generate_audio: number | null
   google_search: number | null
   image_search: number | null
   created_at: number
@@ -39,10 +45,14 @@ interface SessionMessageOutputRecord {
   output_index: number
   status: "pending" | "completed" | "failed" | "deleted"
   image_url: string | null
+  storage_key: string | null
   content_type: MimeType
   width: number | null
   height: number | null
   file_size: number | null
+  duration_ms: number | null
+  fps: number | null
+  has_audio: number | null
   error: string | null
   created_at: number
   updated_at: number
@@ -57,16 +67,35 @@ export async function handleGetSessions(c: AuthenticatedContext) {
 
   const sessions = await c.env.DB.prepare(
     `
-      SELECT s.id, s.title, s.is_pinned, s.created_at, s.updated_at,
-        (
-          SELECT mo.image_url
-          FROM message_outputs mo
-          INNER JOIN messages m ON m.id = mo.message_id
-          WHERE m.session_id = s.id AND m.status = 1 AND mo.status = 'completed' AND mo.image_url IS NOT NULL
-          ORDER BY m.created_at ASC, mo.output_index ASC
-          LIMIT 1
-        ) AS preview_image
+      WITH ranked_previews AS (
+        SELECT
+          m.session_id,
+          COALESCE(mo.storage_key, mo.image_url) AS preview_key,
+          mo.poster_key AS preview_poster_key,
+          mo.content_type AS preview_content_type,
+          ROW_NUMBER() OVER (
+            PARTITION BY m.session_id
+            ORDER BY m.created_at ASC, mo.output_index ASC
+          ) AS preview_rank
+        FROM message_outputs mo
+        INNER JOIN messages m ON m.id = mo.message_id
+        WHERE m.status = 1
+          AND mo.status = 'completed'
+          AND mo.content_type IN ('image', 'video')
+          AND COALESCE(mo.storage_key, mo.image_url) IS NOT NULL
+      )
+      SELECT
+        s.id,
+        s.title,
+        s.is_pinned,
+        s.created_at,
+        s.updated_at,
+        preview.preview_key,
+        preview.preview_poster_key,
+        preview.preview_content_type
       FROM sessions s
+      LEFT JOIN ranked_previews preview
+        ON preview.session_id = s.id AND preview.preview_rank = 1
       WHERE s.user_id = ? AND s.status = 1
       ORDER BY s.is_pinned DESC, s.updated_at DESC
       LIMIT 50
@@ -76,10 +105,24 @@ export async function handleGetSessions(c: AuthenticatedContext) {
     .all()
 
   const results = await Promise.all(
-    (sessions.results as unknown as SessionListRecord[]).map(async session => ({
-      ...session,
-      preview_image: await createSignedImageVariantUrl(c.env, session.preview_image, "small"),
-    }))
+    (sessions.results as unknown as SessionListRecord[]).map(async session => {
+      const { preview_key: previewKey, preview_poster_key: previewPosterKey, ...publicSession } =
+        session
+      const isImage = session.preview_content_type === MIME_TYPES.IMAGE
+      const isVideo = session.preview_content_type === MIME_TYPES.VIDEO
+
+      return {
+        ...publicSession,
+        preview_image:
+          isImage || (isVideo && previewPosterKey)
+            ? await createSignedImageVariantUrl(c.env, previewPosterKey || previewKey, "small")
+            : null,
+        preview_video:
+          isVideo && !previewPosterKey && previewKey
+            ? await createPresignedGetUrl(c.env, previewKey)
+            : null,
+      }
+    })
   )
 
   return c.json({ sessions: results })
@@ -107,7 +150,8 @@ export async function handleGetSession(c: AuthenticatedContext) {
     `
       SELECT m.id, m.role, m.provider, m.model, m.prompt, m.aspect_ratio,
         m.resolution, m.image_size, m.quality, m.style, m.negative_prompt, m.output_format, m.num_images,
-        m.google_search, m.image_search, m.created_at,
+        m.google_search, m.image_search, m.media_type, m.generation_mode, m.duration,
+        m.generate_audio, m.created_at,
         (CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END) AS is_favorite
       FROM messages m
       LEFT JOIN content_favorites f ON f.message_id = m.id AND f.output_id IS NULL AND f.user_id = ? AND f.content_type = 'image'
@@ -122,8 +166,9 @@ export async function handleGetSession(c: AuthenticatedContext) {
 
   const outputs = await c.env.DB.prepare(
     `
-      SELECT mo.id, mo.message_id, mo.output_index, mo.status, mo.image_url, mo.content_type,
-        mo.width, mo.height, mo.file_size, mo.error, mo.created_at, mo.updated_at,
+      SELECT mo.id, mo.message_id, mo.output_index, mo.status, mo.image_url, mo.storage_key,
+        mo.content_type, mo.width, mo.height, mo.file_size, mo.duration_ms, mo.fps,
+        mo.has_audio, mo.error, mo.created_at, mo.updated_at,
         (CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END) AS is_favorite
       FROM message_outputs mo
       INNER JOIN messages m ON m.id = mo.message_id AND m.status = 1
@@ -137,17 +182,20 @@ export async function handleGetSession(c: AuthenticatedContext) {
 
   const outputResults = await Promise.all(
     (outputs.results as unknown as SessionMessageOutputRecord[]).map(async output => {
-      const { image_url: imageUrl, ...publicOutput } = output
+      const { image_url: imageUrl, storage_key: storageKey, ...publicOutput } = output
+      const objectKey = storageKey || imageUrl
       return {
         ...publicOutput,
         thumbnail_url:
           output.content_type === MIME_TYPES.IMAGE
-            ? await createSignedImageVariantUrl(c.env, imageUrl, "small")
+            ? await createSignedImageVariantUrl(c.env, objectKey, "small")
             : null,
         display_url:
           output.content_type === MIME_TYPES.IMAGE
-            ? await createSignedImageVariantUrl(c.env, imageUrl, "large")
-            : null,
+            ? await createSignedImageVariantUrl(c.env, objectKey, "large")
+            : objectKey
+              ? await createPresignedGetUrl(c.env, objectKey)
+              : null,
       }
     })
   )

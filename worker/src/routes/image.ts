@@ -8,35 +8,53 @@ import {
   type PreparedReferenceImage,
 } from "../types"
 import { deductCredits, getUserCredits, calculateRequiredCredits } from "./credits"
+import { getPromptCharacterLength } from "../imageModels"
 import {
-  ENABLED_IMAGE_MODEL_IDS,
+  ENABLED_MEDIA_MODEL_IDS,
   PLAN_MODELS_CONFIG,
-  getEnabledModels,
-  getImageModelPromptMaxLength,
-  getPromptCharacterLength,
-  isImageModelEnabled,
-  validateModelOptions,
-} from "../imageModels"
+  getEnabledMediaModels,
+  getMediaModel,
+  isMediaModelEnabled,
+  validateMediaModelOptions,
+} from "../mediaModels"
+import { getPromptLimitError } from "../promptValidation"
+import {
+  findVideoProviderConfig,
+  getVideoProviderModel,
+  type VideoGenerationMode,
+} from "../videoModels"
 import {
   arrayBufferToDataUrl,
   createReferenceImageKey,
+  createGeneratedAudioKey,
   createGeneratedImageKey,
+  createGeneratedVideoKey,
   getGeneratedImagePrefix,
   getImageContentTypeFromKey,
   createPresignedGetUrl,
   getReferenceImagePrefix,
+  getReferenceMediaPrefix,
   isAllowedReferenceImageContentType,
+  isAllowedReferenceMediaContentType,
   normalizeContentType,
 } from "../utils"
 import {
   EVOLINK_TASK_OBJECTS,
   MIME_TYPES,
   PROVIDERS,
+  REFERENCE_AUDIO_MAX_BYTES,
   REFERENCE_IMAGE_MAX_BYTES,
+  REFERENCE_VIDEO_MAX_BYTES,
   getEvoLinkTaskMimeType,
   type MimeType,
 } from "../const"
 import { createSignedImageVariantUrl } from "./media"
+import {
+  inspectReferenceAudio,
+  inspectReferenceVideo,
+  validateReferenceAudioMetadata,
+  validateReferenceVideoMetadata,
+} from "../referenceMediaValidation"
 
 const BYTEPLUS_MODEL_MAP: Record<string, string> = {
   "bytedance/seedream-4.0": "seedream-4-0-250828",
@@ -60,6 +78,14 @@ const EVOLINK_MODEL_MAP: Record<string, string> = {
 export interface GenerateInput {
   prompt: string
   model: string
+  media_type?: MimeType
+  generation_mode?:
+    | "text_to_image"
+    | "image_to_image"
+    | "text_to_video"
+    | "image_to_video"
+    | "reference_to_video"
+  video_input_mode?: "start_end_frame" | "image_reference" | "video_reference"
   provider?: string
   size?: string
   quality?: string
@@ -75,6 +101,15 @@ export interface GenerateInput {
   thinking_level?: string
   background?: string
   reference_images?: string[]
+  reference_image_roles?: Array<"start_frame" | "end_frame" | "reference">
+  reference_videos?: string[]
+  reference_audios?: string[]
+  billing_reference_image_count?: number
+  billing_reference_video_durations?: number[]
+  billing_reference_audio_durations?: number[]
+  duration?: number | string
+  generate_audio?: string | boolean
+  mode?: string
 }
 
 type AuthenticatedContext = Context<{
@@ -87,6 +122,7 @@ interface ImageRecord {
   message_id: string
   session_id: string
   image_url: string
+  content_type: MimeType
 }
 
 interface FavoriteImageRecord {
@@ -137,6 +173,7 @@ async function setGenerationTaskProvider(
 }
 
 function getRequestedImageCount(input: GenerateInput) {
+  if (input.media_type === MIME_TYPES.VIDEO) return 1
   if (
     input.model === "bytedance/seedream-5-pro" ||
     input.model === "google/nano-banana" ||
@@ -154,9 +191,7 @@ function getRequestedImageCount(input: GenerateInput) {
   return Math.min(Math.max(Math.trunc(parsed), 1), 15)
 }
 
-export function getStoredImageDimensions(
-  input: Pick<GenerateInput, "aspect_ratio" | "size">
-) {
+export function getStoredImageDimensions(input: Pick<GenerateInput, "aspect_ratio" | "size">) {
   const aspectRatio = typeof input.aspect_ratio === "string" ? input.aspect_ratio.trim() : ""
   const size = typeof input.size === "string" ? input.size.trim() : ""
   const sizeIsAspectRatio = /^\d+(?:\.\d+)?:\d+(?:\.\d+)?$/.test(size)
@@ -336,6 +371,8 @@ function applyReferenceImages(
     case "google/nano-banana-pro":
     case "google/nano-banana-2":
     case "google/nano-banana-2-lite":
+    case "bytedance/seedream-4.0":
+    case "bytedance/seedream-4.5":
     case "bytedance/seedream-5-lite":
     case "bytedance/seedream-5-pro":
       aiInput.image_input = referenceImages
@@ -362,11 +399,13 @@ function applyReferenceImages(
 async function getUserImage(c: AuthenticatedContext, imageId: string, userId: string) {
   return c.env.DB.prepare(
     `
-      SELECT mo.id, mo.message_id, m.session_id, mo.image_url
+      SELECT mo.id, mo.message_id, m.session_id, COALESCE(mo.storage_key, mo.image_url) AS image_url,
+        mo.content_type
       FROM message_outputs mo
       INNER JOIN messages m ON m.id = mo.message_id AND m.status = 1
       INNER JOIN sessions s ON s.id = m.session_id AND s.status = 1
-      WHERE mo.id = ? AND s.user_id = ? AND mo.status = 'completed' AND mo.image_url IS NOT NULL
+      WHERE mo.id = ? AND s.user_id = ? AND mo.status = 'completed'
+        AND COALESCE(mo.storage_key, mo.image_url) IS NOT NULL
       LIMIT 1
     `
   )
@@ -426,12 +465,63 @@ async function prepareReferenceImages(
     const contentType = normalizeContentType(
       object.httpMetadata?.contentType || getImageContentTypeFromKey(key) || ""
     )
-    if (!isAllowedReferenceImageContentType(contentType)) {
-      return { error: "Reference image must be PNG, JPEG, or WEBP" }
+    const imageConstraints =
+      modelConfig.referenceImageConstraints ?? modelConfig.referenceMediaConstraints?.image
+    if (
+      !isAllowedReferenceImageContentType(contentType) ||
+      (imageConstraints && !imageConstraints.mimeTypes.includes(contentType))
+    ) {
+      return {
+        error: imageConstraints?.mimeTypes.includes("image/heic")
+          ? "Reference image must be PNG, JPEG, WEBP, HEIC, or HEIF"
+          : imageConstraints?.mimeTypes.includes("image/webp")
+            ? "Reference image must be PNG, JPEG, or WEBP"
+            : "Reference image must be PNG or JPEG",
+      }
     }
 
-    if (object.size > REFERENCE_IMAGE_MAX_BYTES) {
+    const maxImageBytes = imageConstraints?.maxBytes ?? REFERENCE_IMAGE_MAX_BYTES
+    if (object.size > maxImageBytes) {
       return { error: "Reference image is too large" }
+    }
+
+    if (imageConstraints) {
+      const imageObject = await c.env.R2.get(key)
+      if (!imageObject) return { error: "Reference image upload was not found" }
+      try {
+        const imageInfo = await c.env.IMAGES.info(imageObject.body)
+        if (!("width" in imageInfo) || !("height" in imageInfo)) {
+          return { error: "Reference image dimensions could not be read" }
+        }
+        const { width, height } = imageInfo
+        const aspectRatio = width / height
+        if (
+          width < imageConstraints.minWidth ||
+          (imageConstraints.maxWidth !== undefined && width > imageConstraints.maxWidth) ||
+          height < imageConstraints.minHeight ||
+          (imageConstraints.maxHeight !== undefined && height > imageConstraints.maxHeight)
+        ) {
+          const widthRange = imageConstraints.maxWidth
+            ? `${imageConstraints.minWidth}-${imageConstraints.maxWidth}px`
+            : `at least ${imageConstraints.minWidth}px`
+          const heightRange = imageConstraints.maxHeight
+            ? `${imageConstraints.minHeight}-${imageConstraints.maxHeight}px`
+            : `at least ${imageConstraints.minHeight}px`
+          return {
+            error: `Reference image width must be ${widthRange} and height must be ${heightRange}`,
+          }
+        }
+        if (
+          aspectRatio < imageConstraints.minAspectRatio ||
+          aspectRatio > imageConstraints.maxAspectRatio
+        ) {
+          return {
+            error: `Reference image aspect ratio must be ${imageConstraints.minAspectRatio}-${imageConstraints.maxAspectRatio}`,
+          }
+        }
+      } catch {
+        return { error: "Reference image is not a valid supported image" }
+      }
     }
 
     let dataUrl: string | undefined
@@ -458,6 +548,108 @@ async function prepareReferenceImages(
   }
 
   return { images: preparedImages }
+}
+
+async function prepareReferenceMedia(
+  c: AuthenticatedContext,
+  keys: string[],
+  kind: "video" | "audio",
+  user: UserPayload,
+  modelConfig: ModelConfig
+): Promise<{ media: PreparedReferenceImage[]; error?: never } | { media?: never; error: string }> {
+  if (keys.length === 0) return { media: [] }
+  if (!Array.isArray(keys)) return { error: `reference_${kind}s must be an array` }
+
+  const prefix = getReferenceMediaPrefix(user.userId, kind)
+  const maxBytes =
+    modelConfig.referenceMediaConstraints?.[kind].maxBytes ??
+    (kind === "video" ? REFERENCE_VIDEO_MAX_BYTES : REFERENCE_AUDIO_MAX_BYTES)
+  const prepared: PreparedReferenceImage[] = []
+
+  for (const rawKey of keys) {
+    if (typeof rawKey !== "string" || rawKey.length === 0) {
+      return { error: `Invalid reference ${kind}` }
+    }
+
+    const key = rawKey.replace(/^\/+/, "")
+    if (!key.startsWith(prefix)) {
+      return { error: `Invalid reference ${kind}` }
+    }
+
+    const object = await c.env.R2.head(key)
+    if (!object) return { error: `Reference ${kind} upload was not found` }
+
+    const contentType = normalizeContentType(object.httpMetadata?.contentType || "")
+    if (!isAllowedReferenceMediaContentType(kind, contentType)) {
+      return { error: `Unsupported reference ${kind} format` }
+    }
+    if (object.size > maxBytes) return { error: `Reference ${kind} is too large` }
+
+    let inspectedMetadata: Pick<
+      PreparedReferenceImage,
+      "width" | "height" | "durationSeconds" | "fps"
+    > = {}
+    const constraints = modelConfig.referenceMediaConstraints?.[kind]
+    if (constraints) {
+      const objectBody = await c.env.R2.get(key)
+      if (!objectBody) return { error: `Reference ${kind} upload was not found` }
+      const buffer = await objectBody.arrayBuffer()
+      if (kind === "video") {
+        const metadata = inspectReferenceVideo(buffer)
+        if (!metadata) return { error: "Reference video metadata could not be read" }
+        const validationError = validateReferenceVideoMetadata(
+          metadata,
+          modelConfig.referenceMediaConstraints!.video
+        )
+        if (validationError) return { error: validationError }
+        inspectedMetadata = metadata
+      } else {
+        const metadata = inspectReferenceAudio(buffer)
+        if (!metadata) return { error: "Reference audio metadata could not be read" }
+        const validationError = validateReferenceAudioMetadata(
+          metadata,
+          modelConfig.referenceMediaConstraints!.audio
+        )
+        if (validationError) return { error: validationError }
+        inspectedMetadata = metadata
+      }
+    }
+
+    const url = await createPresignedGetUrl(c.env, key)
+    if (!url) return { error: `Failed to create reference ${kind} URL` }
+    prepared.push({ key, url, contentType, size: object.size, ...inspectedMetadata })
+  }
+
+  return { media: prepared }
+}
+
+export function getReferenceMediaTotalSizeError(
+  modelConfig: ModelConfig,
+  media: PreparedReferenceImage[]
+): string | null {
+  const totalMaxBytes = modelConfig.referenceMediaConstraints?.totalMaxBytes
+  if (!totalMaxBytes) return null
+  const totalBytes = media.reduce((sum, item) => sum + item.size, 0)
+  return totalBytes > totalMaxBytes
+    ? `Reference materials must not exceed ${Math.floor(totalMaxBytes / 1_000_000)}MB in total`
+    : null
+}
+
+export function getReferenceMediaTotalDurationError(
+  modelConfig: ModelConfig,
+  videos: PreparedReferenceImage[],
+  audios: PreparedReferenceImage[]
+): string | null {
+  const constraints = modelConfig.referenceMediaConstraints
+  if (!constraints) return null
+  const videoDuration = videos.reduce((sum, item) => sum + (item.durationSeconds ?? 0), 0)
+  if (videoDuration > constraints.video.maxTotalDurationSeconds) {
+    return `Total reference video duration must not exceed ${constraints.video.maxTotalDurationSeconds} seconds`
+  }
+  const audioDuration = audios.reduce((sum, item) => sum + (item.durationSeconds ?? 0), 0)
+  return audioDuration > constraints.audio.maxTotalDurationSeconds
+    ? `Total reference audio duration must not exceed ${constraints.audio.maxTotalDurationSeconds} seconds`
+    : null
 }
 
 export async function handleGetFavorites(c: AuthenticatedContext) {
@@ -548,7 +740,7 @@ export async function handleSetImageFavorite(c: AuthenticatedContext) {
 
   const imageId = c.req.param("id")
   if (!imageId) {
-    return c.json({ error: "Image id is required" }, 400)
+    return c.json({ error: "Output id is required" }, 400)
   }
 
   const body = await c.req.json<FavoriteRequestBody>().catch(() => ({}))
@@ -560,23 +752,30 @@ export async function handleSetImageFavorite(c: AuthenticatedContext) {
 
   const image = await getUserImage(c, imageId, user.userId)
   if (!image) {
-    return c.json({ error: "Image not found" })
+    return c.json({ error: "Output not found" })
   }
 
   if (favorited) {
     await c.env.DB.prepare(
       `
         INSERT OR IGNORE INTO content_favorites (id, user_id, content_type, message_id, output_id, created_at)
-        VALUES (?, ?, 'image', ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
       `
     )
-      .bind(uuidv4(), user.userId, image.message_id, image.id, getCurrentTimestamp())
+      .bind(
+        uuidv4(),
+        user.userId,
+        image.content_type,
+        image.message_id,
+        image.id,
+        getCurrentTimestamp()
+      )
       .run()
   } else {
     await c.env.DB.prepare(
-      "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND output_id = ?"
+      "DELETE FROM content_favorites WHERE user_id = ? AND content_type = ? AND output_id = ?"
     )
-      .bind(user.userId, image.id)
+      .bind(user.userId, image.content_type, image.id)
       .run()
   }
 
@@ -602,7 +801,7 @@ export async function handleGetImageDownloadUrl(c: AuthenticatedContext) {
   try {
     const url = await createPresignedGetUrl(c.env, image.image_url)
     if (!url) {
-      throw new Error("Image does not have an R2 key")
+      throw new Error("Output does not have an R2 key")
     }
     c.header("Cache-Control", "no-store")
     return c.json({ url, expiresIn: 3600 })
@@ -632,8 +831,8 @@ export async function handleDeleteImage(c: AuthenticatedContext) {
   const now = getCurrentTimestamp()
   await c.env.DB.batch([
     c.env.DB.prepare(
-      "DELETE FROM content_favorites WHERE user_id = ? AND content_type = 'image' AND output_id = ?"
-    ).bind(user.userId, image.id),
+      "DELETE FROM content_favorites WHERE user_id = ? AND content_type = ? AND output_id = ?"
+    ).bind(user.userId, image.content_type, image.id),
     c.env.DB.prepare(
       "UPDATE message_outputs SET status = 'deleted', deleted_at = ?, updated_at = ? WHERE id = ?"
     ).bind(now, now, image.id),
@@ -669,19 +868,150 @@ export async function handleGenerate(c: AuthenticatedContext) {
     return c.json({ error: "prompt is required" }, 400)
   }
 
-  if (!input.model || !isImageModelEnabled(input.model)) {
+  if (!input.model || !isMediaModelEnabled(input.model)) {
     return c.json(
-      { error: `model is unavailable; enabled models: ${ENABLED_IMAGE_MODEL_IDS.join(", ")}` },
+      { error: `model is unavailable; enabled models: ${ENABLED_MEDIA_MODEL_IDS.join(", ")}` },
       400
     )
   }
 
-  const promptMaxLength = getImageModelPromptMaxLength(input.model)
-  if (promptMaxLength !== null && getPromptCharacterLength(input.prompt) > promptMaxLength) {
-    return c.json(
-      { error: `prompt must not exceed ${promptMaxLength.toLocaleString("en-US")} characters` },
-      400
+  const modelDefinition = getMediaModel(input.model)
+  if (!modelDefinition) {
+    return c.json({ error: "Invalid model" }, 400)
+  }
+  const mediaType: MimeType =
+    modelDefinition.mediaType === MIME_TYPES.VIDEO ? MIME_TYPES.VIDEO : MIME_TYPES.IMAGE
+  input.media_type = mediaType
+  if (mediaType === MIME_TYPES.VIDEO) {
+    const hasReferenceImages =
+      Array.isArray(input.reference_images) && input.reference_images.length > 0
+    const hasReferenceVideos =
+      Array.isArray(input.reference_videos) && input.reference_videos.length > 0
+    const hasReferenceAudios =
+      Array.isArray(input.reference_audios) && input.reference_audios.length > 0
+    const hasAnyReference = hasReferenceImages || hasReferenceVideos || hasReferenceAudios
+    const selectedInputMode = modelDefinition.videoInputModes?.find(
+      mode => mode.id === input.video_input_mode
     )
+
+    if (!hasAnyReference) {
+      input.generation_mode = "text_to_video"
+      input.video_input_mode = undefined
+    } else {
+      const resolvedInputMode =
+        selectedInputMode ??
+        modelDefinition.videoInputModes?.find(mode => mode.id === "start_end_frame")
+      if (!resolvedInputMode) {
+        return c.json({ error: "This model does not support reference materials" }, 400)
+      }
+      if (
+        resolvedInputMode.id === "start_end_frame" &&
+        (!hasReferenceImages || hasReferenceVideos || hasReferenceAudios)
+      ) {
+        return c.json({ error: "Start & End Frame mode only accepts images" }, 400)
+      }
+      if (input.reference_image_roles !== undefined) {
+        if (
+          !Array.isArray(input.reference_image_roles) ||
+          input.reference_image_roles.length !== (input.reference_images?.length ?? 0) ||
+          input.reference_image_roles.some(
+            role => !["start_frame", "end_frame", "reference"].includes(role)
+          )
+        ) {
+          return c.json({ error: "Reference image roles must match reference images" }, 400)
+        }
+        if (
+          resolvedInputMode.id === "start_end_frame" &&
+          (resolvedInputMode.allowsEndFrameWithoutStart
+            ? input.reference_image_roles.length > 2 ||
+              input.reference_image_roles.some(role => role === "reference") ||
+              new Set(input.reference_image_roles).size !== input.reference_image_roles.length
+            : input.reference_image_roles[0] !== "start_frame" ||
+              input.reference_image_roles.slice(1).some(role => role !== "end_frame"))
+        ) {
+          return c.json(
+            {
+              error: resolvedInputMode.allowsEndFrameWithoutStart
+                ? "Frame inputs must contain at most one start frame and one end frame"
+                : "End frame requires a start frame",
+            },
+            400
+          )
+        }
+      }
+      if (resolvedInputMode.requiresImageOrVideo && !hasReferenceImages && !hasReferenceVideos) {
+        return c.json(
+          { error: "Audio cannot be provided alone; add at least one reference image or video" },
+          400
+        )
+      }
+      if (resolvedInputMode.id === "image_reference" && !hasReferenceImages) {
+        return c.json({ error: "Image Reference mode requires at least one image" }, 400)
+      }
+      if (
+        resolvedInputMode.id === "video_reference" &&
+        resolvedInputMode.requiresVideo !== false &&
+        !hasReferenceVideos
+      ) {
+        return c.json({ error: "Video Reference mode requires at least one video" }, 400)
+      }
+      if ((input.reference_images?.length ?? 0) > (resolvedInputMode.imageCount ?? 0)) {
+        return c.json(
+          { error: `This mode supports at most ${resolvedInputMode.imageCount ?? 0} images` },
+          400
+        )
+      }
+      if ((input.reference_videos?.length ?? 0) > (resolvedInputMode.videoCount ?? 0)) {
+        return c.json(
+          { error: `This mode supports at most ${resolvedInputMode.videoCount ?? 0} videos` },
+          400
+        )
+      }
+      if ((input.reference_audios?.length ?? 0) > (resolvedInputMode.audioCount ?? 0)) {
+        return c.json(
+          { error: `This mode supports at most ${resolvedInputMode.audioCount ?? 0} audio files` },
+          400
+        )
+      }
+      const maxReferenceItems = modelDefinition.referenceMediaConstraints?.maxItems
+      const referenceItemCount =
+        (input.reference_images?.length ?? 0) +
+        (input.reference_videos?.length ?? 0) +
+        (input.reference_audios?.length ?? 0)
+      if (maxReferenceItems && referenceItemCount > maxReferenceItems) {
+        return c.json(
+          { error: `This model supports at most ${maxReferenceItems} reference files in total` },
+          400
+        )
+      }
+      input.video_input_mode = resolvedInputMode.id
+      input.generation_mode = resolvedInputMode.generationMode
+    }
+    if (
+      !modelDefinition.generationModes?.includes(
+        input.generation_mode as "text_to_video" | "image_to_video" | "reference_to_video"
+      )
+    ) {
+      return c.json(
+        { error: `generation mode '${input.generation_mode}' is not supported by this model` },
+        400
+      )
+    }
+    if (input.generation_mode === "text_to_video" && hasAnyReference) {
+      return c.json({ error: "text_to_video does not accept reference materials" }, 400)
+    }
+  } else {
+    input.generation_mode =
+      input.generation_mode ?? (input.reference_images?.length ? "image_to_image" : "text_to_image")
+  }
+
+  const promptLimitError = modelDefinition.promptLimits
+    ? getPromptLimitError(input.prompt, modelDefinition.promptLimits)
+    : getPromptCharacterLength(input.prompt) > modelDefinition.promptMaxLength
+      ? `prompt must not exceed ${modelDefinition.promptMaxLength.toLocaleString("en-US")} characters`
+      : null
+  if (promptLimitError) {
+    return c.json({ error: promptLimitError }, 400)
   }
 
   // Validate model permissions based on user's subscription plan
@@ -732,7 +1062,7 @@ export async function handleGenerate(c: AuthenticatedContext) {
     )
   }
 
-  const optionValidation = validateModelOptions(
+  const optionValidation = validateMediaModelOptions(
     input.model,
     input as unknown as Record<string, string | number | boolean>
   )
@@ -743,16 +1073,6 @@ export async function handleGenerate(c: AuthenticatedContext) {
       },
       400
     )
-  }
-
-  // Pre-check credits balance
-  const creditsPerImage = calculateRequiredCredits(input.model, input)
-  if (!creditsPerImage) {
-    return c.json({ error: `Unknown model: ${input.model}` }, 400)
-  }
-  const userCredits = await getUserCredits(c.env.DB, user.userId)
-  if (userCredits.balance < creditsPerImage) {
-    return c.json({ error: "Insufficient credits" }, 402)
   }
 
   // Reuse an owned session when provided. New sessions are inserted atomically
@@ -776,6 +1096,62 @@ export async function handleGenerate(c: AuthenticatedContext) {
   const referenceImageResult = await prepareReferenceImages(c, input, user)
   if (referenceImageResult.error) {
     return c.json({ error: referenceImageResult.error }, 400)
+  }
+  const referenceVideoResult = await prepareReferenceMedia(
+    c,
+    input.reference_videos ?? [],
+    "video",
+    user,
+    modelDefinition
+  )
+  if (referenceVideoResult.error) {
+    return c.json({ error: referenceVideoResult.error }, 400)
+  }
+  const referenceAudioResult = await prepareReferenceMedia(
+    c,
+    input.reference_audios ?? [],
+    "audio",
+    user,
+    modelDefinition
+  )
+  if (referenceAudioResult.error) {
+    return c.json({ error: referenceAudioResult.error }, 400)
+  }
+
+  const referenceMediaTotalSizeError = getReferenceMediaTotalSizeError(modelDefinition, [
+    ...(referenceImageResult.images ?? []),
+    ...(referenceVideoResult.media ?? []),
+    ...(referenceAudioResult.media ?? []),
+  ])
+  if (referenceMediaTotalSizeError) {
+    return c.json({ error: referenceMediaTotalSizeError }, 400)
+  }
+  const referenceMediaTotalDurationError = getReferenceMediaTotalDurationError(
+    modelDefinition,
+    referenceVideoResult.media ?? [],
+    referenceAudioResult.media ?? []
+  )
+  if (referenceMediaTotalDurationError) {
+    return c.json({ error: referenceMediaTotalDurationError }, 400)
+  }
+
+  // Never trust client-supplied billing metadata. Reference counts and durations are derived from
+  // the R2 objects inspected above, then persisted with the task for final callback deduction.
+  input.billing_reference_image_count = (referenceImageResult.images ?? []).length
+  input.billing_reference_video_durations = (referenceVideoResult.media ?? []).map(
+    item => item.durationSeconds ?? 0
+  )
+  input.billing_reference_audio_durations = (referenceAudioResult.media ?? []).map(
+    item => item.durationSeconds ?? 0
+  )
+
+  const requiredCredits = calculateRequiredCredits(input.model, input)
+  if (!requiredCredits) {
+    return c.json({ error: `Unknown model: ${input.model}` }, 400)
+  }
+  const userCredits = await getUserCredits(c.env.DB, user.userId)
+  if (userCredits.balance < requiredCredits) {
+    return c.json({ error: "Insufficient credits" }, 402)
   }
 
   // Generate task ID and insert task as pending
@@ -807,9 +1183,9 @@ export async function handleGenerate(c: AuthenticatedContext) {
         INSERT INTO messages (
           id, session_id, user_id, role, provider, model, prompt, aspect_ratio, resolution,
           google_search, image_search, image_size, quality, style, negative_prompt,
-          output_format, num_images, created_at
+          output_format, num_images, media_type, generation_mode, duration, generate_audio, created_at
         )
-        VALUES (?, ?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `
     ).bind(
       messageId,
@@ -828,6 +1204,14 @@ export async function handleGenerate(c: AuthenticatedContext) {
       toDbValue(input.negative_prompt),
       toDbValue(input.output_format),
       requestedCount,
+      mediaType,
+      input.generation_mode,
+      mediaType === MIME_TYPES.VIDEO ? Number(input.duration) || 5 : null,
+      mediaType === MIME_TYPES.VIDEO
+        ? input.generate_audio === true || input.generate_audio === "true"
+          ? 1
+          : 0
+        : null,
       now
     ),
     c.env.DB.prepare(
@@ -857,7 +1241,7 @@ export async function handleGenerate(c: AuthenticatedContext) {
           )
           VALUES (?, ?, ?, 'pending', ?, ?, ?)
         `
-      ).bind(uuidv4(), messageId, outputIndex, MIME_TYPES.IMAGE, now, now)
+      ).bind(uuidv4(), messageId, outputIndex, mediaType, now, now)
     ),
   ]
 
@@ -872,7 +1256,9 @@ export async function handleGenerate(c: AuthenticatedContext) {
       sessionId,
       messageId,
       input,
-      referenceImageResult.images || []
+      referenceImageResult.images || [],
+      referenceVideoResult.media || [],
+      referenceAudioResult.media || []
     )
   )
 
@@ -882,6 +1268,10 @@ export async function handleGenerate(c: AuthenticatedContext) {
     sessionId,
     messageId,
     requestedCount,
+    mediaType,
+    generationMode: input.generation_mode,
+    requiredCredits,
+    pollTimeoutSeconds: modelDefinition.pollTimeoutSeconds ?? 5 * 60,
   })
 }
 
@@ -889,11 +1279,71 @@ export function buildEvoLinkPayload(
   evolinkModelName: string,
   input: GenerateInput,
   callbackUrl?: string,
-  referenceImages: PreparedReferenceImage[] = []
+  referenceImages: PreparedReferenceImage[] = [],
+  referenceVideos: PreparedReferenceImage[] = [],
+  referenceAudios: PreparedReferenceImage[] = []
 ): Record<string, any> {
   const payload: any = {
     model: evolinkModelName,
     prompt: input.prompt,
+  }
+
+  if (input.media_type === MIME_TYPES.VIDEO) {
+    const providerConfig = findVideoProviderConfig(evolinkModelName)
+    if (!providerConfig) throw new Error(`Unknown EvoLink video model: ${evolinkModelName}`)
+
+    if (providerConfig.duration && input.duration !== undefined) {
+      payload.duration = input.duration === "auto" ? "auto" : Number(input.duration)
+    }
+    if (providerConfig.quality && input.resolution) payload.quality = input.resolution
+
+    const isImageToVideo = input.generation_mode === "image_to_video"
+    if (
+      providerConfig.aspectRatio &&
+      (!isImageToVideo || providerConfig.imageToVideoAspectRatio !== false) &&
+      input.aspect_ratio
+    ) {
+      payload.aspect_ratio = input.aspect_ratio
+    }
+
+    if (providerConfig.audioField) {
+      const audioEnabled = input.generate_audio === true || input.generate_audio === "true"
+      payload[providerConfig.audioField] =
+        providerConfig.audioField === "sound" ? (audioEnabled ? "on" : "off") : audioEnabled
+    }
+    if (providerConfig.mode && input.mode) payload.mode = input.mode
+    if (providerConfig.generationType) {
+      payload.generation_type = isImageToVideo ? "FIRST&LAST" : "TEXT"
+    }
+    if (input.negative_prompt) payload.negative_prompt = input.negative_prompt
+    if (callbackUrl) payload.callback_url = callbackUrl
+    const imageUrls = referenceImages
+      .map(image => image.url)
+      .filter((url): url is string => Boolean(url))
+    if (imageUrls.length > 0) {
+      if (isImageToVideo && providerConfig.imageInputFields === "start_end") {
+        const roles = input.reference_image_roles ?? []
+        const startIndex = roles.indexOf("start_frame")
+        const endIndex = roles.indexOf("end_frame")
+        if (startIndex >= 0 && imageUrls[startIndex]) payload.image_start = imageUrls[startIndex]
+        if (endIndex >= 0 && imageUrls[endIndex]) payload.image_end = imageUrls[endIndex]
+        if (startIndex < 0 && endIndex < 0) {
+          payload.image_start = imageUrls[0]
+          if (imageUrls[1]) payload.image_end = imageUrls[1]
+        }
+      } else {
+        payload.image_urls = imageUrls
+      }
+    }
+    const videoUrls = referenceVideos
+      .map(video => video.url)
+      .filter((url): url is string => Boolean(url))
+    if (videoUrls.length > 0) payload.video_urls = videoUrls
+    const audioUrls = referenceAudios
+      .map(audio => audio.url)
+      .filter((url): url is string => Boolean(url))
+    if (audioUrls.length > 0) payload.audio_urls = audioUrls
+    return payload
   }
 
   const nanoBananaModels = new Set([
@@ -939,6 +1389,11 @@ export function buildEvoLinkPayload(
     payload.model_params = { output_format: outputFormat }
   }
 
+  if (evolinkModelName === "doubao-seedream-4.5") {
+    payload.size = input.aspect_ratio || "auto"
+    payload.quality = input.resolution || "2K"
+  }
+
   if (nanoBananaModels.has(evolinkModelName)) {
     payload.size = input.aspect_ratio || "auto"
 
@@ -967,6 +1422,8 @@ export function buildEvoLinkPayload(
   }
 
   if (
+    evolinkModelName === "doubao-seedream-4.0" ||
+    evolinkModelName === "doubao-seedream-4.5" ||
     evolinkModelName === "doubao-seedream-5.0-lite" ||
     evolinkModelName === "doubao-seedream-5.0-pro" ||
     nanoBananaModels.has(evolinkModelName)
@@ -985,9 +1442,20 @@ async function generateViaEvoLink(
   dbTaskId: string,
   apiKey: string,
   input: GenerateInput,
-  referenceImages: PreparedReferenceImage[] = []
+  referenceImages: PreparedReferenceImage[] = [],
+  referenceVideos: PreparedReferenceImage[] = [],
+  referenceAudios: PreparedReferenceImage[] = []
 ): Promise<string> {
-  const evolinkModelName = EVOLINK_MODEL_MAP[input.model]
+  const videoGenerationMode: VideoGenerationMode =
+    input.generation_mode === "reference_to_video"
+      ? "reference_to_video"
+      : input.generation_mode === "image_to_video"
+        ? "image_to_video"
+        : "text_to_video"
+  const evolinkModelName =
+    input.media_type === MIME_TYPES.VIDEO
+      ? getVideoProviderModel(input.model, videoGenerationMode)
+      : EVOLINK_MODEL_MAP[input.model]
   if (!evolinkModelName) {
     throw new Error(`Unknown model: ${input.model}`)
   }
@@ -998,11 +1466,17 @@ async function generateViaEvoLink(
     evolinkModelName,
     input,
     c.env.EVOLINK_CALLBACK_URL,
-    referenceImages
+    referenceImages,
+    referenceVideos,
+    referenceAudios
   )
   console.log("[EvoLink] Calling with model", evolinkModelName, "payload", JSON.stringify(payload))
 
-  const res = await fetch("https://api.evolink.ai/v1/images/generations", {
+  const endpoint =
+    input.media_type === MIME_TYPES.VIDEO
+      ? "https://api.evolink.ai/v1/videos/generations"
+      : "https://api.evolink.ai/v1/images/generations"
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1033,7 +1507,11 @@ async function generateViaEvoLink(
   return taskId
 }
 
-async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promise<string[]> {
+async function generateViaBytePlus(
+  apiKey: string,
+  input: GenerateInput,
+  referenceImages: PreparedReferenceImage[] = []
+): Promise<string[]> {
   const byteplusModelName = BYTEPLUS_MODEL_MAP[input.model]
   if (!byteplusModelName) {
     throw new Error(`BytePlus fallback does not support model: ${input.model}`)
@@ -1047,6 +1525,13 @@ async function generateViaBytePlus(apiKey: string, input: GenerateInput): Promis
     size: input.resolution,
     stream: false,
     watermark: false,
+  }
+
+  const referenceImageUrls = referenceImages
+    .map(image => image.url)
+    .filter((url): url is string => Boolean(url))
+  if (referenceImageUrls.length > 0) {
+    payload.image = referenceImageUrls.length === 1 ? referenceImageUrls[0] : referenceImageUrls
   }
 
   if (byteplusModelName === "seedream-5-0-260128") {
@@ -1126,7 +1611,7 @@ async function generateBytedanceImage(
   }
 
   try {
-    const imageUrls = await generateViaBytePlus(arkKey, input)
+    const imageUrls = await generateViaBytePlus(arkKey, input, referenceImages)
     return { imageUrls, provider: PROVIDERS.BYTEPLUS }
   } catch (err: any) {
     throw new Error(
@@ -1263,7 +1748,12 @@ async function completeGenerationTask(
         mimeType,
         responseContentType
       )
-      const key = createGeneratedImageKey(userId, extension)
+      const key =
+        mimeType === MIME_TYPES.IMAGE
+          ? createGeneratedImageKey(userId, extension)
+          : mimeType === MIME_TYPES.VIDEO
+            ? createGeneratedVideoKey(userId, extension)
+            : createGeneratedAudioKey(userId, extension)
       const contentType =
         responseContentType ||
         getImageContentTypeFromKey(key) ||
@@ -1284,17 +1774,64 @@ async function completeGenerationTask(
         httpMetadata: { contentType },
       })
 
-      await db
-        .prepare(
-          `
+      const assetId = uuidv4()
+      const durationMs = mimeType === MIME_TYPES.VIDEO ? (Number(input.duration) || 5) * 1000 : null
+      const hasAudio =
+        mimeType === MIME_TYPES.VIDEO
+          ? input.generate_audio === true || input.generate_audio === "true"
+            ? 1
+            : 0
+          : null
+      await db.batch([
+        db
+          .prepare(
+            `
+              INSERT INTO assets (
+                id, user_id, source_output_id, kind, origin, name, storage_key, content_type,
+                width, height, duration_ms, has_audio, model, prompt, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, 'generated', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `
+          )
+          .bind(
+            assetId,
+            userId,
+            output.id,
+            mimeType,
+            input.prompt.trim().slice(0, 80) || `Generated ${mimeType}`,
+            key,
+            contentType,
+            width,
+            height,
+            durationMs,
+            hasAudio,
+            input.model,
+            input.prompt,
+            now,
+            now
+          ),
+        db
+          .prepare(
+            `
             UPDATE message_outputs
-            SET status = 'completed', image_url = ?, content_type = ?, width = ?, height = ?,
-              file_size = ?, error = NULL, updated_at = ?
+            SET status = 'completed', image_url = ?, storage_key = ?, content_type = ?, width = ?, height = ?,
+              file_size = ?, duration_ms = ?, has_audio = ?, asset_id = ?, error = NULL, updated_at = ?
             WHERE id = ?
           `
-        )
-        .bind(key, mimeType, width, height, imageBuffer.byteLength, now, output.id)
-        .run()
+          )
+          .bind(
+            key,
+            key,
+            mimeType,
+            width,
+            height,
+            imageBuffer.byteLength,
+            durationMs,
+            hasAudio,
+            assetId,
+            now,
+            output.id
+          ),
+      ])
 
       completedOutputs.push({
         id: output.id,
@@ -1317,7 +1854,7 @@ async function completeGenerationTask(
   }
 
   if (completedOutputs.length === 0) {
-    throw new Error("No generated images could be saved")
+    throw new Error("No generated media could be saved")
   }
 
   const chargedInput: GenerateInput = { ...input, num_images: completedOutputs.length }
@@ -1398,7 +1935,9 @@ async function runBackgroundGeneration(
   sessionId: string,
   messageId: string,
   input: GenerateInput,
-  referenceImages: PreparedReferenceImage[]
+  referenceImages: PreparedReferenceImage[],
+  referenceVideos: PreparedReferenceImage[] = [],
+  referenceAudios: PreparedReferenceImage[] = []
 ) {
   const db = c.env.DB
   const now = Math.floor(Date.now() / 1000)
@@ -1413,13 +1952,15 @@ async function runBackgroundGeneration(
     const aiInput = buildAiInput(input, referenceImages)
     console.log("aiInput model in bg", input.model, JSON.stringify(aiInput))
 
-    const isBytedance = input.model.startsWith("bytedance/")
-    const isEvoLinkModel = Boolean(EVOLINK_MODEL_MAP[input.model])
+    const isBytedance =
+      input.media_type !== MIME_TYPES.VIDEO && input.model.startsWith("bytedance/")
+    const isEvoLinkModel =
+      Boolean(EVOLINK_MODEL_MAP[input.model]) || input.media_type === MIME_TYPES.VIDEO
     let result: any
     let finalProvider: string = PROVIDERS.CLOUDFLARE
 
     if (isBytedance) {
-      console.log("generation by bytedance",JSON.stringify(input))
+      console.log("generation by bytedance", JSON.stringify(input))
       const resData = await generateBytedanceImage(c, taskId, input, referenceImages)
       finalProvider = resData.provider
       result = {
@@ -1432,16 +1973,18 @@ async function runBackgroundGeneration(
       await setGenerationTaskProvider(db, taskId, PROVIDERS.EVOLINK)
       const evolinkKey = c.env.EVOLINK_API_KEY
       if (!evolinkKey) {
-        throw new Error("EVOLINK_API_KEY is not configured for this image model.")
+        throw new Error("EVOLINK_API_KEY is not configured for this model.")
       }
       try {
-        console.log("generation by evolink",JSON.stringify(input))
+        console.log("generation by evolink", JSON.stringify(input))
         const providerTaskId = await generateViaEvoLink(
           c,
           taskId,
           evolinkKey,
           input,
-          referenceImages
+          referenceImages,
+          referenceVideos,
+          referenceAudios
         )
         finalProvider = PROVIDERS.EVOLINK
         result = {
@@ -1451,11 +1994,11 @@ async function runBackgroundGeneration(
           },
         }
       } catch (err: any) {
-        throw new Error(`EvoLink image generation failed: ${err.message}`)
+        throw new Error(`EvoLink generation failed: ${err.message}`)
       }
     } else {
       // Call Cloudflare AI
-      console.log("generation by cloudflare ai",JSON.stringify(input))
+      console.log("generation by cloudflare ai", JSON.stringify(input))
       await setGenerationTaskProvider(db, taskId, PROVIDERS.CLOUDFLARE, now)
       result = (await c.env.AI.run(input.model as any, aiInput, {
         gateway: { id: "image-ai-gateway" },
@@ -1488,7 +2031,7 @@ async function runBackgroundGeneration(
         ? [resultPayload.image]
         : []
     if (imageUrls.length === 0) {
-      throw new Error("no image returned from AI")
+      throw new Error("no media returned from AI")
     }
 
     await completeGenerationTask(
@@ -1499,7 +2042,7 @@ async function runBackgroundGeneration(
       input,
       imageUrls,
       finalProvider,
-      MIME_TYPES.IMAGE
+      input.media_type ?? MIME_TYPES.IMAGE
     )
   } catch (error: any) {
     console.error("Background generation task error:", error)
@@ -1681,8 +2224,8 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
   const outputRows = taskRecord.message_id
     ? await c.env.DB.prepare(
         `
-            SELECT id, message_id, output_index, status, image_url, content_type, width, height,
-              file_size, error, created_at, updated_at
+            SELECT id, message_id, output_index, status, image_url, storage_key, content_type,
+              width, height, file_size, duration_ms, fps, has_audio, error, created_at, updated_at
             FROM message_outputs
             WHERE message_id = ? AND status != 'deleted'
             ORDER BY output_index ASC
@@ -1695,10 +2238,14 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
           output_index: number
           status: string
           image_url: string | null
+          storage_key: string | null
           content_type: MimeType
           width: number | null
           height: number | null
           file_size: number | null
+          duration_ms: number | null
+          fps: number | null
+          has_audio: number | null
           error: string | null
           created_at: number
           updated_at: number
@@ -1707,17 +2254,20 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
 
   const outputs = await Promise.all(
     (outputRows.results || []).map(async output => {
-      const { image_url: imageUrl, ...publicOutput } = output
+      const { image_url: imageUrl, storage_key: storageKey, ...publicOutput } = output
+      const objectKey = storageKey || imageUrl
       return {
         ...publicOutput,
         thumbnail_url:
           output.content_type === MIME_TYPES.IMAGE
-            ? await createSignedImageVariantUrl(c.env, imageUrl, "small")
+            ? await createSignedImageVariantUrl(c.env, objectKey, "small")
             : null,
         display_url:
           output.content_type === MIME_TYPES.IMAGE
-            ? await createSignedImageVariantUrl(c.env, imageUrl, "large")
-            : null,
+            ? await createSignedImageVariantUrl(c.env, objectKey, "large")
+            : objectKey
+              ? await createPresignedGetUrl(c.env, objectKey)
+              : null,
       }
     })
   )
@@ -1741,7 +2291,7 @@ export async function handleGetTaskStatus(c: AuthenticatedContext) {
 }
 
 export function getModels(): ModelConfig[] {
-  return getEnabledModels()
+  return getEnabledMediaModels()
 }
 
 export async function handleEvoLinkTaskCheck(env: Env) {

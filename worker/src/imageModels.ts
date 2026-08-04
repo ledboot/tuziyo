@@ -26,7 +26,9 @@ export const IMAGE_MODEL_CATALOG: Record<string, ImageModelDefinition> = {
     promptMaxLength: 2000,
     provider: "ByteDance",
     icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/bytedance.svg",
-    supportsImage: false,
+    supportsImage: true,
+    referenceImageCount: 14,
+    referenceImageFormat: ReferenceImageFormat.URL,
     isNew: false,
     credits: 2,
     options: {
@@ -107,7 +109,9 @@ export const IMAGE_MODEL_CATALOG: Record<string, ImageModelDefinition> = {
     promptMaxLength: 2000,
     provider: "ByteDance",
     icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/bytedance.svg",
-    supportsImage: false,
+    supportsImage: true,
+    referenceImageCount: 14,
+    referenceImageFormat: ReferenceImageFormat.URL,
     isNew: false,
     credits: 3,
     options: {

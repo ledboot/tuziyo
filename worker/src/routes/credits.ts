@@ -1,6 +1,10 @@
 import { v4 as uuidv4 } from "uuid"
 import type { AuthenticatedContext } from "../types"
-import { MODEL_CREDITS as CREDIT_MAP, MODEL_OPTIONS_CONFIG } from "../imageModels"
+import {
+  MEDIA_MODEL_CATALOG,
+  MODEL_CREDITS as CREDIT_MAP,
+  MODEL_OPTIONS_CONFIG,
+} from "../mediaModels"
 
 export interface CreditInfo {
   balance: number
@@ -204,6 +208,66 @@ export async function grantSubscriptionCredits(
 }
 
 export function calculateRequiredCredits(model: string, input: any): number {
+  const modelDefinition = MEDIA_MODEL_CATALOG[model]
+  if (modelDefinition?.pricingMode === "per_second") {
+    const optionsConfig = MODEL_OPTIONS_CONFIG[model]
+    const durationValue = input.duration ?? optionsConfig?.duration?.defaultValue ?? 5
+    const duration = durationValue === "auto" ? 10 : Math.max(1, Number(durationValue) || 5)
+    let creditsPerSecond = modelDefinition.creditsPerSecond || 0
+    const selectedOptions: Record<string, string> = {}
+    if (optionsConfig) {
+      for (const [key, option] of Object.entries(optionsConfig)) {
+        const selectedValue = input[key] ?? option.defaultValue
+        if (selectedValue !== undefined) selectedOptions[key] = String(selectedValue)
+        const premium = option.valueCredits?.[String(selectedValue)]
+        if (typeof premium === "number") creditsPerSecond += premium
+      }
+    }
+    const override = modelDefinition.creditOverrides?.find(rule =>
+      Object.entries(rule.when).every(([key, value]) => selectedOptions[key] === value)
+    )
+    if (override) creditsPerSecond = override.creditsPerSecond
+
+    let totalCredits = creditsPerSecond * duration
+    const referencePricing = modelDefinition.referenceCredits
+    if (referencePricing) {
+      const imageCount = Math.max(
+        0,
+        Number(input.billing_reference_image_count ?? input.reference_images?.length) || 0
+      )
+      totalCredits += imageCount * (referencePricing.imagePerItem ?? 0)
+      if (referencePricing.imagePerItemAfterCount) {
+        totalCredits +=
+          Math.max(0, imageCount - referencePricing.imagePerItemAfterCount.count) *
+          referencePricing.imagePerItemAfterCount.credits
+      }
+
+      const resolution = String(
+        selectedOptions.resolution ??
+          input.resolution ??
+          optionsConfig?.resolution?.defaultValue ??
+          ""
+      )
+      const videoRate =
+        referencePricing.videoPerSecondByResolution?.[resolution] ??
+        referencePricing.videoPerSecond ??
+        0
+      const billedReferenceSeconds = (values: unknown) =>
+        Array.isArray(values)
+          ? values.reduce<number>((sum, value) => {
+              const seconds = Number(value)
+              return sum + (Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 0)
+            }, 0)
+          : 0
+      totalCredits += billedReferenceSeconds(input.billing_reference_video_durations) * videoRate
+      totalCredits +=
+        billedReferenceSeconds(input.billing_reference_audio_durations) *
+        (referencePricing.audioPerSecond ?? 0)
+    }
+
+    return Math.ceil(totalCredits)
+  }
+
   const baseCredits = CREDIT_MAP[model] || 0
   if (!baseCredits) return 0
 

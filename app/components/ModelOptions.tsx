@@ -13,7 +13,10 @@ export interface OptionGroup {
   options: OptionItem[]
   value: string
   onChange: (value: string) => void
-  type?: "select" | "checkbox"
+  type?: "select" | "checkbox" | "range"
+  min?: number
+  max?: number
+  step?: number
 }
 
 interface ModelOptionsProps {
@@ -43,71 +46,105 @@ export function ModelOptions({ groups, className = "" }: ModelOptionsProps) {
     })
   }, [isOpen])
 
-  // Close on outside click
+  // Keep the menu open while interacting with its trigger or portaled content.
   useEffect(() => {
     if (!isOpen) return
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        buttonRef.current?.contains(e.target as Node) ||
-        dropdownRef.current?.contains(e.target as Node)
-      ) return
+
+    const isWithinMenu = (target: EventTarget | null) =>
+      target instanceof Node &&
+      (buttonRef.current?.contains(target) || dropdownRef.current?.contains(target))
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isWithinMenu(event.target)) return
       setIsOpen(false)
     }
+
+    const handleFocusOutside = (event: FocusEvent) => {
+      if (isWithinMenu(event.target)) return
+      setIsOpen(false)
+    }
+
     document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
+    document.addEventListener("focusin", handleFocusOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("focusin", handleFocusOutside)
+    }
   }, [isOpen])
 
   if (groups.length === 0) return null
 
-  const selectGroups = groups.filter(g => g.type !== "checkbox")
+  const controlGroups = groups.filter(g => g.type !== "checkbox")
   const toggleGroups = groups.filter(g => g.type === "checkbox")
 
-  const summaryText = selectGroups
+  const summaryText = controlGroups
     .map(g => {
       const selected = g.options.find(o => o.value === g.value)
-      return selected?.label || g.value
+      const label = selected?.label || g.value
+      return g.id === "duration" && label !== "Auto" ? `${label}s` : label
     })
-    .join(" / ")
+    .join(" · ")
 
   const toggleSummaryText = toggleGroups
     .filter(g => g.value === "true")
-    .map(g => g.label)
+    .map(g => (g.id === "generate_audio" ? "Audio" : g.label))
     .join(", ")
 
-  const displayText = summaryText + (toggleSummaryText ? ` • ${toggleSummaryText}` : "")
+  const displayText = summaryText + (toggleSummaryText ? ` · ${toggleSummaryText}` : "")
 
   const dropdown = isOpen ? (
     <div
       ref={dropdownRef}
       className="liquid-glass-dropdown rounded-box border-none"
       style={{ ...dropdownStyle, width: "max-content" }}
+      role="dialog"
+      aria-label="Model options"
     >
       <div className="p-2">
-        {selectGroups.map((group, groupIdx) => (
+        {controlGroups.map((group, groupIdx) => (
           <div key={group.id} className="mb-2 last:mb-0">
             {groupIdx > 0 && <div className="border-t border-base-200 my-2" />}
             <div className="px-3 py-2">
               <div className="text-xs text-base-content font-medium mb-2 whitespace-nowrap">
                 {group.label}
               </div>
-              <div className="flex w-max gap-2">
-                {group.options.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => {
-                      group.onChange(opt.value)
-                      setIsOpen(false)
-                    }}
-                    className={`w-max whitespace-nowrap px-2 py-1.5 text-sm rounded-lg transition-colors cursor-pointer text-center ${
-                      group.value === opt.value
-                        ? "text-primary font-semibold underline underline-offset-4 decoration-2"
-                        : "bg-transparent text-base-content hover:bg-white/10"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+              {group.type === "range" ? (
+                <div className="w-64 px-1 pb-1">
+                  <div className="mb-2 flex items-center justify-between text-xs text-base-content/70">
+                    <span>{group.min ?? 0}s</span>
+                    <strong className="text-sm text-primary">{group.value}s</strong>
+                    <span>{group.max ?? 100}s</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={group.min}
+                    max={group.max}
+                    step={group.step ?? 1}
+                    value={group.value}
+                    onChange={event => group.onChange(event.target.value)}
+                    className="range range-primary range-sm w-full"
+                    aria-label={`${group.label}: ${group.value} seconds`}
+                    aria-valuetext={`${group.value} seconds`}
+                  />
+                </div>
+              ) : (
+                <div className="flex w-max gap-2">
+                  {group.options.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => group.onChange(opt.value)}
+                      className={`w-max whitespace-nowrap px-2 py-1.5 text-sm rounded-lg transition-colors cursor-pointer text-center ${
+                        group.value === opt.value
+                          ? "text-primary font-semibold underline underline-offset-4 decoration-2"
+                          : "bg-transparent text-base-content hover:bg-white/10"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -138,16 +175,23 @@ export function ModelOptions({ groups, className = "" }: ModelOptionsProps) {
   ) : null
 
   return (
-    <div className={`relative inline-block w-max shrink-0 ${className}`}>
+    <div className={`liquid-model-options relative inline-block min-w-0 ${className}`}>
       <button
+        type="button"
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex w-max items-center gap-2 whitespace-nowrap px-3 py-2 liquid-glass rounded-lg border-none cursor-pointer hover:ring-1 hover:ring-primary transition-all"
+        className="inline-flex min-w-0 items-center gap-2 whitespace-nowrap px-3 py-2 liquid-glass rounded-lg border-none cursor-pointer hover:ring-1 hover:ring-primary focus-visible:ring-2 focus-visible:ring-white/70 transition-[box-shadow,background-color]"
+        aria-label={`Model options: ${displayText || "Select options"}`}
+        aria-expanded={isOpen}
+        aria-haspopup="dialog"
       >
-        <SlidersHorizontal size={16} className="shrink-0 text-white" />
-        <span className="text-sm whitespace-nowrap">{displayText || "Select options"}</span>
+        <SlidersHorizontal size={16} className="shrink-0 text-white" aria-hidden="true" />
+        <span className="liquid-model-options__summary text-sm">
+          {displayText || "Select options"}
+        </span>
         <ChevronDown
           className={`size-4 shrink-0 transition-transform text-white ${isOpen ? "rotate-180" : ""}`}
+          aria-hidden="true"
         />
       </button>
 
