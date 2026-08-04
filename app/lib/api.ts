@@ -6,6 +6,10 @@ export interface ApiModelOption {
   values: string[]
   defaultValue?: string
   valueCredits?: Record<string, number>
+  uiControl?: "slider"
+  min?: number
+  max?: number
+  step?: number
 }
 
 export interface ApiModel {
@@ -13,6 +17,7 @@ export interface ApiModel {
   name: string
   provider: string
   promptMaxLength: number
+  promptLimits?: PromptLimits
   sortOrder: number
   icon: string
   supportsImage?: boolean
@@ -44,7 +49,64 @@ export interface ApiModel {
     when: Record<string, string>
     creditsPerSecond: number
   }>
+  referenceCredits?: ReferenceCreditPricing
   pollTimeoutSeconds?: number
+  referenceImageConstraints?: ReferenceImageConstraints
+  referenceMediaConstraints?: ReferenceMediaConstraints
+}
+
+export interface ReferenceCreditPricing {
+  imagePerItem?: number
+  videoPerSecond?: number
+  videoPerSecondByResolution?: Record<string, number>
+  audioPerSecond?: number
+}
+
+export interface PromptLimitRule {
+  max: number
+  unit: "characters" | "words"
+  exclusive?: boolean
+}
+
+export interface PromptLimits {
+  default: PromptLimitRule
+  chinese?: PromptLimitRule
+}
+
+export interface ReferenceImageConstraints {
+  mimeTypes: string[]
+  maxBytes: number
+  minWidth: number
+  maxWidth?: number
+  minHeight: number
+  maxHeight?: number
+  minAspectRatio: number
+  maxAspectRatio: number
+}
+
+export interface ReferenceVideoConstraints extends ReferenceImageConstraints {
+  minDurationSeconds: number
+  maxDurationSeconds: number
+  maxTotalDurationSeconds: number
+  minFramePixels: number
+  maxFramePixels: number
+  minFps: number
+  maxFps: number
+}
+
+export interface ReferenceAudioConstraints {
+  mimeTypes: string[]
+  maxBytes: number
+  minDurationSeconds: number
+  maxDurationSeconds: number
+  maxTotalDurationSeconds: number
+}
+
+export interface ReferenceMediaConstraints {
+  totalMaxBytes: number
+  image: ReferenceImageConstraints
+  video: ReferenceVideoConstraints
+  audio: ReferenceAudioConstraints
 }
 
 export interface ApiToolkitShowcaseItem {
@@ -350,6 +412,7 @@ export const api = {
       image_search?: string | boolean
       thinking_level?: string
       reference_images?: string[]
+      reference_image_roles?: Array<"start_frame" | "end_frame" | "reference">
       media_type?: "image" | "video"
       generation_mode?:
         | "text_to_image"
@@ -373,6 +436,7 @@ export const api = {
         mediaType?: "image" | "video"
         generationMode?: string
         pollTimeoutSeconds?: number
+        requiredCredits?: number
         error?: string
       }>("/api/generate", {
         method: "POST",

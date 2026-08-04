@@ -11,11 +11,28 @@ export const ModelOptionSchema = z.object({
   values: z.array(z.string()).default([]),
   defaultValue: z.string().optional(),
   valueCredits: z.record(z.number()).optional(),
+  uiControl: z.enum(["slider"]).optional(),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  step: z.number().positive().optional(),
 })
 
 export const ModelCreditOverrideSchema = z.object({
   when: z.record(z.string()),
   creditsPerSecond: z.number().nonnegative(),
+})
+
+const ReferenceCreditPricingSchema = z.object({
+  imagePerItem: z.number().nonnegative().optional(),
+  videoPerSecond: z.number().nonnegative().optional(),
+  videoPerSecondByResolution: z.record(z.number().nonnegative()).optional(),
+  audioPerSecond: z.number().nonnegative().optional(),
+})
+
+const PromptLimitRuleSchema = z.object({
+  max: z.number().int().positive(),
+  unit: z.enum(["characters", "words"]),
+  exclusive: z.boolean().optional(),
 })
 
 export const VideoInputModeSchema = z.object({
@@ -29,11 +46,46 @@ export const VideoInputModeSchema = z.object({
   referenceTagStyle: z.enum(["at", "character"]).optional(),
 })
 
+const ReferenceImageConstraintsSchema = z.object({
+  mimeTypes: z.array(z.string()),
+  maxBytes: z.number().positive(),
+  minWidth: z.number().positive(),
+  maxWidth: z.number().positive().optional(),
+  minHeight: z.number().positive(),
+  maxHeight: z.number().positive().optional(),
+  minAspectRatio: z.number().positive(),
+  maxAspectRatio: z.number().positive(),
+})
+
+const ReferenceVideoConstraintsSchema = ReferenceImageConstraintsSchema.extend({
+  minDurationSeconds: z.number().positive(),
+  maxDurationSeconds: z.number().positive(),
+  maxTotalDurationSeconds: z.number().positive(),
+  minFramePixels: z.number().positive(),
+  maxFramePixels: z.number().positive(),
+  minFps: z.number().positive(),
+  maxFps: z.number().positive(),
+})
+
+const ReferenceAudioConstraintsSchema = z.object({
+  mimeTypes: z.array(z.string()),
+  maxBytes: z.number().positive(),
+  minDurationSeconds: z.number().positive(),
+  maxDurationSeconds: z.number().positive(),
+  maxTotalDurationSeconds: z.number().positive(),
+})
+
 export const ModelSchema = z.object({
   id: z.string(),
   name: z.string(),
   provider: z.string(),
   promptMaxLength: z.number().int().positive(),
+  promptLimits: z
+    .object({
+      default: PromptLimitRuleSchema,
+      chinese: PromptLimitRuleSchema.optional(),
+    })
+    .optional(),
   sortOrder: z.number(),
   icon: z.string(),
   supportsImage: z.boolean().optional(),
@@ -61,7 +113,17 @@ export const ModelSchema = z.object({
   pricingMode: z.enum(["fixed", "per_second"]).default("fixed"),
   creditsPerSecond: z.number().optional(),
   creditOverrides: z.array(ModelCreditOverrideSchema).optional(),
+  referenceCredits: ReferenceCreditPricingSchema.optional(),
   pollTimeoutSeconds: z.number().optional(),
+  referenceImageConstraints: ReferenceImageConstraintsSchema.optional(),
+  referenceMediaConstraints: z
+    .object({
+      totalMaxBytes: z.number().positive(),
+      image: ReferenceImageConstraintsSchema,
+      video: ReferenceVideoConstraintsSchema,
+      audio: ReferenceAudioConstraintsSchema,
+    })
+    .optional(),
 })
 
 export type ModelOptionType = z.infer<typeof ModelOptionTypeSchema>
@@ -79,6 +141,10 @@ export interface PersistedReferenceMedia {
   kind: "image" | "video" | "audio"
   role: "start_frame" | "end_frame" | "reference"
   fileName?: string
+  width?: number
+  height?: number
+  durationSeconds?: number
+  fps?: number
 }
 
 interface ModelState {

@@ -3125,8 +3125,6 @@ select {
 .liquid-video-input-menu {
   position: absolute;
   z-index: 120;
-  top: auto;
-  bottom: calc(100% + 0.5rem);
   left: 0;
   display: flex;
   flex-direction: column;
@@ -3140,6 +3138,16 @@ select {
   background: rgba(30, 30, 33, 0.94);
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38);
   backdrop-filter: none;
+}
+
+.liquid-video-input-menu.is-up {
+  top: auto;
+  bottom: calc(100% + 0.5rem);
+}
+
+.liquid-video-input-menu.is-down {
+  top: calc(100% + 0.5rem);
+  bottom: auto;
 }
 
 .liquid-video-input-menu button {

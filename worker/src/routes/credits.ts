@@ -227,7 +227,40 @@ export function calculateRequiredCredits(model: string, input: any): number {
       Object.entries(rule.when).every(([key, value]) => selectedOptions[key] === value)
     )
     if (override) creditsPerSecond = override.creditsPerSecond
-    return creditsPerSecond * duration
+
+    let totalCredits = creditsPerSecond * duration
+    const referencePricing = modelDefinition.referenceCredits
+    if (referencePricing) {
+      const imageCount = Math.max(
+        0,
+        Number(input.billing_reference_image_count ?? input.reference_images?.length) || 0
+      )
+      totalCredits += imageCount * (referencePricing.imagePerItem ?? 0)
+
+      const resolution = String(
+        selectedOptions.resolution ??
+          input.resolution ??
+          optionsConfig?.resolution?.defaultValue ??
+          ""
+      )
+      const videoRate =
+        referencePricing.videoPerSecondByResolution?.[resolution] ??
+        referencePricing.videoPerSecond ??
+        0
+      const billedReferenceSeconds = (values: unknown) =>
+        Array.isArray(values)
+          ? values.reduce<number>((sum, value) => {
+              const seconds = Number(value)
+              return sum + (Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 0)
+            }, 0)
+          : 0
+      totalCredits += billedReferenceSeconds(input.billing_reference_video_durations) * videoRate
+      totalCredits +=
+        billedReferenceSeconds(input.billing_reference_audio_durations) *
+        (referencePricing.audioPerSecond ?? 0)
+    }
+
+    return Math.ceil(totalCredits)
   }
 
   const baseCredits = CREDIT_MAP[model] || 0

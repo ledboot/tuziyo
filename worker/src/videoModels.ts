@@ -39,7 +39,72 @@ interface VideoModelDefinition extends Omit<ModelConfig, "id"> {
 
 const ALL_PLANS: readonly ModelPlan[] = ["starter", "professional", "creator"]
 const VIDEO_RATIOS = ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"]
-const SHORT_VIDEO_DURATIONS = ["4", "5", "6", "8", "10", "12", "15"]
+const integerRange = (min: number, max: number) =>
+  Array.from({ length: max - min + 1 }, (_, index) => String(index + min))
+const SEEDANCE_REFERENCE_MEDIA_CONSTRAINTS = {
+  totalMaxBytes: 64_000_000,
+  image: {
+    mimeTypes: ["image/jpeg", "image/png", "image/webp"],
+    maxBytes: 30_000_000,
+    minWidth: 300,
+    maxWidth: 6000,
+    minHeight: 300,
+    maxHeight: 6000,
+    minAspectRatio: 0.4,
+    maxAspectRatio: 2.5,
+  },
+  video: {
+    mimeTypes: ["video/mp4", "video/quicktime"],
+    maxBytes: 50_000_000,
+    minWidth: 300,
+    maxWidth: 6000,
+    minHeight: 300,
+    maxHeight: 6000,
+    minAspectRatio: 0.4,
+    maxAspectRatio: 2.5,
+    minDurationSeconds: 2,
+    maxDurationSeconds: 15,
+    maxTotalDurationSeconds: 15,
+    minFramePixels: 409_600,
+    maxFramePixels: 2_086_876,
+    minFps: 24,
+    maxFps: 60,
+  },
+  audio: {
+    mimeTypes: ["audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav"],
+    maxBytes: 15_000_000,
+    minDurationSeconds: 2,
+    maxDurationSeconds: 15,
+    maxTotalDurationSeconds: 15,
+  },
+}
+const KLING_V3_TURBO_IMAGE_CONSTRAINTS = {
+  mimeTypes: ["image/jpeg", "image/png"],
+  maxBytes: 50_000_000,
+  minWidth: 300,
+  minHeight: 300,
+  minAspectRatio: 0.4,
+  maxAspectRatio: 2.5,
+}
+const KLING_V3_IMAGE_CONSTRAINTS = {
+  ...KLING_V3_TURBO_IMAGE_CONSTRAINTS,
+  maxBytes: 10_000_000,
+}
+const SEEDANCE_PROMPT_LIMITS = {
+  default: { max: 1000, unit: "words" as const },
+  chinese: { max: 500, unit: "characters" as const },
+}
+const KLING_V3_PROMPT_LIMITS = {
+  default: { max: 2500, unit: "characters" as const, exclusive: true },
+}
+const VEO_3_1_PROMPT_LIMITS = {
+  default: { max: 2000, unit: "characters" as const, exclusive: true },
+}
+const HAPPYHORSE_PROMPT_LIMITS = {
+  default: { max: 5000, unit: "characters" as const },
+  chinese: { max: 2500, unit: "characters" as const },
+}
+const IMAGE_REFERENCE_CREDITS = { imagePerItem: 1 }
 const START_END_FRAME_MODE = (imageCount = 2): VideoInputModeConfig => ({
   id: "start_end_frame",
   label: imageCount > 1 ? "Start & End Frame" : "Start Frame",
@@ -94,12 +159,24 @@ const audioOption = (valueCredits?: Record<string, number>): ModelOption => ({
   ...(valueCredits ? { valueCredits } : {}),
 })
 
+const durationSlider = (min = 4, max = 15, defaultValue = "5"): ModelOption => ({
+  name: "Duration",
+  type: ModelOptionType.SELECT,
+  values: integerRange(min, max),
+  defaultValue,
+  uiControl: "slider",
+  min,
+  max,
+  step: 1,
+})
+
 export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
   "bytedance/seedance-2.0": {
     enabled: true,
     sortOrder: 20,
     name: "Seedance 2.0",
     promptMaxLength: 4000,
+    promptLimits: SEEDANCE_PROMPT_LIMITS,
     provider: "ByteDance",
     icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/bytedance.svg",
     supportsImage: true,
@@ -108,9 +185,14 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     supportsAudio: true,
     referenceImageCount: 9,
     referenceImageFormat: ReferenceImageFormat.URL,
-    isNew: true,
+    isNew: false,
     credits: 0,
     creditsPerSecond: 4,
+    referenceCredits: {
+      imagePerItem: 1,
+      videoPerSecondByResolution: { "480p": 3, "720p": 6, "1080p": 13, "4k": 27 },
+      audioPerSecond: 1,
+    },
     pricingMode: "per_second",
     pollTimeoutSeconds: 20 * 60,
     mediaType: "video",
@@ -120,6 +202,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
       IMAGE_REFERENCE_MODE(9, 3, "at"),
       VIDEO_REFERENCE_MODE(9, 3, 3),
     ],
+    referenceMediaConstraints: SEEDANCE_REFERENCE_MEDIA_CONSTRAINTS,
     providerConfig: {
       models: {
         text_to_video: "seedance-2.0-text-to-video",
@@ -133,7 +216,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     },
     options: {
       aspect_ratio: select("Aspect Ratio", VIDEO_RATIOS, "16:9"),
-      duration: select("Duration", SHORT_VIDEO_DURATIONS, "5"),
+      duration: durationSlider(),
       resolution: select("Resolution", ["480p", "720p", "1080p", "4k"], "480p", {
         "720p": 5,
         "1080p": 18,
@@ -147,6 +230,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     sortOrder: 21,
     name: "Seedance 2.0 Fast",
     promptMaxLength: 4000,
+    promptLimits: SEEDANCE_PROMPT_LIMITS,
     provider: "ByteDance",
     icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/bytedance.svg",
     supportsImage: true,
@@ -155,9 +239,14 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     supportsAudio: true,
     referenceImageCount: 9,
     referenceImageFormat: ReferenceImageFormat.URL,
-    isNew: true,
+    isNew: false,
     credits: 0,
-    creditsPerSecond: 3,
+    creditsPerSecond: 4,
+    referenceCredits: {
+      imagePerItem: 1,
+      videoPerSecondByResolution: { "480p": 2, "720p": 5 },
+      audioPerSecond: 1,
+    },
     pricingMode: "per_second",
     pollTimeoutSeconds: 20 * 60,
     mediaType: "video",
@@ -167,6 +256,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
       IMAGE_REFERENCE_MODE(9, 3, "at"),
       VIDEO_REFERENCE_MODE(9, 3, 3),
     ],
+    referenceMediaConstraints: SEEDANCE_REFERENCE_MEDIA_CONSTRAINTS,
     providerConfig: {
       models: {
         text_to_video: "seedance-2.0-fast-text-to-video",
@@ -180,8 +270,8 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     },
     options: {
       aspect_ratio: select("Aspect Ratio", VIDEO_RATIOS, "16:9"),
-      duration: select("Duration", SHORT_VIDEO_DURATIONS, "5"),
-      resolution: select("Resolution", ["480p", "720p"], "480p", { "720p": 4 }),
+      duration: durationSlider(),
+      resolution: select("Resolution", ["480p", "720p"], "480p", { "720p": 3 }),
       generate_audio: audioOption(),
     },
   },
@@ -190,6 +280,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     sortOrder: 22,
     name: "Seedance 2.0 Mini",
     promptMaxLength: 4000,
+    promptLimits: SEEDANCE_PROMPT_LIMITS,
     provider: "ByteDance",
     icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/bytedance.svg",
     supportsImage: true,
@@ -198,9 +289,14 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     supportsAudio: true,
     referenceImageCount: 9,
     referenceImageFormat: ReferenceImageFormat.URL,
-    isNew: true,
+    isNew: false,
     credits: 0,
     creditsPerSecond: 2,
+    referenceCredits: {
+      imagePerItem: 1,
+      videoPerSecondByResolution: { "480p": 2, "720p": 3 },
+      audioPerSecond: 1,
+    },
     pricingMode: "per_second",
     pollTimeoutSeconds: 20 * 60,
     mediaType: "video",
@@ -210,6 +306,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
       IMAGE_REFERENCE_MODE(9, 3, "at"),
       VIDEO_REFERENCE_MODE(9, 3, 3),
     ],
+    referenceMediaConstraints: SEEDANCE_REFERENCE_MEDIA_CONSTRAINTS,
     providerConfig: {
       models: {
         text_to_video: "seedance-2.0-mini-text-to-video",
@@ -223,7 +320,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     },
     options: {
       aspect_ratio: select("Aspect Ratio", VIDEO_RATIOS, "16:9"),
-      duration: select("Duration", SHORT_VIDEO_DURATIONS, "5"),
+      duration: durationSlider(),
       resolution: select("Resolution", ["480p", "720p"], "480p", { "720p": 3 }),
       generate_audio: audioOption(),
     },
@@ -241,9 +338,10 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     supportsAudio: true,
     referenceImageCount: 6,
     referenceImageFormat: ReferenceImageFormat.URL,
-    isNew: true,
+    isNew: false,
     credits: 0,
     creditsPerSecond: 5,
+    referenceCredits: IMAGE_REFERENCE_CREDITS,
     pricingMode: "per_second",
     pollTimeoutSeconds: 20 * 60,
     mediaType: "video",
@@ -260,7 +358,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     },
     options: {
       aspect_ratio: select("Aspect Ratio", ["16:9", "9:16", "auto"], "16:9"),
-      duration: select("Duration", ["3", "4", "5", "6", "8", "10", "auto"], "10"),
+      duration: select("Duration", ["3", "4", "5", "6", "7", "8", "9", "10", "auto"], "10"),
     },
   },
   "kling/kling-3.0-turbo": {
@@ -268,6 +366,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     sortOrder: 24,
     name: "Kling 3.0 Turbo",
     promptMaxLength: 2500,
+    promptLimits: KLING_V3_PROMPT_LIMITS,
     provider: "Kling AI",
     icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/kling.svg",
     supportsImage: true,
@@ -276,14 +375,16 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     supportsAudio: false,
     referenceImageCount: 1,
     referenceImageFormat: ReferenceImageFormat.URL,
-    isNew: true,
+    isNew: false,
     credits: 0,
     creditsPerSecond: 5,
+    referenceCredits: IMAGE_REFERENCE_CREDITS,
     pricingMode: "per_second",
     pollTimeoutSeconds: 20 * 60,
     mediaType: "video",
     generationModes: ["text_to_video", "image_to_video"],
     videoInputModes: [START_END_FRAME_MODE(1)],
+    referenceImageConstraints: KLING_V3_TURBO_IMAGE_CONSTRAINTS,
     providerConfig: {
       models: {
         text_to_video: "kling-v3-turbo-text-to-video",
@@ -297,7 +398,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     },
     options: {
       aspect_ratio: select("Aspect Ratio", ["16:9", "9:16", "1:1"], "16:9"),
-      duration: select("Duration", ["3", "5", "8", "10", "15"], "5"),
+      duration: durationSlider(3, 15),
       resolution: select("Resolution", ["720p", "1080p"], "720p", { "1080p": 1 }),
     },
   },
@@ -306,6 +407,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     sortOrder: 25,
     name: "Kling 3.0",
     promptMaxLength: 2500,
+    promptLimits: KLING_V3_PROMPT_LIMITS,
     provider: "Kling AI",
     icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/kling.svg",
     supportsImage: true,
@@ -314,9 +416,10 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     supportsAudio: true,
     referenceImageCount: 2,
     referenceImageFormat: ReferenceImageFormat.URL,
-    isNew: true,
+    isNew: false,
     credits: 0,
     creditsPerSecond: 4,
+    referenceCredits: IMAGE_REFERENCE_CREDITS,
     creditOverrides: [
       {
         when: { resolution: "4k", generate_audio: "true" },
@@ -328,6 +431,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     mediaType: "video",
     generationModes: ["text_to_video", "image_to_video"],
     videoInputModes: [START_END_FRAME_MODE()],
+    referenceImageConstraints: KLING_V3_IMAGE_CONSTRAINTS,
     providerConfig: {
       models: {
         text_to_video: "kling-v3-text-to-video",
@@ -342,7 +446,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     },
     options: {
       aspect_ratio: select("Aspect Ratio", ["16:9", "9:16", "1:1"], "16:9"),
-      duration: select("Duration", ["3", "5", "8", "10", "15"], "5"),
+      duration: durationSlider(3, 15),
       resolution: select("Resolution", ["720p", "1080p", "4k"], "720p", {
         "1080p": 1,
         "4k": 13,
@@ -355,6 +459,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     sortOrder: 26,
     name: "Veo 3.1 Pro",
     promptMaxLength: 8000,
+    promptLimits: VEO_3_1_PROMPT_LIMITS,
     provider: "Google",
     icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/gemini.svg",
     supportsImage: true,
@@ -363,9 +468,10 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     supportsAudio: true,
     referenceImageCount: 2,
     referenceImageFormat: ReferenceImageFormat.URL,
-    isNew: true,
+    isNew: false,
     credits: 0,
     creditsPerSecond: 8,
+    referenceCredits: IMAGE_REFERENCE_CREDITS,
     pricingMode: "per_second",
     pollTimeoutSeconds: 20 * 60,
     mediaType: "video",
@@ -402,6 +508,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     sortOrder: 27,
     name: "Veo 3.1 Fast",
     promptMaxLength: 8000,
+    promptLimits: VEO_3_1_PROMPT_LIMITS,
     provider: "Google",
     icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/gemini.svg",
     supportsImage: true,
@@ -410,9 +517,10 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     supportsAudio: true,
     referenceImageCount: 2,
     referenceImageFormat: ReferenceImageFormat.URL,
-    isNew: true,
+    isNew: false,
     credits: 0,
     creditsPerSecond: 4,
+    referenceCredits: IMAGE_REFERENCE_CREDITS,
     pricingMode: "per_second",
     pollTimeoutSeconds: 20 * 60,
     mediaType: "video",
@@ -457,9 +565,10 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     supportsAudio: false,
     referenceImageCount: 1,
     referenceImageFormat: ReferenceImageFormat.URL,
-    isNew: true,
+    isNew: false,
     credits: 0,
     creditsPerSecond: 1,
+    referenceCredits: IMAGE_REFERENCE_CREDITS,
     pricingMode: "per_second",
     pollTimeoutSeconds: 20 * 60,
     mediaType: "video",
@@ -477,7 +586,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     },
     options: {
       aspect_ratio: select("Aspect Ratio", ["16:9", "9:16", "1:1", "3:2", "2:3"], "16:9"),
-      duration: select("Duration", ["6", "10", "15", "20", "30"], "6"),
+      duration: durationSlider(6, 30, "6"),
       resolution: select("Resolution", ["480p", "720p"], "480p", { "720p": 1 }),
       mode: select("Style", ["normal", "fun", "spicy"], "normal"),
     },
@@ -487,6 +596,7 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     sortOrder: 29,
     name: "HappyHorse 1.1",
     promptMaxLength: 5000,
+    promptLimits: HAPPYHORSE_PROMPT_LIMITS,
     provider: "HappyHorse",
     icon: "https://unpkg.com/@lobehub/icons-static-svg@1.94.0/icons/happyhorse.svg",
     supportsImage: true,
@@ -495,9 +605,10 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
     supportsAudio: false,
     referenceImageCount: 9,
     referenceImageFormat: ReferenceImageFormat.URL,
-    isNew: true,
+    isNew: false,
     credits: 0,
     creditsPerSecond: 6,
+    referenceCredits: IMAGE_REFERENCE_CREDITS,
     pricingMode: "per_second",
     pollTimeoutSeconds: 20 * 60,
     mediaType: "video",

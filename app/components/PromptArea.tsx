@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type CSSProperties, type FocusEvent } from "react"
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FocusEvent,
+} from "react"
 import { createPortal } from "react-dom"
 import {
   X,
@@ -26,6 +33,19 @@ import {
   type PersistedReferenceMedia,
 } from "~/stores/modelStore"
 import { api, getApiErrorMessage } from "~/lib/api"
+import {
+  inspectReferenceMedia,
+  validateReferenceFile,
+  validateReferenceImage,
+  validateReferenceSelection,
+  type ReferenceMediaMetadata,
+} from "~/lib/referenceMediaValidation"
+import {
+  formatPromptLimit,
+  getPromptLimitMessage,
+  getPromptLimitStatus,
+} from "~/lib/promptValidation"
+import { getFloatingMenuPlacement, type VerticalPlacement } from "~/lib/floatingPlacement"
 import {
   classifyAnalyticsError,
   getCreditBalanceBucket,
@@ -118,6 +138,10 @@ export interface UploadedImage {
   kind?: ReferenceMediaKind
   role?: ReferenceMediaRole
   fileName?: string
+  width?: number
+  height?: number
+  durationSeconds?: number
+  fps?: number
 }
 
 function getReferenceAssetByTag(tag: string, assets: UploadedImage[]) {
@@ -462,7 +486,10 @@ function buildOptionGroups(
           label: formatOptionLabel(optionValue),
         })),
         value,
-        type: option.type,
+        type: option.uiControl === "slider" ? "range" : option.type,
+        min: option.min,
+        max: option.max,
+        step: option.step,
         onChange: (nextValue: string) => onChange({ ...options, [key]: nextValue }),
       },
     ]
@@ -472,7 +499,7 @@ function buildOptionGroups(
 function calculateRequiredCredits(
   model: Model | undefined,
   normalizedOptions: Record<string, string>,
-  referenceImageCount: number
+  referenceMedia: UploadedImage[]
 ): number {
   if (!model) return 0
   if (model.pricingMode === "per_second") {
@@ -492,7 +519,29 @@ function calculateRequiredCredits(
     if (override) creditsPerSecond = override.creditsPerSecond
     const durationValue = normalizedOptions.duration ?? model.options?.duration?.defaultValue ?? "5"
     const duration = durationValue === "auto" ? 10 : Math.max(1, Number(durationValue) || 5)
-    return creditsPerSecond * duration
+    let totalCredits = creditsPerSecond * duration
+    const referencePricing = model.referenceCredits
+    if (referencePricing) {
+      totalCredits +=
+        referenceMedia.filter(item => (item.kind ?? "image") === "image").length *
+        (referencePricing.imagePerItem ?? 0)
+      const resolution =
+        selectedOptions.resolution ??
+        normalizedOptions.resolution ??
+        model.options?.resolution?.defaultValue ??
+        ""
+      const videoRate =
+        referencePricing.videoPerSecondByResolution?.[resolution] ??
+        referencePricing.videoPerSecond ??
+        0
+      const billedSeconds = (kind: "video" | "audio") =>
+        referenceMedia
+          .filter(item => item.kind === kind)
+          .reduce((sum, item) => sum + Math.ceil(item.durationSeconds ?? 0), 0)
+      totalCredits += billedSeconds("video") * videoRate
+      totalCredits += billedSeconds("audio") * (referencePricing.audioPerSecond ?? 0)
+    }
+    return Math.ceil(totalCredits)
   }
 
   const baseCredits = model.credits || 0
@@ -513,7 +562,7 @@ function calculateRequiredCredits(
   const numImages = Math.max(1, Number(normalizedOptions["num_images"]) || 1)
   let totalCredits = singleImageCredits * numImages
 
-  totalCredits += referenceImageCount * 5
+  totalCredits += referenceMedia.filter(item => (item.kind ?? "image") === "image").length * 5
 
   return totalCredits
 }
@@ -554,6 +603,7 @@ export default function PromptArea({
   const [hoveredImage, setHoveredImage] = useState<{ url: string; rect: DOMRect } | null>(null)
   const [videoInputMode, setVideoInputMode] = useState<VideoInputMode | null>(null)
   const [showVideoInputMenu, setShowVideoInputMenu] = useState(false)
+  const [videoInputMenuPlacement, setVideoInputMenuPlacement] = useState<VerticalPlacement>("up")
   const [referenceMention, setReferenceMention] = useState<ReferenceMentionState | null>(null)
   const [referenceMediaRefreshNonce, setReferenceMediaRefreshNonce] = useState(0)
 
@@ -566,6 +616,8 @@ export default function PromptArea({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoFileInputRef = useRef<HTMLInputElement>(null)
   const audioFileInputRef = useRef<HTMLInputElement>(null)
+  const videoInputMenuTriggerRef = useRef<HTMLButtonElement>(null)
+  const videoInputMenuRef = useRef<HTMLDivElement>(null)
   const pendingImageRoleRef = useRef<ReferenceMediaRole>("reference")
   const uploadedImagesRef = useRef<UploadedImage[]>([])
   const initialImagesRef = useRef(initialImages)
@@ -594,10 +646,43 @@ export default function PromptArea({
   const shouldHide =
     !isModelsLoading && (modelError !== null || (hasStartedLoading && models.length === 0))
 
+  useLayoutEffect(() => {
+    if (!showVideoInputMenu) return
+    const updatePlacement = () => {
+      const trigger = videoInputMenuTriggerRef.current
+      const menu = videoInputMenuRef.current
+      if (!trigger || !menu) return
+      const triggerRect = trigger.getBoundingClientRect()
+      setVideoInputMenuPlacement(
+        getFloatingMenuPlacement({
+          triggerTop: triggerRect.top,
+          triggerBottom: triggerRect.bottom,
+          menuHeight: menu.getBoundingClientRect().height,
+          viewportHeight: window.innerHeight,
+        })
+      )
+    }
+
+    updatePlacement()
+    window.addEventListener("resize", updatePlacement)
+    window.addEventListener("scroll", updatePlacement, true)
+    const resizeObserver = new ResizeObserver(updatePlacement)
+    if (videoInputMenuTriggerRef.current) resizeObserver.observe(videoInputMenuTriggerRef.current)
+    if (videoInputMenuRef.current) resizeObserver.observe(videoInputMenuRef.current)
+    return () => {
+      window.removeEventListener("resize", updatePlacement)
+      window.removeEventListener("scroll", updatePlacement, true)
+      resizeObserver.disconnect()
+    }
+  }, [showVideoInputMenu, selectedModel])
+
   const availableModels = models.filter(model => model.mediaType === mediaType)
   const isModelDataPending = isModelsLoading || models.length === 0
 
   const selectedModelInfo = availableModels.find(m => m.id === selectedModel)
+  const referenceMediaConstraints = selectedModelInfo?.referenceMediaConstraints
+  const referenceImageConstraints =
+    selectedModelInfo?.referenceImageConstraints ?? referenceMediaConstraints?.image
   const selectedVideoInputMode = selectedModelInfo?.videoInputModes?.find(
     mode => mode.id === videoInputMode
   )
@@ -606,6 +691,34 @@ export default function PromptArea({
     Boolean(selectedVideoInputMode?.requiresImageOrVideo) &&
     uploadedImages.some(item => item.kind === "audio") &&
     !uploadedImages.some(item => (item.kind ?? "image") === "image" || item.kind === "video")
+  const referenceSelectionError = validateReferenceSelection(
+    uploadedImages,
+    referenceMediaConstraints
+  )
+  const referenceUsageText = (() => {
+    if (!referenceMediaConstraints || uploadedImages.length === 0) return ""
+    const totalBytes = uploadedImages.reduce((sum, item) => sum + (item.size ?? 0), 0)
+    const videoSeconds = uploadedImages
+      .filter(item => item.kind === "video")
+      .reduce((sum, item) => sum + (item.durationSeconds ?? 0), 0)
+    const audioSeconds = uploadedImages
+      .filter(item => item.kind === "audio")
+      .reduce((sum, item) => sum + (item.durationSeconds ?? 0), 0)
+    const parts = [
+      `References ${(totalBytes / 1_000_000).toFixed(1)}/${referenceMediaConstraints.totalMaxBytes / 1_000_000}MB`,
+    ]
+    if (videoSeconds > 0) {
+      parts.push(
+        `video ${videoSeconds.toFixed(1)}/${referenceMediaConstraints.video.maxTotalDurationSeconds}s`
+      )
+    }
+    if (audioSeconds > 0) {
+      parts.push(
+        `audio ${audioSeconds.toFixed(1)}/${referenceMediaConstraints.audio.maxTotalDurationSeconds}s`
+      )
+    }
+    return parts.join(" · ")
+  })()
   const isSeedanceModel = mediaType === "video" && selectedModel.startsWith("bytedance/seedance-")
   const supportsAtReferenceTags =
     isSeedanceModel || selectedVideoInputMode?.referenceTagStyle === "at"
@@ -624,18 +737,51 @@ export default function PromptArea({
       : []
   )
   const promptMaxLength = selectedModelInfo?.promptMaxLength ?? DEFAULT_PROMPT_MAX_LENGTH
+  const promptLimits = selectedModelInfo?.promptLimits
+  const promptInputMaxLength = promptLimits ? Number.POSITIVE_INFINITY : promptMaxLength
   const normalizedModelOptions = normalizeModelOptions(selectedModel, modelOptions)
-  const billableReferenceImageCount =
-    mediaType === "image" && selectedModelInfo?.supportsImage
-      ? Math.min(
-          uploadedImages.filter(item => (item.kind ?? "image") === "image").length,
-          selectedModelInfo.referenceImageCount ?? 0
+  const billableReferenceMedia = (() => {
+    if (mediaType === "image") {
+      return uploadedImages
+        .filter(item => (item.kind ?? "image") === "image")
+        .slice(0, selectedModelInfo?.referenceImageCount ?? 0)
+    }
+    if (selectedVideoInputMode?.id === "start_end_frame") {
+      return uploadedImages
+        .filter(
+          item =>
+            (item.kind ?? "image") === "image" &&
+            (item.role === "start_frame" || item.role === "end_frame")
         )
-      : 0
+        .slice(0, selectedVideoInputMode.imageCount ?? 0)
+    }
+    if (selectedVideoInputMode?.id === "image_reference") {
+      const images = uploadedImages
+        .filter(item => (item.kind ?? "image") === "image")
+        .slice(0, selectedVideoInputMode.imageCount ?? 0)
+      const audios = uploadedImages
+        .filter(item => item.kind === "audio")
+        .slice(0, selectedVideoInputMode.audioCount ?? 0)
+      return [...images, ...audios]
+    }
+    if (selectedVideoInputMode?.id === "video_reference") {
+      const images = uploadedImages
+        .filter(item => (item.kind ?? "image") === "image")
+        .slice(0, selectedVideoInputMode.imageCount ?? 0)
+      const videos = uploadedImages
+        .filter(item => item.kind === "video")
+        .slice(0, selectedVideoInputMode.videoCount ?? 0)
+      const audios = uploadedImages
+        .filter(item => item.kind === "audio")
+        .slice(0, selectedVideoInputMode.audioCount ?? 0)
+      return [...images, ...videos, ...audios]
+    }
+    return []
+  })()
   const requiredCredits = calculateRequiredCredits(
     selectedModelInfo,
     normalizedModelOptions,
-    billableReferenceImageCount
+    billableReferenceMedia
   )
   const availableCredits = user?.credits ?? 0
   const hasInsufficientCredits = Boolean(user && availableCredits < requiredCredits)
@@ -667,10 +813,23 @@ export default function PromptArea({
   )
   const negativePromptConfig = modelOptionConfig.negative_prompt
   const supportsNegativePrompt = negativePromptConfig?.type === "textarea"
-  const promptCharacterCount = getPromptCharacterCount(prompt)
-  const promptCharacterLimitText = promptMaxLength.toLocaleString("en-US")
-  const isPromptOverCharacterLimit = promptCharacterCount > promptMaxLength
-  const isPromptAtCharacterLimit = promptCharacterCount >= promptMaxLength
+  const promptLimitStatus = promptLimits
+    ? getPromptLimitStatus(prompt, promptLimits)
+    : {
+        count: getPromptCharacterCount(prompt),
+        rule: { max: promptMaxLength, unit: "characters" as const },
+        isAtLimit: getPromptCharacterCount(prompt) >= promptMaxLength,
+        isOverLimit: getPromptCharacterCount(prompt) > promptMaxLength,
+      }
+  const promptCount = promptLimitStatus.count
+  const promptLimitText = formatPromptLimit(promptLimitStatus.rule)
+  const promptLimitError = promptLimits
+    ? getPromptLimitMessage(prompt, promptLimits)
+    : promptLimitStatus.isOverLimit
+      ? `Prompt must not exceed ${promptMaxLength.toLocaleString("en-US")} characters.`
+      : null
+  const isPromptOverCharacterLimit = promptLimitStatus.isOverLimit
+  const isPromptAtCharacterLimit = promptLimitStatus.isAtLimit
   const modelSelectOptions: SelectOption[] = availableModels.map(model => {
     return {
       value: model.id,
@@ -900,6 +1059,10 @@ export default function PromptArea({
           kind: item.kind ?? "image",
           role: item.role ?? "reference",
           fileName: item.fileName,
+          width: item.width,
+          height: item.height,
+          durationSeconds: item.durationSeconds,
+          fps: item.fps,
         },
       ]
     })
@@ -991,7 +1154,8 @@ export default function PromptArea({
   const uploadReferenceMedia = async (
     file: File,
     kind: ReferenceMediaKind,
-    role: ReferenceMediaRole = "reference"
+    role: ReferenceMediaRole = "reference",
+    metadata: ReferenceMediaMetadata = {}
   ) => {
     const id = crypto.randomUUID()
     const previewUrl = URL.createObjectURL(file)
@@ -1015,6 +1179,7 @@ export default function PromptArea({
           kind,
           role,
           fileName: file.name,
+          ...metadata,
         },
       ]
     })
@@ -1030,6 +1195,7 @@ export default function PromptArea({
                 url: uploadedImage.url,
                 contentType: uploadedImage.contentType,
                 size: uploadedImage.size,
+                ...metadata,
                 status: "uploaded",
               }
             : image
@@ -1049,6 +1215,53 @@ export default function PromptArea({
         )
       )
       toast.error(getApiErrorMessage(error, `Failed to upload reference ${kind}`))
+    }
+  }
+
+  const inspectAndUploadReferenceMedia = async (
+    file: File,
+    kind: ReferenceMediaKind,
+    role: ReferenceMediaRole = "reference"
+  ) => {
+    try {
+      const metadata = await inspectReferenceMedia(file, kind)
+      if (referenceMediaConstraints) {
+        const validationError = validateReferenceFile(
+          file,
+          kind,
+          metadata,
+          referenceMediaConstraints
+        )
+        if (validationError) {
+          toast.error(validationError)
+          return
+        }
+        const aggregateError = validateReferenceSelection(
+          [
+            ...uploadedImagesRef.current,
+            {
+              kind,
+              size: file.size,
+              durationSeconds: metadata.durationSeconds,
+              status: "uploaded",
+            },
+          ],
+          referenceMediaConstraints
+        )
+        if (aggregateError) {
+          toast.error(aggregateError)
+          return
+        }
+      } else if (kind === "image" && referenceImageConstraints) {
+        const validationError = validateReferenceImage(file, metadata, referenceImageConstraints)
+        if (validationError) {
+          toast.error(validationError)
+          return
+        }
+      }
+      await uploadReferenceMedia(file, kind, role, metadata)
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, `Unable to inspect reference ${kind}`))
     }
   }
 
@@ -1088,17 +1301,24 @@ export default function PromptArea({
     }
 
     toAdd.forEach(file => {
-      if (!REFERENCE_IMAGE_ACCEPT.split(",").includes(file.type)) {
-        toast.error("Reference image must be PNG, JPEG, or WEBP.")
+      const acceptedImageTypes =
+        referenceImageConstraints?.mimeTypes ?? REFERENCE_IMAGE_ACCEPT.split(",")
+      if (!acceptedImageTypes.includes(file.type)) {
+        toast.error(
+          referenceImageConstraints && !referenceImageConstraints.mimeTypes.includes("image/webp")
+            ? "Reference image must be PNG or JPEG."
+            : "Reference image must be PNG, JPEG, or WEBP."
+        )
         return
       }
 
-      if (file.size > REFERENCE_IMAGE_MAX_BYTES) {
-        toast.error("Reference image must be smaller than 10MB.")
+      const maxBytes = referenceImageConstraints?.maxBytes ?? REFERENCE_IMAGE_MAX_BYTES
+      if (file.size > maxBytes) {
+        toast.error(`Reference image must not exceed ${Math.floor(maxBytes / 1_000_000)}MB.`)
         return
       }
 
-      void uploadReferenceMedia(file, "image", pendingImageRoleRef.current)
+      void inspectAndUploadReferenceMedia(file, "image", pendingImageRoleRef.current)
     })
     e.target.value = ""
   }
@@ -1131,9 +1351,13 @@ export default function PromptArea({
       Array.from(files)
         .slice(0, remaining)
         .forEach(file => {
-          const accepted = kind === "video" ? REFERENCE_VIDEO_ACCEPT : REFERENCE_AUDIO_ACCEPT
-          const maxBytes = kind === "video" ? REFERENCE_VIDEO_MAX_BYTES : REFERENCE_AUDIO_MAX_BYTES
-          if (!accepted.split(",").includes(file.type)) {
+          const accepted =
+            referenceMediaConstraints?.[kind].mimeTypes ??
+            (kind === "video" ? REFERENCE_VIDEO_ACCEPT : REFERENCE_AUDIO_ACCEPT).split(",")
+          const maxBytes =
+            referenceMediaConstraints?.[kind].maxBytes ??
+            (kind === "video" ? REFERENCE_VIDEO_MAX_BYTES : REFERENCE_AUDIO_MAX_BYTES)
+          if (!accepted.includes(file.type)) {
             toast.error(
               kind === "video"
                 ? "Reference video must be MP4 or MOV."
@@ -1145,7 +1369,7 @@ export default function PromptArea({
             toast.error(`Reference ${kind} must be smaller than ${maxBytes / 1024 / 1024}MB.`)
             return
           }
-          void uploadReferenceMedia(file, kind)
+          void inspectAndUploadReferenceMedia(file, kind)
         })
       e.target.value = ""
     }
@@ -1171,7 +1395,7 @@ export default function PromptArea({
     const trailingSpace = end < prompt.length && !/\s/.test(prompt[end] ?? "") ? " " : ""
     const nextPrompt = clampPrompt(
       `${prompt.slice(0, start)}${leadingSpace}${tag}${trailingSpace}${prompt.slice(end)}`,
-      promptMaxLength
+      promptInputMaxLength
     )
     setPrompt(nextPrompt)
     setUserPrompt(nextPrompt)
@@ -1189,7 +1413,7 @@ export default function PromptArea({
   const handlePromptChange = (event: React.FormEvent<HTMLDivElement>) => {
     const editor = event.currentTarget
     const nextPrompt = getPromptEditorValue(editor)
-    const clampedPrompt = clampPrompt(nextPrompt, promptMaxLength)
+    const clampedPrompt = clampPrompt(nextPrompt, promptInputMaxLength)
     lastEditorPromptRef.current = nextPrompt === clampedPrompt ? clampedPrompt : ""
     setPrompt(clampedPrompt)
     setUserPrompt(clampedPrompt)
@@ -1199,11 +1423,7 @@ export default function PromptArea({
     const hasMentionableAssets = uploadedImages.some(
       item => item.status === "uploaded" && (item.role ?? "reference") === "reference"
     )
-    if (
-      supportsAtReferenceTags &&
-      hasMentionableAssets &&
-      mentionMatch
-    ) {
+    if (supportsAtReferenceTags && hasMentionableAssets && mentionMatch) {
       const tokenLength = mentionMatch[0].trimStart().length
       setReferenceMention({
         start: cursor - tokenLength,
@@ -1228,12 +1448,17 @@ export default function PromptArea({
     }
 
     if (isPromptOverCharacterLimit) {
-      toast.error(`Prompt must not exceed ${promptCharacterLimitText} characters for this model.`)
+      toast.error(promptLimitError ?? "Prompt exceeds this model's limit.")
       return
     }
 
     if (hasAudioOnlyReference) {
       toast.error("Audio requires at least one reference image or video.")
+      return
+    }
+
+    if (referenceSelectionError) {
+      toast.error(referenceSelectionError)
       return
     }
 
@@ -1279,6 +1504,15 @@ export default function PromptArea({
       ...usableReferenceVideos,
       ...usableReferenceAudios,
     ]
+    if (
+      mediaType === "video" &&
+      effectiveVideoInputMode?.id === "start_end_frame" &&
+      usableReferenceImages.some(item => item.role === "end_frame") &&
+      !usableReferenceImages.some(item => item.role === "start_frame")
+    ) {
+      toast.error("Add a start frame before using an end frame.")
+      return
+    }
     if (
       mediaType === "video" &&
       uploadedImages.length > 0 &&
@@ -1340,13 +1574,13 @@ export default function PromptArea({
         end_frame: 1,
         reference: 2,
       }
-      const referenceImages = usableReferenceImages
+      const orderedReferenceImages = usableReferenceImages
         .filter(image => image.status === "uploaded" && image.key)
         .sort(
           (left, right) =>
             frameOrder[left.role ?? "reference"] - frameOrder[right.role ?? "reference"]
         )
-        .map(image => image.key as string)
+      const referenceImages = orderedReferenceImages.map(image => image.key as string)
       const referenceVideos = usableReferenceVideos
         .filter(item => item.status === "uploaded" && item.key)
         .map(item => item.key as string)
@@ -1356,6 +1590,9 @@ export default function PromptArea({
 
       if (referenceImages.length > 0) {
         requestBody.reference_images = referenceImages
+        requestBody.reference_image_roles = orderedReferenceImages.map(
+          image => image.role ?? "reference"
+        )
       }
       if (referenceVideos.length > 0) requestBody.reference_videos = referenceVideos
       if (referenceAudios.length > 0) requestBody.reference_audios = referenceAudios
@@ -1531,10 +1768,7 @@ export default function PromptArea({
         shellRef.current?.style.setProperty("--prompt-w", `${clampPromptWidth(pendingWidth)}px`)
       }
       if (pendingHeight !== null) {
-        panelRef.current?.style.setProperty(
-          "--prompt-h",
-          `${clampPromptHeight(pendingHeight)}px`
-        )
+        panelRef.current?.style.setProperty("--prompt-h", `${clampPromptHeight(pendingHeight)}px`)
       }
       pendingWidth = null
       pendingHeight = null
@@ -1628,6 +1862,13 @@ export default function PromptArea({
   const changeReferenceImageRole = (assetId: string, role: ReferenceMediaRole) => {
     const selectedAsset = uploadedImages.find(item => item.id === assetId)
     if (!selectedAsset) return
+    if (
+      role === "end_frame" &&
+      !uploadedImages.some(item => item.id !== assetId && item.role === "start_frame")
+    ) {
+      toast.error("Add a start frame before using an end frame.")
+      return
+    }
 
     const previousRole = selectedAsset.role ?? "reference"
     const nextAssets = uploadedImages.map(item => {
@@ -1692,7 +1933,7 @@ export default function PromptArea({
       `${currentPrompt.slice(0, referenceMention.start)}${tag}${trailingSpace}${currentPrompt.slice(
         referenceMention.end
       )}`,
-      promptMaxLength
+      promptInputMaxLength
     )
     const cursor = Math.min(
       nextPrompt.length,
@@ -1957,7 +2198,7 @@ export default function PromptArea({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept={REFERENCE_IMAGE_ACCEPT}
+                  accept={referenceImageConstraints?.mimeTypes.join(",") ?? REFERENCE_IMAGE_ACCEPT}
                   multiple={mediaType !== "video" || videoInputMode !== "start_end_frame"}
                   className="hidden"
                   onChange={handleImageUpload}
@@ -1965,7 +2206,9 @@ export default function PromptArea({
                 <input
                   ref={videoFileInputRef}
                   type="file"
-                  accept={REFERENCE_VIDEO_ACCEPT}
+                  accept={
+                    referenceMediaConstraints?.video.mimeTypes.join(",") ?? REFERENCE_VIDEO_ACCEPT
+                  }
                   multiple
                   className="hidden"
                   onChange={handleMediaUpload("video")}
@@ -1973,7 +2216,9 @@ export default function PromptArea({
                 <input
                   ref={audioFileInputRef}
                   type="file"
-                  accept={REFERENCE_AUDIO_ACCEPT}
+                  accept={
+                    referenceMediaConstraints?.audio.mimeTypes.join(",") ?? REFERENCE_AUDIO_ACCEPT
+                  }
                   multiple
                   className="hidden"
                   onChange={handleMediaUpload("audio")}
@@ -2003,6 +2248,7 @@ export default function PromptArea({
                       <div className="liquid-video-input__toolbar">
                         <div className="relative" onBlur={handleVideoInputMenuBlur}>
                           <button
+                            ref={videoInputMenuTriggerRef}
                             type="button"
                             onClick={() => setShowVideoInputMenu(value => !value)}
                             className="btn btn-ghost btn-square liquid-icon-button"
@@ -2012,7 +2258,11 @@ export default function PromptArea({
                             <Plus className="size-5" />
                           </button>
                           {showVideoInputMenu && (
-                            <div className="liquid-video-input-menu" role="menu">
+                            <div
+                              ref={videoInputMenuRef}
+                              className={`liquid-video-input-menu is-${videoInputMenuPlacement}`}
+                              role="menu"
+                            >
                               {selectedModelInfo?.videoInputModes?.map(mode => (
                                 <button
                                   key={mode.id}
@@ -2048,6 +2298,10 @@ export default function PromptArea({
                                 key={role}
                                 type="button"
                                 onClick={() => openImageUpload(role)}
+                                disabled={
+                                  role === "end_frame" &&
+                                  !uploadedImages.some(item => item.role === "start_frame")
+                                }
                                 className="liquid-frame-slot"
                               >
                                 <ImagePlus className="size-5" />
@@ -2179,19 +2433,25 @@ export default function PromptArea({
               className={`liquid-prompt-hint ${
                 isPromptAtCharacterLimit ? "liquid-prompt-hint--limit" : ""
               }`}
-              role={isPromptAtCharacterLimit || hasAudioOnlyReference ? "status" : undefined}
+              role={
+                isPromptAtCharacterLimit || hasAudioOnlyReference || referenceSelectionError
+                  ? "status"
+                  : undefined
+              }
             >
               <span>
                 {hasAudioOnlyReference
                   ? "Audio requires at least one reference image or video."
-                  : isPromptOverCharacterLimit
-                  ? `已超出 ${promptCharacterLimitText} 字符上限`
-                  : isPromptAtCharacterLimit
-                    ? `已达到 ${promptCharacterLimitText} 字符上限`
-                    : ""}
+                  : referenceSelectionError
+                    ? referenceSelectionError
+                    : isPromptOverCharacterLimit
+                      ? (promptLimitError ?? `已超出 ${promptLimitText} 限制`)
+                      : isPromptAtCharacterLimit
+                        ? `已达到 ${promptLimitText} 限制`
+                        : referenceUsageText}
               </span>
               <span className="liquid-prompt-hint__count">
-                {promptCharacterCount.toLocaleString("en-US")} / {promptCharacterLimitText}
+                {promptCount.toLocaleString("en-US")} / {promptLimitText}
               </span>
             </div>
           </div>
@@ -2272,12 +2532,13 @@ export default function PromptArea({
                 !prompt.trim() ||
                 isGenerating ||
                 hasInsufficientCredits ||
-                hasAudioOnlyReference
+                hasAudioOnlyReference ||
+                Boolean(referenceSelectionError)
               }
               title={
                 hasAudioOnlyReference
                   ? "Add at least one reference image or video."
-                  : undefined
+                  : (referenceSelectionError ?? undefined)
               }
               className={`btn liquid-generate-button ${
                 hasInsufficientCredits ? "btn-disabled" : "btn-primary"

@@ -4,7 +4,12 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { MIME_TYPES } from "../src/const"
 import { calculateRequiredCredits } from "../src/routes/credits"
-import { buildEvoLinkPayload, getModels } from "../src/routes/image"
+import {
+  buildEvoLinkPayload,
+  getModels,
+  getReferenceMediaTotalDurationError,
+  getReferenceMediaTotalSizeError,
+} from "../src/routes/image"
 import { getVideoProviderModel } from "../src/videoModels"
 
 describe("video generation catalog", () => {
@@ -64,13 +69,13 @@ describe("video generation catalog", () => {
       supportsEndFrame: true,
       supportsAudio: true,
       pricingMode: "per_second",
-      creditsPerSecond: 3,
+      creditsPerSecond: 4,
       pollTimeoutSeconds: 1200,
       options: {
         resolution: {
           values: ["480p", "720p"],
           defaultValue: "480p",
-          valueCredits: { "720p": 4 },
+          valueCredits: { "720p": 3 },
         },
       },
     })
@@ -126,6 +131,91 @@ describe("video generation catalog", () => {
     }
   })
 
+  test("publishes and enforces Seedance reference media limits", () => {
+    for (const modelId of [
+      "bytedance/seedance-2.0",
+      "bytedance/seedance-2.0-fast",
+      "bytedance/seedance-2.0-mini",
+    ]) {
+      const model = getModels().find(item => item.id === modelId)
+      expect(model?.referenceMediaConstraints).toMatchObject({
+        totalMaxBytes: 64_000_000,
+        image: {
+          maxBytes: 30_000_000,
+          minWidth: 300,
+          maxWidth: 6000,
+          minAspectRatio: 0.4,
+          maxAspectRatio: 2.5,
+        },
+        video: {
+          maxBytes: 50_000_000,
+          minDurationSeconds: 2,
+          maxDurationSeconds: 15,
+          maxTotalDurationSeconds: 15,
+          minFramePixels: 409_600,
+          maxFramePixels: 2_086_876,
+          minFps: 24,
+          maxFps: 60,
+        },
+        audio: {
+          maxBytes: 15_000_000,
+          minDurationSeconds: 2,
+          maxDurationSeconds: 15,
+          maxTotalDurationSeconds: 15,
+        },
+      })
+      expect(
+        getReferenceMediaTotalSizeError(model!, [
+          { key: "image", contentType: "image/png", size: 30_000_000 },
+          { key: "video", contentType: "video/mp4", size: 34_000_000 },
+        ])
+      ).toBeNull()
+      expect(
+        getReferenceMediaTotalSizeError(model!, [
+          { key: "image", contentType: "image/png", size: 30_000_000 },
+          { key: "video", contentType: "video/mp4", size: 34_000_001 },
+        ])
+      ).toBe("Reference materials must not exceed 64MB in total")
+      expect(
+        getReferenceMediaTotalDurationError(
+          model!,
+          [
+            { key: "video-1", contentType: "video/mp4", size: 1, durationSeconds: 8 },
+            { key: "video-2", contentType: "video/mp4", size: 1, durationSeconds: 7 },
+          ],
+          []
+        )
+      ).toBeNull()
+      expect(
+        getReferenceMediaTotalDurationError(
+          model!,
+          [
+            { key: "video-1", contentType: "video/mp4", size: 1, durationSeconds: 8 },
+            { key: "video-2", contentType: "video/mp4", size: 1, durationSeconds: 7.01 },
+          ],
+          []
+        )
+      ).toBe("Total reference video duration must not exceed 15 seconds")
+    }
+
+    const standard = getModels().find(item => item.id === "bytedance/seedance-2.0")
+    expect(standard?.options?.resolution?.values).toEqual(["480p", "720p", "1080p", "4k"])
+    for (const modelId of [
+      "bytedance/seedance-2.0",
+      "bytedance/seedance-2.0-fast",
+      "bytedance/seedance-2.0-mini",
+    ]) {
+      expect(getModels().find(item => item.id === modelId)?.options?.duration).toMatchObject({
+        values: ["4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"],
+        defaultValue: "5",
+        uiControl: "slider",
+        min: 4,
+        max: 15,
+        step: 1,
+      })
+    }
+  })
+
   test("exposes every requested EvoLink video model through the models API", () => {
     const videoModels = getModels().filter(model => model.mediaType === "video")
     expect(videoModels.map(model => model.id)).toEqual([
@@ -141,6 +231,7 @@ describe("video generation catalog", () => {
       "happyhorse/happyhorse-1.1",
     ])
     for (const model of videoModels) {
+      expect(model.isNew).toBe(false)
       expect(model.generationModes).toContain("text_to_video")
       expect(model.generationModes).toContain("image_to_video")
       expect(model.options?.duration?.values.length).toBeGreaterThan(0)
@@ -159,8 +250,102 @@ describe("video generation catalog", () => {
     ])
   })
 
+  test("publishes Kling V3 duration and image-to-video constraints", () => {
+    const expectedDuration = {
+      values: ["3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"],
+      defaultValue: "5",
+      uiControl: "slider",
+      min: 3,
+      max: 15,
+      step: 1,
+    }
+    const turbo = getModels().find(item => item.id === "kling/kling-3.0-turbo")
+    const standard = getModels().find(item => item.id === "kling/kling-3.0")
+
+    expect(turbo?.options?.duration).toMatchObject(expectedDuration)
+    expect(turbo?.videoInputModes).toEqual([
+      {
+        id: "start_end_frame",
+        label: "Start Frame",
+        generationMode: "image_to_video",
+        imageCount: 1,
+      },
+    ])
+    expect(turbo?.referenceImageConstraints).toEqual({
+      mimeTypes: ["image/jpeg", "image/png"],
+      maxBytes: 50_000_000,
+      minWidth: 300,
+      minHeight: 300,
+      minAspectRatio: 0.4,
+      maxAspectRatio: 2.5,
+    })
+
+    expect(standard?.options?.duration).toMatchObject(expectedDuration)
+    expect(standard?.videoInputModes?.[0]).toMatchObject({
+      id: "start_end_frame",
+      imageCount: 2,
+    })
+    expect(standard?.referenceImageConstraints).toEqual({
+      mimeTypes: ["image/jpeg", "image/png"],
+      maxBytes: 10_000_000,
+      minWidth: 300,
+      minHeight: 300,
+      minAspectRatio: 0.4,
+      maxAspectRatio: 2.5,
+    })
+  })
+
+  test("publishes every integer Grok video duration through a slider", () => {
+    expect(
+      getModels().find(model => model.id === "xai/grok-imagine-video")?.options?.duration
+    ).toMatchObject({
+      values: Array.from({ length: 25 }, (_, index) => String(index + 6)),
+      defaultValue: "6",
+      uiControl: "slider",
+      min: 6,
+      max: 30,
+      step: 1,
+    })
+  })
+
+  test("publishes language-aware prompt limits for video models", () => {
+    const models = getModels()
+    for (const modelId of [
+      "bytedance/seedance-2.0",
+      "bytedance/seedance-2.0-fast",
+      "bytedance/seedance-2.0-mini",
+    ]) {
+      expect(models.find(model => model.id === modelId)?.promptLimits).toEqual({
+        default: { max: 1000, unit: "words" },
+        chinese: { max: 500, unit: "characters" },
+      })
+    }
+    for (const modelId of ["kling/kling-3.0-turbo", "kling/kling-3.0"]) {
+      expect(models.find(model => model.id === modelId)?.promptLimits).toEqual({
+        default: { max: 2500, unit: "characters", exclusive: true },
+      })
+    }
+    for (const modelId of ["google/veo-3.1-pro", "google/veo-3.1-fast"]) {
+      expect(models.find(model => model.id === modelId)?.promptLimits).toEqual({
+        default: { max: 2000, unit: "characters", exclusive: true },
+      })
+    }
+    expect(models.find(model => model.id === "happyhorse/happyhorse-1.1")?.promptLimits).toEqual({
+      default: { max: 5000, unit: "characters" },
+      chinese: { max: 2500, unit: "characters" },
+    })
+  })
+
   test("publishes video option credit metadata to the frontend", () => {
     const models = getModels()
+    expect(models.find(model => model.id === "google/gemini-omni-flash")).toMatchObject({
+      options: {
+        duration: {
+          values: ["3", "4", "5", "6", "7", "8", "9", "10", "auto"],
+          defaultValue: "10",
+        },
+      },
+    })
     expect(models.find(model => model.id === "google/veo-3.1-pro")).toMatchObject({
       name: "Veo 3.1 Pro",
       creditsPerSecond: 8,
@@ -386,7 +571,7 @@ describe("video generation catalog", () => {
         duration: 5,
         resolution: "480p",
       })
-    ).toBe(15)
+    ).toBe(20)
     expect(
       calculateRequiredCredits("bytedance/seedance-2.0-fast", {
         duration: 5,
@@ -452,6 +637,57 @@ describe("video generation catalog", () => {
         resolution: "1080p",
       })
     ).toBe(40)
+  })
+
+  test("adds model-configured image, video, and audio reference credits", () => {
+    expect(
+      calculateRequiredCredits("bytedance/seedance-2.0", {
+        duration: 5,
+        resolution: "720p",
+        billing_reference_image_count: 2,
+        billing_reference_video_durations: [2.1],
+        billing_reference_audio_durations: [3.2],
+      })
+    ).toBe(69)
+    expect(
+      calculateRequiredCredits("bytedance/seedance-2.0-mini", {
+        duration: 5,
+        resolution: "720p",
+        billing_reference_image_count: 1,
+        billing_reference_video_durations: [2.1],
+        billing_reference_audio_durations: [4.2],
+      })
+    ).toBe(40)
+    expect(
+      calculateRequiredCredits("kling/kling-3.0", {
+        duration: 5,
+        resolution: "1080p",
+        generate_audio: "true",
+        billing_reference_image_count: 2,
+      })
+    ).toBe(37)
+    expect(
+      calculateRequiredCredits("google/veo-3.1-pro", {
+        duration: 4,
+        resolution: "720p",
+        generate_audio: "true",
+        billing_reference_image_count: 2,
+      })
+    ).toBe(62)
+    expect(
+      calculateRequiredCredits("xai/grok-imagine-video", {
+        duration: 6,
+        resolution: "720p",
+        billing_reference_image_count: 1,
+      })
+    ).toBe(13)
+    expect(
+      calculateRequiredCredits("happyhorse/happyhorse-1.1", {
+        duration: 5,
+        resolution: "1080p",
+        billing_reference_image_count: 3,
+      })
+    ).toBe(43)
   })
 
   test("converts unified controls to model-specific EvoLink video fields", () => {

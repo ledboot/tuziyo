@@ -49,8 +49,9 @@ export function isMediaModelEnabled(modelId: string) {
   return MEDIA_MODEL_CATALOG[modelId]?.enabled === true
 }
 
-export function getMediaModel(modelId: string) {
-  return MEDIA_MODEL_CATALOG[modelId]
+export function getMediaModel(modelId: string): ModelConfig | undefined {
+  const model = MEDIA_MODEL_CATALOG[modelId]
+  return model ? { id: modelId, ...model } : undefined
 }
 
 export function getMediaModelPromptMaxLength(modelId: string): number | null {

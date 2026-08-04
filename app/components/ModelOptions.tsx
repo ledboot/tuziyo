@@ -13,7 +13,10 @@ export interface OptionGroup {
   options: OptionItem[]
   value: string
   onChange: (value: string) => void
-  type?: "select" | "checkbox"
+  type?: "select" | "checkbox" | "range"
+  min?: number
+  max?: number
+  step?: number
 }
 
 interface ModelOptionsProps {
@@ -71,10 +74,10 @@ export function ModelOptions({ groups, className = "" }: ModelOptionsProps) {
 
   if (groups.length === 0) return null
 
-  const selectGroups = groups.filter(g => g.type !== "checkbox")
+  const controlGroups = groups.filter(g => g.type !== "checkbox")
   const toggleGroups = groups.filter(g => g.type === "checkbox")
 
-  const summaryText = selectGroups
+  const summaryText = controlGroups
     .map(g => {
       const selected = g.options.find(o => o.value === g.value)
       const label = selected?.label || g.value
@@ -98,29 +101,50 @@ export function ModelOptions({ groups, className = "" }: ModelOptionsProps) {
       aria-label="Model options"
     >
       <div className="p-2">
-        {selectGroups.map((group, groupIdx) => (
+        {controlGroups.map((group, groupIdx) => (
           <div key={group.id} className="mb-2 last:mb-0">
             {groupIdx > 0 && <div className="border-t border-base-200 my-2" />}
             <div className="px-3 py-2">
               <div className="text-xs text-base-content font-medium mb-2 whitespace-nowrap">
                 {group.label}
               </div>
-              <div className="flex w-max gap-2">
-                {group.options.map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => group.onChange(opt.value)}
-                    className={`w-max whitespace-nowrap px-2 py-1.5 text-sm rounded-lg transition-colors cursor-pointer text-center ${
-                      group.value === opt.value
-                        ? "text-primary font-semibold underline underline-offset-4 decoration-2"
-                        : "bg-transparent text-base-content hover:bg-white/10"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+              {group.type === "range" ? (
+                <div className="w-64 px-1 pb-1">
+                  <div className="mb-2 flex items-center justify-between text-xs text-base-content/70">
+                    <span>{group.min ?? 0}s</span>
+                    <strong className="text-sm text-primary">{group.value}s</strong>
+                    <span>{group.max ?? 100}s</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={group.min}
+                    max={group.max}
+                    step={group.step ?? 1}
+                    value={group.value}
+                    onChange={event => group.onChange(event.target.value)}
+                    className="range range-primary range-sm w-full"
+                    aria-label={`${group.label}: ${group.value} seconds`}
+                    aria-valuetext={`${group.value} seconds`}
+                  />
+                </div>
+              ) : (
+                <div className="flex w-max gap-2">
+                  {group.options.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => group.onChange(opt.value)}
+                      className={`w-max whitespace-nowrap px-2 py-1.5 text-sm rounded-lg transition-colors cursor-pointer text-center ${
+                        group.value === opt.value
+                          ? "text-primary font-semibold underline underline-offset-4 decoration-2"
+                          : "bg-transparent text-base-content hover:bg-white/10"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}

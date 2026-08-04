@@ -14,10 +14,10 @@ import {
   PLAN_MODELS_CONFIG,
   getEnabledMediaModels,
   getMediaModel,
-  getMediaModelPromptMaxLength,
   isMediaModelEnabled,
   validateMediaModelOptions,
 } from "../mediaModels"
+import { getPromptLimitError } from "../promptValidation"
 import {
   findVideoProviderConfig,
   getVideoProviderModel,
@@ -49,6 +49,12 @@ import {
   type MimeType,
 } from "../const"
 import { createSignedImageVariantUrl } from "./media"
+import {
+  inspectReferenceAudio,
+  inspectReferenceVideo,
+  validateReferenceAudioMetadata,
+  validateReferenceVideoMetadata,
+} from "../referenceMediaValidation"
 
 const BYTEPLUS_MODEL_MAP: Record<string, string> = {
   "bytedance/seedream-4.0": "seedream-4-0-250828",
@@ -95,8 +101,12 @@ export interface GenerateInput {
   thinking_level?: string
   background?: string
   reference_images?: string[]
+  reference_image_roles?: Array<"start_frame" | "end_frame" | "reference">
   reference_videos?: string[]
   reference_audios?: string[]
+  billing_reference_image_count?: number
+  billing_reference_video_durations?: number[]
+  billing_reference_audio_durations?: number[]
   duration?: number | string
   generate_audio?: string | boolean
   mode?: string
@@ -455,12 +465,61 @@ async function prepareReferenceImages(
     const contentType = normalizeContentType(
       object.httpMetadata?.contentType || getImageContentTypeFromKey(key) || ""
     )
-    if (!isAllowedReferenceImageContentType(contentType)) {
-      return { error: "Reference image must be PNG, JPEG, or WEBP" }
+    const imageConstraints =
+      modelConfig.referenceImageConstraints ?? modelConfig.referenceMediaConstraints?.image
+    if (
+      !isAllowedReferenceImageContentType(contentType) ||
+      (imageConstraints && !imageConstraints.mimeTypes.includes(contentType))
+    ) {
+      return {
+        error: imageConstraints?.mimeTypes.includes("image/webp")
+          ? "Reference image must be PNG, JPEG, or WEBP"
+          : "Reference image must be PNG or JPEG",
+      }
     }
 
-    if (object.size > REFERENCE_IMAGE_MAX_BYTES) {
+    const maxImageBytes = imageConstraints?.maxBytes ?? REFERENCE_IMAGE_MAX_BYTES
+    if (object.size > maxImageBytes) {
       return { error: "Reference image is too large" }
+    }
+
+    if (imageConstraints) {
+      const imageObject = await c.env.R2.get(key)
+      if (!imageObject) return { error: "Reference image upload was not found" }
+      try {
+        const imageInfo = await c.env.IMAGES.info(imageObject.body)
+        if (!("width" in imageInfo) || !("height" in imageInfo)) {
+          return { error: "Reference image dimensions could not be read" }
+        }
+        const { width, height } = imageInfo
+        const aspectRatio = width / height
+        if (
+          width < imageConstraints.minWidth ||
+          (imageConstraints.maxWidth !== undefined && width > imageConstraints.maxWidth) ||
+          height < imageConstraints.minHeight ||
+          (imageConstraints.maxHeight !== undefined && height > imageConstraints.maxHeight)
+        ) {
+          const widthRange = imageConstraints.maxWidth
+            ? `${imageConstraints.minWidth}-${imageConstraints.maxWidth}px`
+            : `at least ${imageConstraints.minWidth}px`
+          const heightRange = imageConstraints.maxHeight
+            ? `${imageConstraints.minHeight}-${imageConstraints.maxHeight}px`
+            : `at least ${imageConstraints.minHeight}px`
+          return {
+            error: `Reference image width must be ${widthRange} and height must be ${heightRange}`,
+          }
+        }
+        if (
+          aspectRatio < imageConstraints.minAspectRatio ||
+          aspectRatio > imageConstraints.maxAspectRatio
+        ) {
+          return {
+            error: `Reference image aspect ratio must be ${imageConstraints.minAspectRatio}-${imageConstraints.maxAspectRatio}`,
+          }
+        }
+      } catch {
+        return { error: "Reference image is not a valid supported image" }
+      }
     }
 
     let dataUrl: string | undefined
@@ -493,13 +552,16 @@ async function prepareReferenceMedia(
   c: AuthenticatedContext,
   keys: string[],
   kind: "video" | "audio",
-  user: UserPayload
+  user: UserPayload,
+  modelConfig: ModelConfig
 ): Promise<{ media: PreparedReferenceImage[]; error?: never } | { media?: never; error: string }> {
   if (keys.length === 0) return { media: [] }
   if (!Array.isArray(keys)) return { error: `reference_${kind}s must be an array` }
 
   const prefix = getReferenceMediaPrefix(user.userId, kind)
-  const maxBytes = kind === "video" ? REFERENCE_VIDEO_MAX_BYTES : REFERENCE_AUDIO_MAX_BYTES
+  const maxBytes =
+    modelConfig.referenceMediaConstraints?.[kind].maxBytes ??
+    (kind === "video" ? REFERENCE_VIDEO_MAX_BYTES : REFERENCE_AUDIO_MAX_BYTES)
   const prepared: PreparedReferenceImage[] = []
 
   for (const rawKey of keys) {
@@ -521,12 +583,71 @@ async function prepareReferenceMedia(
     }
     if (object.size > maxBytes) return { error: `Reference ${kind} is too large` }
 
+    let inspectedMetadata: Pick<
+      PreparedReferenceImage,
+      "width" | "height" | "durationSeconds" | "fps"
+    > = {}
+    const constraints = modelConfig.referenceMediaConstraints?.[kind]
+    if (constraints) {
+      const objectBody = await c.env.R2.get(key)
+      if (!objectBody) return { error: `Reference ${kind} upload was not found` }
+      const buffer = await objectBody.arrayBuffer()
+      if (kind === "video") {
+        const metadata = inspectReferenceVideo(buffer)
+        if (!metadata) return { error: "Reference video metadata could not be read" }
+        const validationError = validateReferenceVideoMetadata(
+          metadata,
+          modelConfig.referenceMediaConstraints!.video
+        )
+        if (validationError) return { error: validationError }
+        inspectedMetadata = metadata
+      } else {
+        const metadata = inspectReferenceAudio(buffer)
+        if (!metadata) return { error: "Reference audio metadata could not be read" }
+        const validationError = validateReferenceAudioMetadata(
+          metadata,
+          modelConfig.referenceMediaConstraints!.audio
+        )
+        if (validationError) return { error: validationError }
+        inspectedMetadata = metadata
+      }
+    }
+
     const url = await createPresignedGetUrl(c.env, key)
     if (!url) return { error: `Failed to create reference ${kind} URL` }
-    prepared.push({ key, url, contentType, size: object.size })
+    prepared.push({ key, url, contentType, size: object.size, ...inspectedMetadata })
   }
 
   return { media: prepared }
+}
+
+export function getReferenceMediaTotalSizeError(
+  modelConfig: ModelConfig,
+  media: PreparedReferenceImage[]
+): string | null {
+  const totalMaxBytes = modelConfig.referenceMediaConstraints?.totalMaxBytes
+  if (!totalMaxBytes) return null
+  const totalBytes = media.reduce((sum, item) => sum + item.size, 0)
+  return totalBytes > totalMaxBytes
+    ? `Reference materials must not exceed ${Math.floor(totalMaxBytes / 1_000_000)}MB in total`
+    : null
+}
+
+export function getReferenceMediaTotalDurationError(
+  modelConfig: ModelConfig,
+  videos: PreparedReferenceImage[],
+  audios: PreparedReferenceImage[]
+): string | null {
+  const constraints = modelConfig.referenceMediaConstraints
+  if (!constraints) return null
+  const videoDuration = videos.reduce((sum, item) => sum + (item.durationSeconds ?? 0), 0)
+  if (videoDuration > constraints.video.maxTotalDurationSeconds) {
+    return `Total reference video duration must not exceed ${constraints.video.maxTotalDurationSeconds} seconds`
+  }
+  const audioDuration = audios.reduce((sum, item) => sum + (item.durationSeconds ?? 0), 0)
+  return audioDuration > constraints.audio.maxTotalDurationSeconds
+    ? `Total reference audio duration must not exceed ${constraints.audio.maxTotalDurationSeconds} seconds`
+    : null
 }
 
 export async function handleGetFavorites(c: AuthenticatedContext) {
@@ -753,6 +874,9 @@ export async function handleGenerate(c: AuthenticatedContext) {
   }
 
   const modelDefinition = getMediaModel(input.model)
+  if (!modelDefinition) {
+    return c.json({ error: "Invalid model" }, 400)
+  }
   const mediaType: MimeType =
     modelDefinition.mediaType === MIME_TYPES.VIDEO ? MIME_TYPES.VIDEO : MIME_TYPES.IMAGE
   input.media_type = mediaType
@@ -783,6 +907,24 @@ export async function handleGenerate(c: AuthenticatedContext) {
         (!hasReferenceImages || hasReferenceVideos || hasReferenceAudios)
       ) {
         return c.json({ error: "Start & End Frame mode only accepts images" }, 400)
+      }
+      if (input.reference_image_roles !== undefined) {
+        if (
+          !Array.isArray(input.reference_image_roles) ||
+          input.reference_image_roles.length !== (input.reference_images?.length ?? 0) ||
+          input.reference_image_roles.some(
+            role => !["start_frame", "end_frame", "reference"].includes(role)
+          )
+        ) {
+          return c.json({ error: "Reference image roles must match reference images" }, 400)
+        }
+        if (
+          resolvedInputMode.id === "start_end_frame" &&
+          (input.reference_image_roles[0] !== "start_frame" ||
+            input.reference_image_roles.slice(1).some(role => role !== "end_frame"))
+        ) {
+          return c.json({ error: "End frame requires a start frame" }, 400)
+        }
       }
       if (resolvedInputMode.requiresImageOrVideo && !hasReferenceImages && !hasReferenceVideos) {
         return c.json(
@@ -835,12 +977,13 @@ export async function handleGenerate(c: AuthenticatedContext) {
       input.generation_mode ?? (input.reference_images?.length ? "image_to_image" : "text_to_image")
   }
 
-  const promptMaxLength = getMediaModelPromptMaxLength(input.model)
-  if (promptMaxLength !== null && getPromptCharacterLength(input.prompt) > promptMaxLength) {
-    return c.json(
-      { error: `prompt must not exceed ${promptMaxLength.toLocaleString("en-US")} characters` },
-      400
-    )
+  const promptLimitError = modelDefinition.promptLimits
+    ? getPromptLimitError(input.prompt, modelDefinition.promptLimits)
+    : getPromptCharacterLength(input.prompt) > modelDefinition.promptMaxLength
+      ? `prompt must not exceed ${modelDefinition.promptMaxLength.toLocaleString("en-US")} characters`
+      : null
+  if (promptLimitError) {
+    return c.json({ error: promptLimitError }, 400)
   }
 
   // Validate model permissions based on user's subscription plan
@@ -904,16 +1047,6 @@ export async function handleGenerate(c: AuthenticatedContext) {
     )
   }
 
-  // Pre-check credits balance
-  const requiredCredits = calculateRequiredCredits(input.model, input)
-  if (!requiredCredits) {
-    return c.json({ error: `Unknown model: ${input.model}` }, 400)
-  }
-  const userCredits = await getUserCredits(c.env.DB, user.userId)
-  if (userCredits.balance < requiredCredits) {
-    return c.json({ error: "Insufficient credits" }, 402)
-  }
-
   // Reuse an owned session when provided. New sessions are inserted atomically
   // with the generation message and task below.
   const now = Math.floor(Date.now() / 1000)
@@ -940,7 +1073,8 @@ export async function handleGenerate(c: AuthenticatedContext) {
     c,
     input.reference_videos ?? [],
     "video",
-    user
+    user,
+    modelDefinition
   )
   if (referenceVideoResult.error) {
     return c.json({ error: referenceVideoResult.error }, 400)
@@ -949,10 +1083,47 @@ export async function handleGenerate(c: AuthenticatedContext) {
     c,
     input.reference_audios ?? [],
     "audio",
-    user
+    user,
+    modelDefinition
   )
   if (referenceAudioResult.error) {
     return c.json({ error: referenceAudioResult.error }, 400)
+  }
+
+  const referenceMediaTotalSizeError = getReferenceMediaTotalSizeError(modelDefinition, [
+    ...(referenceImageResult.images ?? []),
+    ...(referenceVideoResult.media ?? []),
+    ...(referenceAudioResult.media ?? []),
+  ])
+  if (referenceMediaTotalSizeError) {
+    return c.json({ error: referenceMediaTotalSizeError }, 400)
+  }
+  const referenceMediaTotalDurationError = getReferenceMediaTotalDurationError(
+    modelDefinition,
+    referenceVideoResult.media ?? [],
+    referenceAudioResult.media ?? []
+  )
+  if (referenceMediaTotalDurationError) {
+    return c.json({ error: referenceMediaTotalDurationError }, 400)
+  }
+
+  // Never trust client-supplied billing metadata. Reference counts and durations are derived from
+  // the R2 objects inspected above, then persisted with the task for final callback deduction.
+  input.billing_reference_image_count = (referenceImageResult.images ?? []).length
+  input.billing_reference_video_durations = (referenceVideoResult.media ?? []).map(
+    item => item.durationSeconds ?? 0
+  )
+  input.billing_reference_audio_durations = (referenceAudioResult.media ?? []).map(
+    item => item.durationSeconds ?? 0
+  )
+
+  const requiredCredits = calculateRequiredCredits(input.model, input)
+  if (!requiredCredits) {
+    return c.json({ error: `Unknown model: ${input.model}` }, 400)
+  }
+  const userCredits = await getUserCredits(c.env.DB, user.userId)
+  if (userCredits.balance < requiredCredits) {
+    return c.json({ error: "Insufficient credits" }, 402)
   }
 
   // Generate task ID and insert task as pending
@@ -1071,6 +1242,7 @@ export async function handleGenerate(c: AuthenticatedContext) {
     requestedCount,
     mediaType,
     generationMode: input.generation_mode,
+    requiredCredits,
     pollTimeoutSeconds: modelDefinition.pollTimeoutSeconds ?? 5 * 60,
   })
 }

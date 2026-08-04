@@ -68,27 +68,38 @@ export async function handleCreateReferenceImageUpload(c: AuthenticatedContext) 
     return c.json({ error: `This model does not support reference ${kind}s` }, 400)
   }
   const contentType = normalizeContentType(body.contentType || "")
+  const imageConstraints = model.referenceImageConstraints ?? model.referenceMediaConstraints?.image
   const isAllowed =
     kind === "image"
-      ? isAllowedReferenceImageContentType(contentType)
+      ? isAllowedReferenceImageContentType(contentType) &&
+        (!imageConstraints || imageConstraints.mimeTypes.includes(contentType))
       : isAllowedReferenceMediaContentType(kind, contentType)
   if (!isAllowed) {
     const formats =
-      kind === "image" ? "PNG, JPEG, or WEBP" : kind === "video" ? "MP4 or MOV" : "MP3 or WAV"
+      kind === "image"
+        ? imageConstraints?.mimeTypes.includes("image/webp")
+          ? "PNG, JPEG, or WEBP"
+          : "PNG or JPEG"
+        : kind === "video"
+          ? "MP4 or MOV"
+          : "MP3 or WAV"
     return c.json({ error: `Reference ${kind} must be ${formats}` }, 400)
   }
 
   const size = Number(body.size)
+  const configuredMaxBytes =
+    kind === "image" ? imageConstraints?.maxBytes : model.referenceMediaConstraints?.[kind].maxBytes
   const maxBytes =
-    kind === "video"
+    configuredMaxBytes ??
+    (kind === "video"
       ? REFERENCE_VIDEO_MAX_BYTES
       : kind === "audio"
         ? REFERENCE_AUDIO_MAX_BYTES
-        : REFERENCE_IMAGE_MAX_BYTES
+        : REFERENCE_IMAGE_MAX_BYTES)
   if (!Number.isFinite(size) || size <= 0 || size > maxBytes) {
     return c.json(
       {
-        error: `Reference ${kind} must be smaller than ${Math.floor(maxBytes / 1024 / 1024)}MB`,
+        error: `Reference ${kind} must not exceed ${Math.floor(maxBytes / 1_000_000)}MB`,
       },
       400
     )
