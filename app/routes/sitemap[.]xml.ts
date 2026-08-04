@@ -6,7 +6,7 @@ const baseUrl = "https://tuziyo.com"
 interface SitemapRoute {
   path: string
   lastmod?: string
-  image?: { loc: string; title: string; caption: string }
+  image?: { loc: string }
 }
 
 function escapeXml(value: string) {
@@ -26,8 +26,6 @@ export async function loader() {
       lastmod: model.updatedAt,
       image: {
         loc: `${baseUrl}${model.heroImage.src}`,
-        title: `${model.name} AI image prompt reference`,
-        caption: model.heroImage.alt,
       },
     }
   })
@@ -36,8 +34,6 @@ export async function loader() {
     lastmod: SEO_PAGE_UPDATED_AT,
     image: {
       loc: `${baseUrl}${page.candidates[0].image}`,
-      title: page.title,
-      caption: page.candidates[0].imageAlt,
     },
   }))
 
@@ -49,8 +45,6 @@ export async function loader() {
       lastmod: "2026-08-04",
       image: {
         loc: `${baseUrl}/showcase/case324.jpg`,
-        title: "MiniMax H3 (Hailuo 3) AI video generator and prompt guide",
-        caption: "Cinematic visual reference for a MiniMax H3 video prompt guide",
       },
     },
     ...modelRoutes,
@@ -74,8 +68,6 @@ ${routes
         ? `
     <image:image>
       <image:loc>${escapeXml(route.image.loc)}</image:loc>
-      <image:title>${escapeXml(route.image.title)}</image:title>
-      <image:caption>${escapeXml(route.image.caption)}</image:caption>
     </image:image>`
         : ""
     }
