@@ -236,6 +236,11 @@ export function calculateRequiredCredits(model: string, input: any): number {
         Number(input.billing_reference_image_count ?? input.reference_images?.length) || 0
       )
       totalCredits += imageCount * (referencePricing.imagePerItem ?? 0)
+      if (referencePricing.imagePerItemAfterCount) {
+        totalCredits +=
+          Math.max(0, imageCount - referencePricing.imagePerItemAfterCount.count) *
+          referencePricing.imagePerItemAfterCount.credits
+      }
 
       const resolution = String(
         selectedOptions.resolution ??

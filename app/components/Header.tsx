@@ -39,6 +39,7 @@ export default function Header() {
   const isAiImage =
     location.pathname === "/ai/models" ||
     location.pathname.startsWith("/ai/models/") ||
+    location.pathname.startsWith("/ai/video-models/") ||
     location.pathname.startsWith("/ai/compare/") ||
     location.pathname.startsWith("/prompts/")
 
@@ -47,11 +48,12 @@ export default function Header() {
     ...(!user
       ? [
           {
-            title: "AI Image",
+            title: "AI Models",
             children: [
               { title: "All AI image models", to: "/ai/models" },
               { title: "AI image prompts", to: "/prompts/ai-image-prompts" },
               { title: "Prompt examples", to: "/prompts/ai-image-prompts-examples" },
+              { title: "MiniMax H3 (Hailuo 3)", to: "/ai/video-models/minimax-h3" },
               ...AI_IMAGE_MODEL_SLUGS.map(slug => ({
                 title: AI_IMAGE_MODELS[slug].name,
                 to: `/ai/models/${slug}`,

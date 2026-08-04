@@ -24,6 +24,9 @@ export const ModelCreditOverrideSchema = z.object({
 
 const ReferenceCreditPricingSchema = z.object({
   imagePerItem: z.number().nonnegative().optional(),
+  imagePerItemAfterCount: z
+    .object({ count: z.number().int().nonnegative(), credits: z.number().nonnegative() })
+    .optional(),
   videoPerSecond: z.number().nonnegative().optional(),
   videoPerSecondByResolution: z.record(z.number().nonnegative()).optional(),
   audioPerSecond: z.number().nonnegative().optional(),
@@ -43,7 +46,9 @@ export const VideoInputModeSchema = z.object({
   videoCount: z.number().int().nonnegative().optional(),
   audioCount: z.number().int().nonnegative().optional(),
   requiresImageOrVideo: z.boolean().optional(),
-  referenceTagStyle: z.enum(["at", "character"]).optional(),
+  requiresVideo: z.boolean().optional(),
+  allowsEndFrameWithoutStart: z.boolean().optional(),
+  referenceTagStyle: z.enum(["at", "character", "numbered"]).optional(),
 })
 
 const ReferenceImageConstraintsSchema = z.object({
@@ -119,6 +124,7 @@ export const ModelSchema = z.object({
   referenceMediaConstraints: z
     .object({
       totalMaxBytes: z.number().positive(),
+      maxItems: z.number().int().positive().optional(),
       image: ReferenceImageConstraintsSchema,
       video: ReferenceVideoConstraintsSchema,
       audio: ReferenceAudioConstraintsSchema,

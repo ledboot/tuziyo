@@ -4251,6 +4251,17 @@ select {
   line-height: 0.9;
 }
 
+.model-kicker {
+  display: inline-flex;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
 .model-hero-copy > p {
   max-width: 35rem;
   margin: 0;

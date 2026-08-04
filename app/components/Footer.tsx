@@ -48,7 +48,12 @@ export default function Footer() {
             <ul className="footer-links-list">
               <li>
                 <Link to="/ai/models" className="footer-link">
-                  Compare all models
+                  Compare image models
+                </Link>
+              </li>
+              <li>
+                <Link to="/ai/video-models/minimax-h3" className="footer-link">
+                  MiniMax H3 (Hailuo 3)
                 </Link>
               </li>
               {AI_IMAGE_MODEL_SLUGS.map(slug => (

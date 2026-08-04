@@ -44,6 +44,15 @@ export async function loader() {
   const routes: SitemapRoute[] = [
     ...staticRoutes.map(path => ({ path })),
     { path: "/ai/models", lastmod: "2026-07-16" },
+    {
+      path: "/ai/video-models/minimax-h3",
+      lastmod: "2026-08-04",
+      image: {
+        loc: `${baseUrl}/showcase/case324.jpg`,
+        title: "MiniMax H3 (Hailuo 3) AI video generator and prompt guide",
+        caption: "Cinematic visual reference for a MiniMax H3 video prompt guide",
+      },
+    },
     ...modelRoutes,
     ...comparisonRoutes,
     { path: "/prompts/ai-image-prompts", lastmod: SEO_PAGE_UPDATED_AT },

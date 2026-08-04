@@ -4,6 +4,7 @@ export default [
   index("routes/_index.tsx"),
   route("ai/models", "routes/ai.models._index.tsx"),
   route("ai/models/:model", "routes/ai.models.$model.tsx"),
+  route("ai/video-models/minimax-h3", "routes/ai.video-models.minimax-h3.tsx"),
   route("ai/compare/:comparison", "routes/ai.compare.$comparison.tsx"),
   route("prompts/ai-image-prompts", "routes/prompts.ai-image-prompts.tsx"),
   route("prompts/ai-image-prompts-examples", "routes/prompts.ai-image-prompts-examples.tsx"),

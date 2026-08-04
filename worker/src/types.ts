@@ -61,6 +61,7 @@ export interface ModelCreditOverride {
 
 export interface ReferenceCreditPricing {
   imagePerItem?: number
+  imagePerItemAfterCount?: { count: number; credits: number }
   videoPerSecond?: number
   videoPerSecondByResolution?: Record<string, number>
   audioPerSecond?: number
@@ -88,7 +89,9 @@ export interface VideoInputModeConfig {
   videoCount?: number
   audioCount?: number
   requiresImageOrVideo?: boolean
-  referenceTagStyle?: "at" | "character"
+  requiresVideo?: boolean
+  allowsEndFrameWithoutStart?: boolean
+  referenceTagStyle?: "at" | "character" | "numbered"
 }
 
 export interface ReferenceImageConstraints {
@@ -122,6 +125,7 @@ export interface ReferenceAudioConstraints {
 
 export interface ReferenceMediaConstraints {
   totalMaxBytes: number
+  maxItems?: number
   image: ReferenceImageConstraints
   video: ReferenceVideoConstraints
   audio: ReferenceAudioConstraints

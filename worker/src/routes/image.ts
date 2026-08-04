@@ -472,9 +472,11 @@ async function prepareReferenceImages(
       (imageConstraints && !imageConstraints.mimeTypes.includes(contentType))
     ) {
       return {
-        error: imageConstraints?.mimeTypes.includes("image/webp")
-          ? "Reference image must be PNG, JPEG, or WEBP"
-          : "Reference image must be PNG or JPEG",
+        error: imageConstraints?.mimeTypes.includes("image/heic")
+          ? "Reference image must be PNG, JPEG, WEBP, HEIC, or HEIF"
+          : imageConstraints?.mimeTypes.includes("image/webp")
+            ? "Reference image must be PNG, JPEG, or WEBP"
+            : "Reference image must be PNG or JPEG",
       }
     }
 
@@ -920,10 +922,21 @@ export async function handleGenerate(c: AuthenticatedContext) {
         }
         if (
           resolvedInputMode.id === "start_end_frame" &&
-          (input.reference_image_roles[0] !== "start_frame" ||
-            input.reference_image_roles.slice(1).some(role => role !== "end_frame"))
+          (resolvedInputMode.allowsEndFrameWithoutStart
+            ? input.reference_image_roles.length > 2 ||
+              input.reference_image_roles.some(role => role === "reference") ||
+              new Set(input.reference_image_roles).size !== input.reference_image_roles.length
+            : input.reference_image_roles[0] !== "start_frame" ||
+              input.reference_image_roles.slice(1).some(role => role !== "end_frame"))
         ) {
-          return c.json({ error: "End frame requires a start frame" }, 400)
+          return c.json(
+            {
+              error: resolvedInputMode.allowsEndFrameWithoutStart
+                ? "Frame inputs must contain at most one start frame and one end frame"
+                : "End frame requires a start frame",
+            },
+            400
+          )
         }
       }
       if (resolvedInputMode.requiresImageOrVideo && !hasReferenceImages && !hasReferenceVideos) {
@@ -935,7 +948,11 @@ export async function handleGenerate(c: AuthenticatedContext) {
       if (resolvedInputMode.id === "image_reference" && !hasReferenceImages) {
         return c.json({ error: "Image Reference mode requires at least one image" }, 400)
       }
-      if (resolvedInputMode.id === "video_reference" && !hasReferenceVideos) {
+      if (
+        resolvedInputMode.id === "video_reference" &&
+        resolvedInputMode.requiresVideo !== false &&
+        !hasReferenceVideos
+      ) {
         return c.json({ error: "Video Reference mode requires at least one video" }, 400)
       }
       if ((input.reference_images?.length ?? 0) > (resolvedInputMode.imageCount ?? 0)) {
@@ -953,6 +970,17 @@ export async function handleGenerate(c: AuthenticatedContext) {
       if ((input.reference_audios?.length ?? 0) > (resolvedInputMode.audioCount ?? 0)) {
         return c.json(
           { error: `This mode supports at most ${resolvedInputMode.audioCount ?? 0} audio files` },
+          400
+        )
+      }
+      const maxReferenceItems = modelDefinition.referenceMediaConstraints?.maxItems
+      const referenceItemCount =
+        (input.reference_images?.length ?? 0) +
+        (input.reference_videos?.length ?? 0) +
+        (input.reference_audios?.length ?? 0)
+      if (maxReferenceItems && referenceItemCount > maxReferenceItems) {
+        return c.json(
+          { error: `This model supports at most ${maxReferenceItems} reference files in total` },
           400
         )
       }
@@ -1294,8 +1322,15 @@ export function buildEvoLinkPayload(
       .filter((url): url is string => Boolean(url))
     if (imageUrls.length > 0) {
       if (isImageToVideo && providerConfig.imageInputFields === "start_end") {
-        payload.image_start = imageUrls[0]
-        if (imageUrls[1]) payload.image_end = imageUrls[1]
+        const roles = input.reference_image_roles ?? []
+        const startIndex = roles.indexOf("start_frame")
+        const endIndex = roles.indexOf("end_frame")
+        if (startIndex >= 0 && imageUrls[startIndex]) payload.image_start = imageUrls[startIndex]
+        if (endIndex >= 0 && imageUrls[endIndex]) payload.image_end = imageUrls[endIndex]
+        if (startIndex < 0 && endIndex < 0) {
+          payload.image_start = imageUrls[0]
+          if (imageUrls[1]) payload.image_end = imageUrls[1]
+        }
       } else {
         payload.image_urls = imageUrls
       }

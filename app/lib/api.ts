@@ -38,7 +38,9 @@ export interface ApiModel {
     videoCount?: number
     audioCount?: number
     requiresImageOrVideo?: boolean
-    referenceTagStyle?: "at" | "character"
+    requiresVideo?: boolean
+    allowsEndFrameWithoutStart?: boolean
+    referenceTagStyle?: "at" | "character" | "numbered"
   }>
   supportsStartFrame?: boolean
   supportsEndFrame?: boolean
@@ -57,6 +59,7 @@ export interface ApiModel {
 
 export interface ReferenceCreditPricing {
   imagePerItem?: number
+  imagePerItemAfterCount?: { count: number; credits: number }
   videoPerSecond?: number
   videoPerSecondByResolution?: Record<string, number>
   audioPerSecond?: number
@@ -104,6 +107,7 @@ export interface ReferenceAudioConstraints {
 
 export interface ReferenceMediaConstraints {
   totalMaxBytes: number
+  maxItems?: number
   image: ReferenceImageConstraints
   video: ReferenceVideoConstraints
   audio: ReferenceAudioConstraints

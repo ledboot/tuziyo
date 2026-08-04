@@ -244,6 +244,9 @@ export function validateReferenceSelection(
   constraints?: ReferenceMediaConstraints
 ): string | null {
   if (!constraints) return null
+  if (constraints.maxItems && items.length > constraints.maxItems) {
+    return `Reference materials must not exceed ${constraints.maxItems} files in total.`
+  }
   const uploaded = items.filter(item => item.status === "uploaded")
   const totalBytes = uploaded.reduce((sum, item) => sum + (item.size ?? 0), 0)
   if (totalBytes > constraints.totalMaxBytes) {

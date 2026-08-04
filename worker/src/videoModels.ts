@@ -90,6 +90,44 @@ const KLING_V3_IMAGE_CONSTRAINTS = {
   ...KLING_V3_TURBO_IMAGE_CONSTRAINTS,
   maxBytes: 10_000_000,
 }
+const MINIMAX_H3_REFERENCE_MEDIA_CONSTRAINTS = {
+  totalMaxBytes: 64_000_000,
+  maxItems: 12,
+  image: {
+    mimeTypes: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"],
+    maxBytes: 30_000_000,
+    minWidth: 256,
+    maxWidth: 5760,
+    minHeight: 256,
+    maxHeight: 5760,
+    minAspectRatio: 0.4,
+    maxAspectRatio: 2.5,
+  },
+  video: {
+    mimeTypes: ["video/mp4", "video/quicktime"],
+    maxBytes: 50_000_000,
+    minWidth: 256,
+    maxWidth: 5760,
+    minHeight: 256,
+    maxHeight: 5760,
+    minAspectRatio: 0.4,
+    maxAspectRatio: 2.5,
+    minDurationSeconds: 2,
+    maxDurationSeconds: 15,
+    maxTotalDurationSeconds: 15,
+    minFramePixels: 65_536,
+    maxFramePixels: 33_177_600,
+    minFps: 23.976,
+    maxFps: 60,
+  },
+  audio: {
+    mimeTypes: ["audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav"],
+    maxBytes: 15_000_000,
+    minDurationSeconds: 2,
+    maxDurationSeconds: 15,
+    maxTotalDurationSeconds: 15,
+  },
+}
 const SEEDANCE_PROMPT_LIMITS = {
   default: { max: 1000, unit: "words" as const },
   chinese: { max: 500, unit: "characters" as const },
@@ -105,11 +143,15 @@ const HAPPYHORSE_PROMPT_LIMITS = {
   chinese: { max: 2500, unit: "characters" as const },
 }
 const IMAGE_REFERENCE_CREDITS = { imagePerItem: 1 }
-const START_END_FRAME_MODE = (imageCount = 2): VideoInputModeConfig => ({
+const START_END_FRAME_MODE = (
+  imageCount = 2,
+  allowsEndFrameWithoutStart = false
+): VideoInputModeConfig => ({
   id: "start_end_frame",
   label: imageCount > 1 ? "Start & End Frame" : "Start Frame",
   generationMode: "image_to_video",
   imageCount,
+  ...(allowsEndFrameWithoutStart ? { allowsEndFrameWithoutStart: true } : {}),
 })
 const IMAGE_REFERENCE_MODE = (
   imageCount: number,
@@ -126,16 +168,23 @@ const IMAGE_REFERENCE_MODE = (
 const VIDEO_REFERENCE_MODE = (
   imageCount: number,
   videoCount: number,
-  audioCount: number
+  audioCount: number,
+  options: {
+    label?: string
+    requiresImageOrVideo?: boolean
+    requiresVideo?: boolean
+    referenceTagStyle?: "at" | "character" | "numbered"
+  } = {}
 ): VideoInputModeConfig => ({
   id: "video_reference",
-  label: "Video Reference",
+  label: options.label ?? "Video Reference",
   generationMode: "reference_to_video",
   imageCount,
   videoCount,
   audioCount,
-  requiresImageOrVideo: true,
-  referenceTagStyle: "at",
+  ...(options.requiresImageOrVideo === false ? {} : { requiresImageOrVideo: true }),
+  ...(options.requiresVideo === false ? { requiresVideo: false } : {}),
+  referenceTagStyle: options.referenceTagStyle ?? "at",
 })
 
 const select = (
@@ -632,6 +681,64 @@ export const VIDEO_MODEL_CATALOG: Record<string, VideoModelDefinition> = {
       ),
       duration: select("Duration", ["3", "5", "8", "10", "15"], "5"),
       resolution: select("Resolution", ["720p", "1080p"], "720p", { "1080p": 2 }),
+    },
+  },
+  "minimax/minimax-h3": {
+    enabled: true,
+    sortOrder: 30,
+    name: "MiniMax H3",
+    promptMaxLength: 7000,
+    provider: "MiniMax",
+    icon: "https://unpkg.com/@lobehub/icons-static-svg@latest/icons/minimax.svg",
+    supportsImage: true,
+    supportsStartFrame: true,
+    supportsEndFrame: true,
+    supportsAudio: true,
+    referenceImageCount: 9,
+    referenceImageFormat: ReferenceImageFormat.URL,
+    isNew: false,
+    credits: 0,
+    creditsPerSecond: 6,
+    referenceCredits: {
+      imagePerItem: 1,
+      imagePerItemAfterCount: { count: 5, credits: 1 },
+      videoPerSecond: 6,
+      audioPerSecond: 1,
+    },
+    pricingMode: "per_second",
+    pollTimeoutSeconds: 20 * 60,
+    mediaType: "video",
+    generationModes: ["text_to_video", "image_to_video", "reference_to_video"],
+    videoInputModes: [
+      START_END_FRAME_MODE(2, true),
+      VIDEO_REFERENCE_MODE(9, 3, 3, {
+        label: "Multimodal Reference",
+        requiresImageOrVideo: false,
+        requiresVideo: false,
+        referenceTagStyle: "numbered",
+      }),
+    ],
+    referenceMediaConstraints: MINIMAX_H3_REFERENCE_MEDIA_CONSTRAINTS,
+    providerConfig: {
+      models: {
+        text_to_video: "minimax-h3-text-to-video",
+        image_to_video: "minimax-h3-image-to-video",
+        reference_to_video: "minimax-h3-reference-to-video",
+      },
+      duration: true,
+      quality: true,
+      aspectRatio: true,
+      imageToVideoAspectRatio: false,
+      imageInputFields: "start_end",
+    },
+    options: {
+      aspect_ratio: select(
+        "Aspect Ratio",
+        ["16:9", "21:9", "4:3", "1:1", "3:4", "9:16"],
+        "16:9"
+      ),
+      duration: durationSlider(4, 15, "4"),
+      resolution: select("Resolution", ["2k"], "2k"),
     },
   },
 }

@@ -522,9 +522,15 @@ function calculateRequiredCredits(
     let totalCredits = creditsPerSecond * duration
     const referencePricing = model.referenceCredits
     if (referencePricing) {
-      totalCredits +=
-        referenceMedia.filter(item => (item.kind ?? "image") === "image").length *
-        (referencePricing.imagePerItem ?? 0)
+      const referenceImageCount = referenceMedia.filter(
+        item => (item.kind ?? "image") === "image"
+      ).length
+      totalCredits += referenceImageCount * (referencePricing.imagePerItem ?? 0)
+      if (referencePricing.imagePerItemAfterCount) {
+        totalCredits +=
+          Math.max(0, referenceImageCount - referencePricing.imagePerItemAfterCount.count) *
+          referencePricing.imagePerItemAfterCount.credits
+      }
       const resolution =
         selectedOptions.resolution ??
         normalizedOptions.resolution ??
@@ -1305,9 +1311,11 @@ export default function PromptArea({
         referenceImageConstraints?.mimeTypes ?? REFERENCE_IMAGE_ACCEPT.split(",")
       if (!acceptedImageTypes.includes(file.type)) {
         toast.error(
-          referenceImageConstraints && !referenceImageConstraints.mimeTypes.includes("image/webp")
-            ? "Reference image must be PNG or JPEG."
-            : "Reference image must be PNG, JPEG, or WEBP."
+          referenceImageConstraints?.mimeTypes.includes("image/heic")
+            ? "Reference image must be PNG, JPEG, WEBP, HEIC, or HEIF."
+            : referenceImageConstraints && !referenceImageConstraints.mimeTypes.includes("image/webp")
+              ? "Reference image must be PNG or JPEG."
+              : "Reference image must be PNG, JPEG, or WEBP."
         )
         return
       }
@@ -1507,6 +1515,7 @@ export default function PromptArea({
     if (
       mediaType === "video" &&
       effectiveVideoInputMode?.id === "start_end_frame" &&
+      !effectiveVideoInputMode.allowsEndFrameWithoutStart &&
       usableReferenceImages.some(item => item.role === "end_frame") &&
       !usableReferenceImages.some(item => item.role === "start_frame")
     ) {
@@ -1526,6 +1535,7 @@ export default function PromptArea({
       mediaType === "video" &&
       uploadedImages.length > 0 &&
       effectiveVideoInputMode?.id === "video_reference" &&
+      effectiveVideoInputMode.requiresVideo !== false &&
       usableReferenceVideos.length === 0
     ) {
       toast.error("Video Reference mode requires at least one video.")
@@ -1864,6 +1874,7 @@ export default function PromptArea({
     if (!selectedAsset) return
     if (
       role === "end_frame" &&
+      !selectedVideoInputMode?.allowsEndFrameWithoutStart &&
       !uploadedImages.some(item => item.id !== assetId && item.role === "start_frame")
     ) {
       toast.error("Add a start frame before using an end frame.")
@@ -1903,6 +1914,9 @@ export default function PromptArea({
     )
     const index = sameKind.findIndex(item => item.id === asset.id) + 1
     const apiIndex = Math.max(1, index)
+    if (selectedVideoInputMode?.referenceTagStyle === "numbered") {
+      return `${kind[0].toUpperCase()}${kind.slice(1)} ${apiIndex}`
+    }
     return selectedVideoInputMode?.referenceTagStyle === "character" && kind === "image"
       ? `character${apiIndex}`
       : `@${kind}${apiIndex}`
@@ -2300,6 +2314,7 @@ export default function PromptArea({
                                 onClick={() => openImageUpload(role)}
                                 disabled={
                                   role === "end_frame" &&
+                                  !selectedVideoInputMode.allowsEndFrameWithoutStart &&
                                   !uploadedImages.some(item => item.role === "start_frame")
                                 }
                                 className="liquid-frame-slot"

@@ -77,9 +77,11 @@ export async function handleCreateReferenceImageUpload(c: AuthenticatedContext) 
   if (!isAllowed) {
     const formats =
       kind === "image"
-        ? imageConstraints?.mimeTypes.includes("image/webp")
-          ? "PNG, JPEG, or WEBP"
-          : "PNG or JPEG"
+        ? imageConstraints?.mimeTypes.includes("image/heic")
+          ? "PNG, JPEG, WEBP, HEIC, or HEIF"
+          : imageConstraints?.mimeTypes.includes("image/webp")
+            ? "PNG, JPEG, or WEBP"
+            : "PNG or JPEG"
         : kind === "video"
           ? "MP4 or MOV"
           : "MP3 or WAV"

@@ -5,6 +5,8 @@ const REFERENCE_IMAGE_CONTENT_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
+  "image/heic": "heic",
+  "image/heif": "heif",
 }
 const REFERENCE_VIDEO_CONTENT_TYPES: Record<string, string> = {
   "video/mp4": "mp4",
@@ -32,6 +34,8 @@ export function getImageContentTypeFromKey(key: string) {
   if (extension === "jpg" || extension === "jpeg") return "image/jpeg"
   if (extension === "png") return "image/png"
   if (extension === "webp") return "image/webp"
+  if (extension === "heic") return "image/heic"
+  if (extension === "heif") return "image/heif"
   return undefined
 }
 

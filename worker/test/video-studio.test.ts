@@ -229,6 +229,7 @@ describe("video generation catalog", () => {
       "google/veo-3.1-fast",
       "xai/grok-imagine-video",
       "happyhorse/happyhorse-1.1",
+      "minimax/minimax-h3",
     ])
     for (const model of videoModels) {
       expect(model.isNew).toBe(false)
@@ -247,6 +248,64 @@ describe("video generation catalog", () => {
       "bytedance/seedance-2.0-mini",
       "google/gemini-omni-flash",
       "happyhorse/happyhorse-1.1",
+      "minimax/minimax-h3",
+    ])
+  })
+
+  test("publishes the documented MiniMax H3 contract", () => {
+    const model = getModels().find(item => item.id === "minimax/minimax-h3")
+    expect(model).toMatchObject({
+      name: "MiniMax H3",
+      provider: "MiniMax",
+      promptMaxLength: 7000,
+      creditsPerSecond: 6,
+      generationModes: ["text_to_video", "image_to_video", "reference_to_video"],
+      options: {
+        duration: {
+          values: ["4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"],
+          defaultValue: "4",
+          uiControl: "slider",
+        },
+        resolution: { values: ["2k"], defaultValue: "2k" },
+      },
+      referenceMediaConstraints: {
+        totalMaxBytes: 64_000_000,
+        maxItems: 12,
+        image: { maxBytes: 30_000_000, minWidth: 256, maxWidth: 5760 },
+        video: {
+          maxBytes: 50_000_000,
+          minDurationSeconds: 2,
+          maxDurationSeconds: 15,
+          maxTotalDurationSeconds: 15,
+          minFps: 23.976,
+          maxFps: 60,
+        },
+        audio: {
+          maxBytes: 15_000_000,
+          minDurationSeconds: 2,
+          maxDurationSeconds: 15,
+          maxTotalDurationSeconds: 15,
+        },
+      },
+    })
+    expect(model?.videoInputModes).toEqual([
+      {
+        id: "start_end_frame",
+        label: "Start & End Frame",
+        generationMode: "image_to_video",
+        imageCount: 2,
+        allowsEndFrameWithoutStart: true,
+      },
+      {
+        id: "video_reference",
+        label: "Multimodal Reference",
+        generationMode: "reference_to_video",
+        imageCount: 9,
+        videoCount: 3,
+        audioCount: 3,
+        requiresVideo: false,
+        referenceTagStyle: "numbered",
+      },
     ])
   })
 
@@ -425,6 +484,15 @@ describe("video generation catalog", () => {
     expect(getVideoProviderModel("happyhorse/happyhorse-1.1", "reference_to_video")).toBe(
       "happyhorse-1.1-reference-to-video"
     )
+    expect(getVideoProviderModel("minimax/minimax-h3", "text_to_video")).toBe(
+      "minimax-h3-text-to-video"
+    )
+    expect(getVideoProviderModel("minimax/minimax-h3", "image_to_video")).toBe(
+      "minimax-h3-image-to-video"
+    )
+    expect(getVideoProviderModel("minimax/minimax-h3", "reference_to_video")).toBe(
+      "minimax-h3-reference-to-video"
+    )
   })
 
   test("builds documented text-to-video and image-to-video payloads", () => {
@@ -551,6 +619,54 @@ describe("video generation catalog", () => {
       video_urls: ["https://example.com/fast-video.mp4"],
       audio_urls: ["https://example.com/fast-audio.mp3"],
     })
+
+    const h3Input = {
+      model: "minimax/minimax-h3",
+      prompt: "Use Image 1 for the character, Video 1 for motion, and Audio 1 for timing.",
+      media_type: MIME_TYPES.VIDEO,
+      generation_mode: "reference_to_video" as const,
+      duration: "7",
+      resolution: "2k",
+      aspect_ratio: "21:9",
+    }
+    expect(
+      buildEvoLinkPayload(
+        "minimax-h3-reference-to-video",
+        h3Input,
+        undefined,
+        [{ key: "image", url: "https://example.com/image.webp", contentType: "image/webp", size: 1 }],
+        [{ key: "video", url: "https://example.com/video.mp4", contentType: "video/mp4", size: 1 }],
+        [{ key: "audio", url: "https://example.com/audio.wav", contentType: "audio/wav", size: 1 }]
+      )
+    ).toEqual({
+      model: "minimax-h3-reference-to-video",
+      prompt: h3Input.prompt,
+      duration: 7,
+      quality: "2k",
+      aspect_ratio: "21:9",
+      image_urls: ["https://example.com/image.webp"],
+      video_urls: ["https://example.com/video.mp4"],
+      audio_urls: ["https://example.com/audio.wav"],
+    })
+
+    expect(
+      buildEvoLinkPayload(
+        "minimax-h3-image-to-video",
+        {
+          ...h3Input,
+          generation_mode: "image_to_video",
+          reference_image_roles: ["end_frame"],
+        },
+        undefined,
+        [{ key: "end", url: "https://example.com/end.png", contentType: "image/png", size: 1 }]
+      )
+    ).toEqual({
+      model: "minimax-h3-image-to-video",
+      prompt: h3Input.prompt,
+      duration: 7,
+      quality: "2k",
+      image_end: "https://example.com/end.png",
+    })
   })
 
   test("calculates configured video credits for model and option combinations", () => {
@@ -637,6 +753,7 @@ describe("video generation catalog", () => {
         resolution: "1080p",
       })
     ).toBe(40)
+    expect(calculateRequiredCredits("minimax/minimax-h3", { duration: 4 })).toBe(24)
   })
 
   test("adds model-configured image, video, and audio reference credits", () => {
@@ -688,6 +805,20 @@ describe("video generation catalog", () => {
         billing_reference_image_count: 3,
       })
     ).toBe(43)
+    expect(
+      calculateRequiredCredits("minimax/minimax-h3", {
+        duration: 5,
+        billing_reference_image_count: 2,
+        billing_reference_video_durations: [2.1],
+        billing_reference_audio_durations: [3.2],
+      })
+    ).toBe(54)
+    expect(
+      calculateRequiredCredits("minimax/minimax-h3", {
+        duration: 5,
+        billing_reference_image_count: 7,
+      })
+    ).toBe(39)
   })
 
   test("converts unified controls to model-specific EvoLink video fields", () => {
