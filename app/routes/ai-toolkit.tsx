@@ -1,141 +1,36 @@
-import { useState, useRef, useEffect, useMemo } from "react"
-import { Link, useNavigate } from "react-router"
+import { useState, useRef, useEffect } from "react"
+import { useNavigate } from "react-router"
 import PromptArea from "~/components/PromptArea"
 import { useUserStore } from "~/stores/userStore"
 import { useModelStore } from "~/stores/modelStore"
 import { useGenerateStore } from "~/stores/generateStore"
-import { api, type ApiToolkitShowcaseItem } from "~/lib/api"
+import { api } from "~/lib/api"
 import { AIToolkitSidebar } from "~/components/AIToolkitSidebar"
 import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo"
 
-const AI_TOOLKIT_FAQS = [
-  {
-    question: "Which AI image models can I use in tuziyo?",
-    answer:
-      "tuziyo supports multiple image model families, including Nano Banana, Seedream, and GPT Image. The available catalog is shown in the generator and the model comparison pages document current controls and use cases.",
-  },
-  {
-    question: "Can I use reference images?",
-    answer:
-      "Yes. Reference support depends on the selected model. When references are supported, tuziyo keeps them with the prompt, model settings, and results in the same creative session.",
-  },
-  {
-    question: "How do generation credits work?",
-    answer:
-      "Each model and output configuration has a credit cost. tuziyo shows the applicable estimate before generation, and tasks recorded as failed restore the credits charged for that task.",
-  },
-  {
-    question: "Why compare the same brief across models?",
-    answer:
-      "Different models prioritize instruction following, reference consistency, typography, resolution, speed, and cost differently. Comparing a stable brief helps you choose based on the actual job instead of a general leaderboard.",
-  },
-]
-
-const AI_TOOLKIT_WORKFLOW = [
-  {
-    number: "01",
-    title: "Describe the visual",
-    description:
-      "Start with the subject, action, composition, lighting, and details that must remain consistent.",
-  },
-  {
-    number: "02",
-    title: "Choose the model",
-    description:
-      "Match the brief to the model's available references, output controls, resolution, and credit cost.",
-  },
-  {
-    number: "03",
-    title: "Keep the context",
-    description:
-      "Store prompts, references, settings, and outputs together so the next iteration starts from the strongest result.",
-  },
-]
-
 export function meta() {
-  const title = "AI Image Generator & Creative Studio | tuziyo"
+  const title = "AI Image & Video Generator | tuziyo"
   const description =
-    "Generate images with leading AI models, reference media, reusable sessions, and flexible output controls in one focused creative studio."
+    "Create AI images and videos with leading models in one workspace. Use prompts and reference media, compare model controls, and keep every generation organized."
 
   return createSeoMeta({
     title,
     description,
     path: "/ai-toolkit",
     keywords:
-      "ai image generator, multi-model ai image studio, text to image, compare ai image models, tuziyo",
-    schema: [
-      createWebApplicationSchema({
-        name: "tuziyo AI Toolkit",
-        description,
-        path: "/ai-toolkit",
-        free: false,
-      }),
-      {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        mainEntity: AI_TOOLKIT_FAQS.map(item => ({
-          "@type": "Question",
-          name: item.question,
-          acceptedAnswer: { "@type": "Answer", text: item.answer },
-        })),
-      },
-    ],
+      "ai image generator, ai video generator, text to image, text to video, image to video, multi-model ai studio, reference image, reference video, tuziyo",
+    schema: createWebApplicationSchema({
+      name: "tuziyo AI Image & Video Toolkit",
+      description,
+      path: "/ai-toolkit",
+      free: false,
+    }),
   })
 }
 
 type ModelId = string
 
-const SKELETON_SHOWCASE_ITEMS: ApiToolkitShowcaseItem[] = Array.from({ length: 15 }).map(
-  (_, i) => ({
-    id: `skeleton-${i}`,
-    src: "",
-    alt: "",
-    prompt: "",
-    model: "",
-    aspectRatio: "",
-    width: 0,
-    height: 0,
-  })
-)
-
-function getMasonryColumnCount(width: number) {
-  if (width >= 1024) return 5
-  if (width >= 768) return 4
-  return 2
-}
-
-const MASONRY_TILE_HEIGHTS = [
-  "14rem",
-  "28rem",
-  "20rem",
-  "40rem",
-  "16rem",
-  "34rem",
-  "22rem",
-  "44rem",
-  "18rem",
-  "30rem",
-  "24rem",
-  "38rem",
-]
-
-function getMasonryTileHeight(columnIndex: number, itemIndex: number) {
-  return MASONRY_TILE_HEIGHTS[(columnIndex * 3 + itemIndex * 2) % MASONRY_TILE_HEIGHTS.length]
-}
-
-function distributeMasonryItems(items: ApiToolkitShowcaseItem[], columnCount: number) {
-  const columns = Array.from({ length: columnCount }, () => [] as ApiToolkitShowcaseItem[])
-  items.forEach((item, index) => {
-    columns[index % columnCount].push(item)
-  })
-  return columns
-}
-
 export default function AIToolkitPage() {
-  const [showcaseItems, setShowcaseItems] = useState<ApiToolkitShowcaseItem[]>([])
-  const [isShowcaseLoading, setIsShowcaseLoading] = useState(true)
-  const [isPromptVisible, setIsPromptVisible] = useState(false)
-  const [masonryColumnCount, setMasonryColumnCount] = useState(5)
   const [currentSession, setCurrentSession] = useState<{ id: string; title: string } | null>(null)
   const [sessionHistory, setSessionHistory] = useState<
     {
@@ -217,44 +112,6 @@ export default function AIToolkitPage() {
   }, [fetchModels])
 
   useEffect(() => {
-    let ignore = false
-
-    api.aiToolkit
-      .showcase()
-      .then(data => {
-        if (!ignore && data.items?.length) {
-          setShowcaseItems(data.items)
-        }
-      })
-      .catch(error => {
-        console.error("Failed to load AI toolkit showcase:", error)
-      })
-      .finally(() => {
-        if (!ignore) {
-          setIsShowcaseLoading(false)
-          // Delay PromptArea entrance until images start fading in
-          setTimeout(() => {
-            if (!ignore) setIsPromptVisible(true)
-          }, 500)
-        }
-      })
-
-    return () => {
-      ignore = true
-    }
-  }, [])
-
-  useEffect(() => {
-    const updateColumnCount = () => {
-      setMasonryColumnCount(getMasonryColumnCount(window.innerWidth))
-    }
-
-    updateColumnCount()
-    window.addEventListener("resize", updateColumnCount)
-    return () => window.removeEventListener("resize", updateColumnCount)
-  }, [])
-
-  useEffect(() => {
     if (user && token && !sessionsFetchedRef.current) {
       sessionsFetchedRef.current = true
       api.sessions
@@ -289,23 +146,8 @@ export default function AIToolkitPage() {
     }
   }
 
-  const masonryColumns = useMemo(
-    () =>
-      distributeMasonryItems(
-        showcaseItems.length > 0 ? showcaseItems : SKELETON_SHOWCASE_ITEMS,
-        masonryColumnCount
-      ),
-    [masonryColumnCount, showcaseItems]
-  )
-
   return (
     <div className="ai-toolkit-shell">
-      <AIToolkitMasonryBackdrop
-        columns={masonryColumns}
-        isLoading={isShowcaseLoading}
-        hasSidebar={!!user}
-      />
-
       {user && (
         <AIToolkitSidebar
           showSidebar={showSidebar}
@@ -322,61 +164,18 @@ export default function AIToolkitPage() {
         />
       )}
 
-      <main className={`ai-toolkit-stage ${user ? "ai-toolkit-stage--with-sidebar" : ""}`}>
-        <div className={`ai-toolkit-hero-copy ${isPromptVisible ? "is-visible" : ""}`}>
-          <h1>Multi-model AI image generator</h1>
-          <p>
-            Create from one brief, compare the controls that matter, and keep prompts, references,
-            settings, and results together as the idea develops.
-          </p>
-        </div>
-      </main>
-
-      <section className="ai-toolkit-guide" aria-labelledby="ai-toolkit-guide-title">
-        <div className="ai-toolkit-guide__intro">
-          <span>One brief, clearer model choices</span>
-          <h2 id="ai-toolkit-guide-title">Choose the model for the work, not the leaderboard.</h2>
-          <p>
-            Image models differ in reference consistency, instruction following, typography, output
-            size, speed, and cost. tuziyo keeps those practical differences close to the generator
-            so you can test a direction without rebuilding the creative context.
-          </p>
-          <div className="ai-toolkit-guide__links">
-            <Link to="/ai/models">Compare AI image models</Link>
-            <Link to="/prompts/ai-image-prompts">Read the prompt guide</Link>
-          </div>
-        </div>
-
-        <div className="ai-toolkit-workflow" aria-label="AI image generation workflow">
-          {AI_TOOLKIT_WORKFLOW.map(item => (
-            <article key={item.number}>
-              <span>{item.number}</span>
-              <h3>{item.title}</h3>
-              <p>{item.description}</p>
-            </article>
-          ))}
-        </div>
-
-        <div className="ai-toolkit-faq">
-          <div>
-            <span>Before you generate</span>
-            <h2>Questions about the AI image workflow</h2>
-          </div>
-          <div className="ai-toolkit-faq__list">
-            {AI_TOOLKIT_FAQS.map(item => (
-              <article key={item.question}>
-                <h3>{item.question}</h3>
-                <p>{item.answer}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div
-        className={`ai-toolkit-prompt-dock ${user ? "ai-toolkit-prompt-dock--with-sidebar" : ""} ${isPromptVisible ? "is-visible" : ""}`}
+      <main
+        className={`ai-toolkit-stage ${user ? "ai-toolkit-stage--with-sidebar" : ""}`}
+        aria-labelledby="ai-toolkit-title"
       >
-        <div className="ai-toolkit-prompt-dock__inner pointer-events-auto">
+        <div className="ai-toolkit-hero-copy">
+          <h1 id="ai-toolkit-title">Create AI images and videos</h1>
+          <p>
+            Turn prompts and reference media into images or videos with leading AI models. Keep
+            every brief, setting, and result connected as the idea develops.
+          </p>
+        </div>
+        <div className="ai-toolkit-composer">
           <PromptArea
             models={models}
             selectedModel={selectedModel}
@@ -399,7 +198,7 @@ export default function AIToolkitPage() {
             }}
           />
         </div>
-      </div>
+      </main>
 
       {deleteSessionId && (
         <div className="modal modal-open">
@@ -426,62 +225,6 @@ export default function AIToolkitPage() {
           <div className="modal-backdrop" onClick={() => setDeleteSessionId(null)} />
         </div>
       )}
-    </div>
-  )
-}
-
-function AIToolkitMasonryBackdrop({
-  columns,
-  isLoading,
-  hasSidebar,
-}: {
-  columns: ApiToolkitShowcaseItem[][]
-  isLoading: boolean
-  hasSidebar: boolean
-}) {
-  return (
-    <div
-      className={`ai-toolkit-backdrop ${isLoading ? "is-loading" : ""} ${
-        hasSidebar ? "ai-toolkit-backdrop--with-sidebar" : ""
-      }`}
-      aria-hidden="true"
-    >
-      <div className="ai-toolkit-masonry">
-        {columns.map((column, columnIndex) => (
-          <div className="ai-toolkit-masonry__column" key={columnIndex}>
-            {column.map((item, itemIndex) => (
-              <figure
-                className="ai-toolkit-masonry__tile"
-                key={item.id}
-                style={
-                  {
-                    "--tile-height": getMasonryTileHeight(columnIndex, itemIndex),
-                    flexShrink: 0,
-                  } as React.CSSProperties
-                }
-              >
-                {/* Skeleton placeholder — always rendered, fades out once image loads */}
-                <div className="ai-toolkit-masonry__skeleton" aria-hidden="true" />
-                {item.src && (
-                  <img
-                    src={item.src}
-                    alt=""
-                    width={item.width}
-                    height={item.height}
-                    loading="lazy"
-                    onLoad={e => {
-                      const tile = (e.currentTarget as HTMLImageElement).closest(
-                        ".ai-toolkit-masonry__tile"
-                      )
-                      tile?.classList.add("is-loaded")
-                    }}
-                  />
-                )}
-              </figure>
-            ))}
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
