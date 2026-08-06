@@ -10,7 +10,7 @@ const description =
 
 export function meta({}: Route.MetaArgs) {
   return createSeoMeta({
-    title: "AI Image Prompts: Structure, Templates & Practical Guide | tuziyo",
+    title: "AI Image Prompt Guide & Templates | tuziyo",
     description,
     path,
     keywords:

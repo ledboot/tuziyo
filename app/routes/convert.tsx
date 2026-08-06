@@ -15,9 +15,7 @@ import {
   Zap,
   CircleDollarSign,
 } from "lucide-react";
-import type { Route } from "./+types/convert";
 import { useI18n } from "~/lib/i18n";
-import { SEOMeta } from "~/components/SeoMeta";
 import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo";
 
 type OutputFormat = "jpeg" | "png" | "webp";
@@ -42,7 +40,7 @@ const OUTPUT_FORMATS: { label: string; value: OutputFormat; mime: string }[] = [
   { label: "JPEG (Standard)", value: "jpeg", mime: "image/jpeg" },
 ];
 
-export function meta({}: Route.MetaArgs) {
+export function meta() {
   const title = "Private Batch Image Converter | HEIC to PNG, JPG, WebP";
   const description =
     "Convert images between formats instantly. Secure batch processing for HEIC, PNG, and JPEG. Images stay on your device.";
@@ -51,16 +49,20 @@ export function meta({}: Route.MetaArgs) {
     title,
     description,
     path: "/convert",
-    keywords: "tuziyo, heic to jpg converter, batch image converter, webp converter, png converter, jpg converter",
-    schema: createWebApplicationSchema({ name: "tuziyo Batch Image Converter", description, path: "/convert" }),
+    keywords:
+      "tuziyo, heic to jpg converter, batch image converter, webp converter, png converter, jpg converter",
+    schema: createWebApplicationSchema({
+      name: "tuziyo Batch Image Converter",
+      description,
+      path: "/convert",
+    }),
   });
 }
 
 export default function ConvertPage() {
   const { t } = useI18n();
   const [images, setImages] = useState<ImageItem[]>([]);
-  const [globalOutputFormat, setGlobalOutputFormat] =
-    useState<OutputFormat>("webp");
+  const [globalOutputFormat, setGlobalOutputFormat] = useState<OutputFormat>("webp");
   const [quality, setQuality] = useState(90);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -126,7 +128,7 @@ export default function ConvertPage() {
           img.onload = () => {
             width = img.naturalWidth;
             height = img.naturalHeight;
-            setImages((prev) => [
+            setImages(prev => [
               ...prev,
               {
                 file,
@@ -143,12 +145,12 @@ export default function ConvertPage() {
 
       processFile();
     },
-    [setImages],
+    [setImages]
   );
 
   const handleMultipleFiles = useCallback(
     (files: FileList | File[]) => {
-      Array.from(files).forEach((file) => {
+      Array.from(files).forEach(file => {
         const isImage =
           file.type.startsWith("image/") ||
           file.name.toLowerCase().endsWith(".heic") ||
@@ -158,7 +160,7 @@ export default function ConvertPage() {
         }
       });
     },
-    [handleFileChange],
+    [handleFileChange]
   );
 
   const convertImage = useCallback(
@@ -190,19 +192,19 @@ export default function ConvertPage() {
           canvas.height = img.naturalHeight;
           ctx.drawImage(img, 0, 0);
           canvas.toBlob(
-            (blob) => {
+            blob => {
               if (blob) resolve(blob);
               else reject(new Error("Failed to convert image"));
             },
             targetMime,
-            quality / 100,
+            quality / 100
           );
         };
         img.onerror = () => reject(new Error("Failed to load image"));
         img.src = item.preview;
       });
     },
-    [quality],
+    [quality]
   );
 
   const handleBatchProcess = useCallback(async () => {
@@ -213,12 +215,10 @@ export default function ConvertPage() {
     for (let i = 0; i < images.length; i += 1) {
       if (!images[i].converted) {
         try {
-          setImages((prev) =>
+          setImages(prev =>
             prev.map((img, idx) =>
-              idx === i
-                ? { ...img, isConverting: true, error: undefined }
-                : img,
-            ),
+              idx === i ? { ...img, isConverting: true, error: undefined } : img
+            )
           );
 
           const blob = await convertImage(images[i], globalOutputFormat);
@@ -226,7 +226,7 @@ export default function ConvertPage() {
           const filename = `${baseName}.${globalOutputFormat}`;
           zip.file(filename, blob);
 
-          setImages((prev) =>
+          setImages(prev =>
             prev.map((img, idx) =>
               idx === i
                 ? {
@@ -234,16 +234,14 @@ export default function ConvertPage() {
                     isConverting: false,
                     converted: { blob, url: URL.createObjectURL(blob) },
                   }
-                : img,
-            ),
+                : img
+            )
           );
         } catch (e) {
-          setImages((prev) =>
+          setImages(prev =>
             prev.map((img, idx) =>
-              idx === i
-                ? { ...img, isConverting: false, error: (e as Error).message }
-                : img,
-            ),
+              idx === i ? { ...img, isConverting: false, error: (e as Error).message } : img
+            )
           );
         }
       }
@@ -261,12 +259,10 @@ export default function ConvertPage() {
   }, [images, convertImage, globalOutputFormat]);
 
   const handleRemoveImage = useCallback((index: number) => {
-    setImages((prev) => {
+    setImages(prev => {
       const newImages = [...prev];
-      if (newImages[index].preview)
-        URL.revokeObjectURL(newImages[index].preview);
-      if (newImages[index].converted?.url)
-        URL.revokeObjectURL(newImages[index].converted.url);
+      if (newImages[index].preview) URL.revokeObjectURL(newImages[index].preview);
+      if (newImages[index].converted?.url) URL.revokeObjectURL(newImages[index].converted.url);
       newImages.splice(index, 1);
       return newImages;
     });
@@ -274,7 +270,6 @@ export default function ConvertPage() {
 
   return (
     <div className="bg-slate-50 dark:bg-slate-950 min-h-screen">
-      <SEOMeta page="convert" />
       <main className="max-w-7xl mx-auto px-6 py-12 space-y-12">
         <div className="text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold uppercase tracking-widest mb-2">
@@ -298,12 +293,12 @@ export default function ConvertPage() {
                   : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
                 : "border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50"
             } hover:border-primary/50 hover:bg-primary/5`}
-            onDragOver={(e) => {
+            onDragOver={e => {
               e.preventDefault();
               setIsDragging(true);
             }}
             onDragLeave={() => setIsDragging(false)}
-            onDrop={(e) => {
+            onDrop={e => {
               e.preventDefault();
               setIsDragging(false);
               if (e.dataTransfer.files) {
@@ -318,9 +313,7 @@ export default function ConvertPage() {
               <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
                 {t.inpainting.dropzone}
               </h3>
-              <p className="text-slate-500 dark:text-slate-400">
-                {t.convert.description}
-              </p>
+              <p className="text-slate-500 dark:text-slate-400">{t.convert.description}</p>
             </div>
             <label
               htmlFor="file-upload"
@@ -334,9 +327,7 @@ export default function ConvertPage() {
                 multiple
                 accept="image/*,.heic,.heif"
                 className="hidden"
-                onChange={(e) =>
-                  e.target.files && handleMultipleFiles(e.target.files)
-                }
+                onChange={e => e.target.files && handleMultipleFiles(e.target.files)}
               />
             </label>
 
@@ -373,21 +364,16 @@ export default function ConvertPage() {
                     id="target-format"
                     className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary min-w-45 py-3 px-4 text-slate-700 dark:text-slate-200"
                     value={globalOutputFormat}
-                    onChange={(e) =>
-                      setGlobalOutputFormat(e.target.value as OutputFormat)
-                    }
+                    onChange={e => setGlobalOutputFormat(e.target.value as OutputFormat)}
                   >
-                    {OUTPUT_FORMATS.map((f) => (
+                    {OUTPUT_FORMATS.map(f => (
                       <option key={f.value} value={f.value}>
                         {f.label}
                       </option>
                     ))}
                   </select>
                 </label>
-                <label
-                  htmlFor="quality-setting"
-                  className="flex flex-col gap-2"
-                >
+                <label htmlFor="quality-setting" className="flex flex-col gap-2">
                   <span className="text-2xs font-bold uppercase tracking-widest text-slate-400">
                     {t.convert.quality}
                   </span>
@@ -399,11 +385,9 @@ export default function ConvertPage() {
                       min="10"
                       max="100"
                       value={quality}
-                      onChange={(e) => setQuality(Number(e.target.value))}
+                      onChange={e => setQuality(Number(e.target.value))}
                     />
-                    <span className="text-sm font-bold text-primary w-8">
-                      {quality}%
-                    </span>
+                    <span className="text-sm font-bold text-primary w-8">{quality}%</span>
                   </div>
                 </label>
               </div>
@@ -434,9 +418,7 @@ export default function ConvertPage() {
                       <th className="px-8 py-5">{t.common.source}</th>
                       <th className="px-8 py-5">{t.common.size}</th>
                       <th className="px-8 py-5">{t.common.status}</th>
-                      <th className="px-8 py-5 text-right">
-                        {t.common.actions}
-                      </th>
+                      <th className="px-8 py-5 text-right">{t.common.actions}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -459,8 +441,7 @@ export default function ConvertPage() {
                                 {img.file.name}
                               </p>
                               <p className="text-xs text-slate-400 font-medium">
-                                {img.dimensions.width} x {img.dimensions.height}{" "}
-                                pixels
+                                {img.dimensions.width} x {img.dimensions.height} pixels
                               </p>
                             </div>
                           </div>
@@ -490,23 +471,19 @@ export default function ConvertPage() {
                                 </span>
                               </div>
                             )}
-                            {!img.isConverting &&
-                              !img.converted &&
-                              img.error && (
-                                <div className="flex items-center gap-2 text-red-500">
-                                  <AlertCircle className="size-5" />
-                                  <span className="text-2xs font-bold uppercase tracking-tighter">
-                                    {t.common.failed}
-                                  </span>
-                                </div>
-                              )}
-                            {!img.isConverting &&
-                              !img.converted &&
-                              !img.error && (
-                                <span className="text-2xs font-bold text-primary uppercase tracking-tighter">
-                                  {t.common.ready}
+                            {!img.isConverting && !img.converted && img.error && (
+                              <div className="flex items-center gap-2 text-red-500">
+                                <AlertCircle className="size-5" />
+                                <span className="text-2xs font-bold uppercase tracking-tighter">
+                                  {t.common.failed}
                                 </span>
-                              )}
+                              </div>
+                            )}
+                            {!img.isConverting && !img.converted && !img.error && (
+                              <span className="text-2xs font-bold text-primary uppercase tracking-tighter">
+                                {t.common.ready}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="px-8 py-5 text-right">
@@ -516,7 +493,7 @@ export default function ConvertPage() {
                                 href={img.converted.url}
                                 download={`${img.file.name.replace(
                                   /\.[^/.]+$/,
-                                  "",
+                                  ""
                                 )}.${globalOutputFormat}`}
                                 className="size-10 flex items-center justify-center rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
                               >
@@ -548,8 +525,7 @@ export default function ConvertPage() {
                   </p>
                   <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
                   <p className="text-2xs font-bold text-slate-400 uppercase tracking-widest">
-                    {t.common.total}:{" "}
-                    {formatSize(images.reduce((a, b) => a + b.size, 0))}
+                    {t.common.total}: {formatSize(images.reduce((a, b) => a + b.size, 0))}
                   </p>
                 </div>
               </div>
@@ -580,7 +556,7 @@ export default function ConvertPage() {
               desc: t.home.aiDesc,
               color: "green",
             },
-          ].map((feature) => (
+          ].map(feature => (
             <div
               key={feature.title}
               className="p-8 rounded-4xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-center space-y-4 shadow-sm"
@@ -588,22 +564,14 @@ export default function ConvertPage() {
               <div
                 className={`size-12 rounded-2xl flex items-center justify-center mx-auto ${
                   feature.color === "blue" ? "bg-blue-50 text-blue-500" : ""
-                } ${
-                  feature.color === "purple"
-                    ? "bg-purple-50 text-purple-500"
-                    : ""
-                } ${
+                } ${feature.color === "purple" ? "bg-purple-50 text-purple-500" : ""} ${
                   feature.color === "green" ? "bg-green-50 text-green-500" : ""
                 }`}
               >
                 <feature.icon className="size-6" />
               </div>
-              <h4 className="font-bold text-slate-900 dark:text-white">
-                {feature.title}
-              </h4>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                {feature.desc}
-              </p>
+              <h4 className="font-bold text-slate-900 dark:text-white">{feature.title}</h4>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{feature.desc}</p>
             </div>
           ))}
         </section>

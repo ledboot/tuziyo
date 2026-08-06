@@ -3,13 +3,13 @@
   <br>tuziyo<br>
 </h1>
 
-**One creative workspace for AI image and video generation, model comparison, reusable assets, and browser-based finishing.**
+**One creative workspace for AI image and video generation, model comparison, reusable sessions, and organized assets.**
 
 [![Deploy with Cloudflare Pages](https://img.shields.io/badge/Deploy%20to-Cloudflare-F38020?logo=cloudflare&logoColor=white)](https://www.cloudflare.com/)
 [![GitHub license](https://img.shields.io/github/license/ledboot/tuziyo)](https://github.com/ledboot/tuziyo/blob/main/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/ledboot/tuziyo)](https://github.com/ledboot/tuziyo/stargazers)
 
-Tuziyo is an AI image and video creation studio that brings multiple leading models into one focused workflow. Generate with image models including Nano Banana, Seedream, GPT Image, Grok, and Recraft or video models including Seedance, Kling, Veo, Grok Imagine Video, HappyHorse, and MiniMax H3. Keep the results in a reusable Library, arrange video shots in Studio Lite, or finish images with browser-based tools.
+Tuziyo is an AI image and video creation studio that brings multiple leading models into one focused workflow. Generate with image models including Nano Banana, Seedream, GPT Image, Grok, and Recraft or video models including Seedance, Kling, Veo, Grok Imagine Video, HappyHorse, and MiniMax H3. Keep prompts and references in reusable sessions, collect results in the Library, and arrange video shots in Studio Lite.
 
 New accounts receive **10 free credits** and do not require a credit card.
 
@@ -23,12 +23,10 @@ New accounts receive **10 free credits** and do not require a credit card.
 - 🖼️ **Reference-guided workflows**: Keep prompts, image, video, and audio references, settings, and outputs together in reusable sessions.
 - 🗂️ **Library and Studio Lite**: Find reusable generated assets, organize shots, and export an ordered MP4 sequence in the browser.
 - 🔍 **Model comparison guides**: Compare resolution, reference limits, credit cost, controls, and best-fit use cases before generating.
-- 🪄 **Local AI inpainting**: Remove unwanted objects or restore missing regions with an in-browser neural model.
-- 📐 **Batch image tools**: Resize, crop, and convert HEIC, PNG, JPG, and WebP files directly in the browser.
-- 🔒 **Privacy-aware finishing**: The crop, resize, convert, and local inpainting tools process images on the user's device.
+- 🧭 **Connected creative context**: Keep prompts, references, settings, and results attached to the same direction as it develops.
 - 💳 **Free to try**: Every new account starts with 10 complimentary generation credits.
 
-> Cloud AI generation sends the prompt, selected references, and generation settings to the chosen model provider. Sequence export and the standalone crop, resize, convert, and local inpainting tools run in the browser.
+> Cloud AI generation sends the prompt, selected references, generation settings, and required request metadata to the chosen model provider. Studio sequence export runs in the browser.
 
 ## 🤖 Supported model guides
 
@@ -45,8 +43,6 @@ New accounts receive **10 free credits** and do not require a credit card.
 - **Runtime**: [Bun](https://bun.sh/)
 - **Deployment**: Cloudflare
 - **Styling**: Tailwind CSS 4
-- **AI Engine**: ONNX Runtime Web for local inpainting
-- **Image Processing**: Canvas API, heic2any, and JSZip
 - **Backend**: Cloudflare Workers, D1, and R2
 
 ## 🚀 Getting started
@@ -78,6 +74,8 @@ bun dev
 - Model comparison: [tuziyo.com/ai/models](https://tuziyo.com/ai/models)
 - Blog: [tuziyo.com/blog](https://tuziyo.com/blog/)
 - Privacy policy: [tuziyo.com/privacy](https://tuziyo.com/privacy)
+- Terms of service: [tuziyo.com/terms](https://tuziyo.com/terms)
+- Contact and support: [tuziyo.com/contact](https://tuziyo.com/contact)
 
 ## 📈 Star history
 

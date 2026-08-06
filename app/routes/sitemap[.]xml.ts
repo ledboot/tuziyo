@@ -18,7 +18,7 @@ function escapeXml(value: string) {
 }
 
 export async function loader() {
-  const staticRoutes = ["/", "/ai-toolkit", "/studio", "/pricing", "/privacy"]
+  const staticRoutes = ["/", "/ai-toolkit", "/studio", "/pricing", "/privacy", "/terms", "/contact"]
   const modelRoutes: SitemapRoute[] = AI_IMAGE_MODEL_SLUGS.map(slug => {
     const model = AI_IMAGE_MODELS[slug]
     return {
