@@ -62,6 +62,7 @@ export interface Translations {
     videoAction: string
     toolkitTitle: string
     toolkitDesc: string
+    toolkitAction: string
     galleryTitle: string
     galleryDesc: string
     galleryImageAlt: string
@@ -168,6 +169,7 @@ type HomeMarketingTranslations = Pick<
   | "videoAction"
   | "toolkitTitle"
   | "toolkitDesc"
+  | "toolkitAction"
   | "galleryTitle"
   | "galleryDesc"
   | "galleryImageAlt"
@@ -183,29 +185,35 @@ type HomeMarketingTranslations = Pick<
 const enHomeMarketing: HomeMarketingTranslations = {
   heroLead: "Create any visual you can imagine",
   heroBody:
-    "A cinematic creative workspace for generating images and videos, editing pictures, and preparing polished assets for every project.",
+    "A cinematic creative workspace for generating images and videos, comparing model strengths, and keeping every creative direction in context.",
   start: "Start Free Now",
   freeCreditNote: "10 free credits for every new account. No credit card required.",
   proofAriaLabel: "Creative model and tool strip",
   generationTitle: "Everything you need to shape the shot",
   generationDesc:
-    "Move from idea to finished asset with AI image creation and practical finishing tools in one focused workflow.",
+    "Move from a creative brief to image and video variations while keeping model choices, references, and outputs in one focused workflow.",
   imageTitle: "Image creation",
-  imageDesc: "Create product shots, campaign visuals, covers, and concept frames with a polished production look.",
+  imageDesc:
+    "Create product shots, campaign visuals, covers, and concept frames with a polished production look.",
   imageAction: "Create image",
   videoTitle: "Video concepts",
-  videoDesc: "Explore cinematic motion ideas for ads, stories, launch films, and visual experiments.",
+  videoDesc:
+    "Explore cinematic motion ideas for ads, stories, launch films, and visual experiments.",
   videoAction: "Create video",
-  toolkitTitle: "Picture finishing",
-  toolkitDesc: "Retouch, crop, resize, and convert images so every output is ready to publish.",
+  toolkitTitle: "Model comparison",
+  toolkitDesc:
+    "Compare current controls, reference support, credit costs, and best-fit use cases before you generate.",
+  toolkitAction: "Compare models",
   galleryTitle: "High-impact visuals for every format",
-  galleryDesc: "From posters and product scenes to social cuts and cinematic frames, keep the visual direction consistent.",
+  galleryDesc:
+    "From posters and product scenes to social cuts and cinematic frames, keep the visual direction consistent.",
   galleryImageAlt: "Creative visual sample",
   browse: "Open studio",
   voicesTitle: "From idea to final asset",
-  voicesDesc: "Generate the direction, refine the frame, then export images and video-ready assets without breaking momentum.",
+  voicesDesc:
+    "Generate a direction, compare variations, and organize reusable images and video shots without losing the original brief.",
   ctaTitle: "Make your next visual with tuziyo",
-  ctaDesc: "Start with an idea, shape the look, and finish it with the tools your content needs.",
+  ctaDesc: "Start with an idea, compare creative directions, and carry the strongest result forward.",
   register: "Start Free Now",
   testimonials: [
     [
@@ -218,49 +226,48 @@ const enHomeMarketing: HomeMarketingTranslations = {
       "Image and video",
       "Create still visuals and short motion concepts from the same workspace.",
     ],
+    ["Compare", "Model choice", "Review variations and choose the model that best fits the brief."],
     [
-      "Edit",
-      "Image finishing",
-      "Repair, crop, resize, and convert outputs without breaking the creative flow.",
-    ],
-    [
-      "Export",
-      "Ready to use",
-      "Prepare final assets for campaigns, social posts, product pages, and internal drafts.",
+      "Organize",
+      "Ready to reuse",
+      "Keep useful outputs available for campaigns, stories, and future iterations.",
     ],
   ],
 }
 
 const zhHomeMarketing: HomeMarketingTranslations = {
   heroLead: "创作你想象中的任何视觉",
-  heroBody: "一个有电影质感的创作工作区，用来生成图片和视频、编辑图片，并整理出适合项目使用的成品资产。",
+  heroBody:
+    "一个有电影质感的创作工作区，用来生成图片和视频、比较模型优势，并让每条创作方向都保留完整上下文。",
   start: "免费开始",
   freeCreditNote: "新用户注册即送 10 credits，无需绑定信用卡。",
   proofAriaLabel: "创作模型与工具条",
   generationTitle: "从想法到画面，一套工具完成",
-  generationDesc: "把 AI 图片创作与实用精修工具放在一个专注的流程里，从概念到成品更顺。",
+  generationDesc:
+    "从创意简报出发生成图片和视频变体，同时把模型选择、参考素材和输出保留在同一个流程里。",
   imageTitle: "图片创作",
   imageDesc: "生成产品图、营销视觉、封面和概念帧，保持更成熟的视觉质感。",
   imageAction: "创建图片",
   videoTitle: "视频概念",
   videoDesc: "探索适合广告、故事、发布短片和创意测试的电影感动态画面。",
   videoAction: "创建视频",
-  toolkitTitle: "图片精修处理",
-  toolkitDesc: "修补、裁剪、调整尺寸、转换格式，让每张图都能直接进入发布流程。",
+  toolkitTitle: "模型对比",
+  toolkitDesc: "生成前比较模型的可用控制项、参考素材支持、credits 成本和适用场景。",
+  toolkitAction: "比较模型",
   galleryTitle: "适配各种格式的高质感视觉",
   galleryDesc: "从海报、产品场景到社媒切图和电影感画面，保持一致的视觉方向。",
   galleryImageAlt: "创意视觉示例",
   browse: "打开创作台",
   voicesTitle: "从想法到成品资产",
-  voicesDesc: "确定方向、完善画面，再导出图片和视频可用素材，不打断创作节奏。",
+  voicesDesc: "确定方向、比较变体，再整理可复用的图片和视频镜头，同时保留原始创意简报。",
   ctaTitle: "用 tuziyo 创作下一张视觉",
-  ctaDesc: "从一个想法开始，塑造画面质感，再用合适工具完成它。",
+  ctaDesc: "从一个想法开始，比较不同创作方向，再继续打磨最合适的结果。",
   register: "免费开始",
   testimonials: [
     ["提示词", "创意简报", "从一句想法、一个产品方向或一张参考图开始。"],
     ["生成", "图片与视频", "在同一个工作区生成静态视觉和短视频概念。"],
-    ["编辑", "图片收尾", "修复、裁剪、调整尺寸和转换格式，不打断创作流程。"],
-    ["导出", "可直接使用", "准备适合营销、社媒、商品页和内部提案的最终资产。"],
+    ["比较", "模型选择", "查看不同变体，选择最适合当前创意简报的模型。"],
+    ["整理", "可重复使用", "保留有价值的输出，继续用于营销、故事和后续迭代。"],
   ],
 }
 

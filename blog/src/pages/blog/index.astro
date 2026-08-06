@@ -13,7 +13,7 @@ const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN ?? "https://tuziyo.com";
 ---
 <BaseLayout
   title="Blog | tuziyo"
-  description="Product updates, model comparisons, prompt workflows, and practical browser-based image finishing guides."
+  description="Product updates, AI model comparisons, prompt workflows, and practical guides for image and video generation."
   ogType="website"
   ogImage="https://tuziyo.com/web-app-manifest-512x512.png"
 >
@@ -32,7 +32,6 @@ const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN ?? "https://tuziyo.com";
     </div>
   </section>
 
-  <section class="mt-16 space-y-16">
   <section class="mt-16 space-y-16">
     {pagePosts.map((post) => (
       <a
@@ -69,7 +68,6 @@ const MAIN_ORIGIN = import.meta.env.PUBLIC_APP_ORIGIN ?? "https://tuziyo.com";
         </div>
       </a>
     ))}
-  </section>
   </section>
 
   {totalPages > 1 ? (

@@ -2,7 +2,6 @@ import { Link } from "react-router"
 import { ArrowRight } from "lucide-react"
 import type { Route } from "./+types/_index"
 import { translations, useI18n } from "~/lib/i18n"
-import { SEOMeta } from "~/components/SeoMeta"
 import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo"
 
 export function meta({}: Route.MetaArgs) {
@@ -33,11 +32,11 @@ export function meta({}: Route.MetaArgs) {
 const showcaseImages = {
   hero: "/showcase/case1.avif",
   heroVideo: "/videos/cover-video.mp4",
-  image: "/showcase/case351.jpg",
-  edit: "/showcase/case250.jpg",
-  poster: "/showcase/case22.jpg",
-  vertical: "/showcase/case6.jpg",
-  concept: "/showcase/case324.jpg",
+  image: { src: "/showcase/case351.webp", width: 1254, height: 1254 },
+  edit: { src: "/showcase/case250.webp", width: 1199, height: 889 },
+  poster: { src: "/showcase/case22.webp", width: 1200, height: 960 },
+  vertical: { src: "/showcase/case6.webp", width: 1080, height: 1920 },
+  concept: { src: "/showcase/case324.webp", width: 1024, height: 1536 },
 }
 
 const models = [
@@ -71,22 +70,29 @@ export default function Index() {
     {
       title: home.toolkitTitle,
       description: home.toolkitDesc,
-      action: t.common.tools,
-      to: "/inpainting",
+      action: home.toolkitAction,
+      to: "/ai/models",
       image: showcaseImages.edit,
     },
   ]
 
   return (
     <>
-      <SEOMeta page="home" />
-
       <section className="home-redesign-hero">
         <figure className="home-redesign-hero__media" aria-hidden="true">
-          <video autoPlay loop muted playsInline preload="metadata" poster={showcaseImages.hero}>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            poster={showcaseImages.hero}
+            width={1280}
+            height={720}
+          >
             <source src={showcaseImages.heroVideo} type="video/mp4" />
           </video>
-          <img src={showcaseImages.hero} alt="" />
+          <img src={showcaseImages.hero} alt="" width={800} height={447} />
         </figure>
 
         <div className="home-redesign-shell home-redesign-hero__inner">
@@ -108,6 +114,8 @@ export default function Index() {
                 <img
                   src={`https://unpkg.com/@lobehub/icons-static-svg@latest/icons/${model.slug}.svg`}
                   alt=""
+                  width={20}
+                  height={20}
                 />
                 {model.name}
               </span>
@@ -128,13 +136,16 @@ export default function Index() {
 
           <div className="home-suite__grid">
             {featureCards.map(({ title, description, action, to, image }, index) => (
-              <Link
-                key={title}
-                to={to}
-                className="home-suite-card"
-              >
+              <Link key={title} to={to} className="home-suite-card">
                 <figure>
-                  <img src={image} alt="" />
+                  <img
+                    src={image.src}
+                    alt=""
+                    width={image.width}
+                    height={image.height}
+                    loading="lazy"
+                    decoding="async"
+                  />
                   <span>{String(index + 1).padStart(2, "0")}</span>
                 </figure>
                 <div className="home-suite-card__copy">
@@ -183,9 +194,16 @@ export default function Index() {
         </div>
 
         <div className="home-redesign-gallery">
-          {galleryImages.map(src => (
-            <figure key={src}>
-              <img src={src} alt={home.galleryImageAlt} />
+          {galleryImages.map(image => (
+            <figure key={image.src}>
+              <img
+                src={image.src}
+                alt={home.galleryImageAlt}
+                width={image.width}
+                height={image.height}
+                loading="lazy"
+                decoding="async"
+              />
             </figure>
           ))}
         </div>

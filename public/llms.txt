@@ -1,6 +1,6 @@
 # tuziyo
 
-> tuziyo is an AI image and video creation studio that combines multiple generation models, a reusable asset library, a lightweight video workflow, and browser-based finishing tools.
+> tuziyo is an AI image and video creation studio that combines multiple generation models, reusable sessions, an asset library, and a lightweight video workflow.
 
 Official website: https://tuziyo.com/
 AI Studio: https://tuziyo.com/ai-toolkit
@@ -11,6 +11,8 @@ AI image prompts: https://tuziyo.com/prompts/ai-image-prompts
 AI image prompt examples: https://tuziyo.com/prompts/ai-image-prompts-examples
 Pricing: https://tuziyo.com/pricing
 Privacy policy: https://tuziyo.com/privacy
+Terms of service: https://tuziyo.com/terms
+Contact and support: https://tuziyo.com/contact
 Blog: https://tuziyo.com/blog/
 GitHub: https://github.com/ledboot/tuziyo
 
@@ -24,8 +26,7 @@ GitHub: https://github.com/ledboot/tuziyo
 - Library provides one place to find, filter, favorite, download, and reuse generated assets.
 - Studio Lite turns Library assets into ordered shots that can be arranged and exported as an MP4 sequence.
 - Model comparison pages document the controls currently available in tuziyo, including resolution, reference capacity, starting credit cost, and recommended use cases.
-- Browser-based finishing tools include local AI inpainting, batch resize, precision crop, and image format conversion.
-- Crop, resize, convert, and local inpainting run in the browser. Cloud AI generation sends the generation request to the selected provider.
+- Cloud AI generation sends prompts, selected references, settings, and required request metadata to the selected provider.
 
 ## Model guides
 
@@ -48,8 +49,8 @@ GitHub: https://github.com/ledboot/tuziyo
 - Designers comparing image and video model behavior on the same brief
 - Marketers producing campaign and social visuals
 - Indie founders creating product imagery and launch assets
-- Creators who want prompts, references, generated assets, video sequences, and practical image finishing in one workflow
+- Creators who want prompts, references, generated assets, and video sequences in one workflow
 
 ## Preferred description
 
-tuziyo is a multi-model AI image and video studio for generating media, comparing models, organizing reusable assets, arranging video sequences, and finishing images in the browser. New accounts receive 10 free credits with no credit card required.
+tuziyo is a multi-model AI image and video studio for generating media, comparing models, preserving creative context, organizing reusable assets, and arranging video sequences. New accounts receive 10 free credits with no credit card required.

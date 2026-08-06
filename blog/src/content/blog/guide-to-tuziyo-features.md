@@ -1,17 +1,17 @@
 ---
-title: "Getting Started with Tuziyo: AI Generation and Browser Image Tools"
-description: "Learn how to generate images with multiple AI models, compare results, and finish assets with Tuziyo's local inpainting, resize, crop, and conversion tools."
+title: "Getting Started with Tuziyo: AI Image and Video Workflow"
+description: "Learn how to choose an AI model, work with prompts and references, preserve creative sessions, organize assets, and build video sequences in Tuziyo."
 date: 2025-08-15
 cover: ""
-tags: ["introduction"]
-keywords: ["tuziyo", "Image Converter", "AI Inpainting", "Smart Resize", "Local AI", "Privacy First", "Free Tools", "Image Editing", "Browser-Based"]
+tags: ["introduction", "AI workflow", "model selection"]
+keywords: ["tuziyo", "AI image generator", "AI video generator", "AI model comparison", "creative sessions", "reference images", "AI creative workflow"]
 ---
 
-Welcome to **Tuziyo**, a focused workspace for AI image generation and practical image finishing. You can compare multiple generation models, keep prompts and references in reusable sessions, and prepare the final asset with browser-based editing tools.
+Welcome to **Tuziyo**, a focused workspace for AI image and video generation. You can choose from multiple model families, keep prompts and references in reusable sessions, collect useful outputs in a Library, and arrange visual ideas into ordered shots in Studio.
 
 New accounts receive **10 free generation credits**, with no credit card required.
 
-Here is a complete guide to what you can do with Tuziyo.
+This guide explains the current workflow from the first brief to a reusable set of visual assets.
 
 ## 1. Generate with multiple AI image models
 
@@ -19,64 +19,48 @@ Open the [AI Studio](https://tuziyo.com/ai-toolkit), describe the image you want
 
 If you are unsure where to start, use the [AI image model comparison](https://tuziyo.com/ai/models) to compare current resolution, reference, credit, and use-case details.
 
-## 2. AI Inpainting: The Magic Eraser
+Different models are useful for different constraints. A quick draft, a product image with strict geometry, a typography-heavy layout, and a detailed campaign scene may each benefit from a different model. Start with the requirement that cannot change, then choose the model around it.
 
-Have a perfect shot ruined by a photobomber, a stray trash can, or a watermark? Our AI Inpainting tool uses advanced machine learning models (running locally in your browser!) to seamlessly remove unwanted elements.
+## 2. Write a brief the model can act on
 
-**How to use it:**
-1. Navigate to the **Inpainting** tool.
-2. **Upload** your image.
-3. Use the **Brush** tool to paint over the object you want to remove. You can adjust the brush size for precision.
-4. Click **Remove**. The AI will analyze the surrounding pixels and fill in the gap intelligently.
-5. **Download** your clean image.
+A useful prompt gives the model a clear job without trying to control every pixel. Describe the request in a stable order:
 
-## 3. Batch Format Converter
+1. State the subject and intended outcome.
+2. Define the composition, camera, or layout.
+3. Describe the environment, lighting, materials, and mood.
+4. Identify the details that must remain unchanged.
+5. Add the requested format and meaningful exclusions.
 
-Stop struggling with incompatible file formats. Tuziyo's Converter allows you to transform images between modern and classic formats in seconds.
+The [AI image prompt guide](https://tuziyo.com/prompts/ai-image-prompts) explains this structure in more detail. The [prompt examples](https://tuziyo.com/prompts/ai-image-prompts-examples) provide adaptable starting points for products, portraits, characters, interiors, storyboards, and campaigns.
 
-**Supported Formats:**
-- Inputs: HEIC, PNG, JPG, WEBP, AVIF
-- Outputs: PNG, JPG, WEBP
+## 3. Give each reference a role
 
-**How to use it:**
-1. Go to the **Convert** page.
-2. Drag and drop **one or multiple images**.
-3. Select your desired **Output Format** (e.g., WebP for web performance, JPG for compatibility).
-4. Click **Convert All**. Since it processes locally, it's lightning fast!
+When the selected model supports reference images, explain what each reference controls. One image might define the exact product, another the lighting, and another the composition or palette. Naming these roles reduces ambiguity and makes comparisons more useful.
 
-## 4. Smart Resize
+Reference capacity varies by model. The model pages document the limits and controls currently available inside Tuziyo rather than repeating a generic provider specification.
 
-Need to shrink photos for a website or email attachment? Our Resizer lets you scale images down (or up) while maintaining quality.
+## 4. Preserve the creative trail in sessions
 
-**How to use it:**
-1. Open the **Resize** tool.
-2. Upload your images.
-3. Choose your method:
-    - **By Percentage**: e.g., reduce to 50%.
-    - **By Dimensions**: Set a specific Width or Height (aspect ratio is preserved automatically).
-4. Hit **Size Image** and download the optimized files.
+Each generation session keeps the prompt, selected model, reference media, output settings, and generated results together. That makes it possible to return to an earlier direction, compare outputs, or continue from the strongest result without reconstructing the original request.
 
-## 5. Professional Crop
+Use a new session when the creative goal changes materially. Continue an existing session when you are refining the same subject, scene, campaign direction, or shot.
 
-Get your images ready for Instagram, X (Twitter), or your blog header with precise cropping tools.
+## 5. Reuse generated assets from the Library
 
-**How to use it:**
-1. Head to the **Crop** tool.
-2. Upload a photo.
-3. Choose a **Preset Ratio** (like 1:1 Square, 16:9 Landscape) or drag the handles for a **Freestyle** crop.
-4. Confirm and download.
+The Library provides a single place to find generated images and videos, mark useful assets, download them, or reuse them in another part of the workflow. Instead of treating every output as a disposable file, keep the candidates that may support future shots, campaigns, or variations.
 
-## Why Choose Tuziyo?
+## 6. Build a sequence in Studio
 
-### 🔒 Clear processing boundaries
-The crop, resize, convert, and local inpainting tools process images in your browser. Cloud AI generation sends the prompt, selected references, and generation settings to the model provider required to create the result.
+Studio turns Library assets into visual projects. Organize images and clips into shots, keep the direction beside each frame, adjust the sequence, and export an ordered MP4 when the project is ready for review.
 
-### ⚡ Blazing Speed
-No uploading implies no waiting. Large files open instantly, and processing happens as fast as your device allows.
+The goal is not to replace a full professional editor. Studio is a lightweight bridge between isolated generations and a coherent sequence that can continue into a broader production workflow.
 
-### 💸 Free to try
-Every new account receives 10 free generation credits. The standalone browser image tools are available without consuming generation credits.
+## Understand the processing boundary
+
+Cloud AI generation sends the prompt, selected references, settings, and required request metadata to the provider for the chosen model. Account, session, task, and output records are stored as described in the [Privacy Policy](https://tuziyo.com/privacy).
+
+Before publishing an output, review identity, product geometry, text, logos, and any other detail that must be accurate. Generative results are candidates, not guarantees.
 
 ---
 
-Ready to enhance your workflow? Start editing with [Tuziyo](https://tuziyo.com) today!
+Ready to test a brief? Open the [AI Studio](https://tuziyo.com/ai-toolkit) and start with the model that best matches the constraint that matters most.

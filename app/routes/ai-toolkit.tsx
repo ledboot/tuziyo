@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react"
-import { useNavigate } from "react-router"
+import { Link, useNavigate } from "react-router"
 import PromptArea from "~/components/PromptArea"
 import { useUserStore } from "~/stores/userStore"
 import { useModelStore } from "~/stores/modelStore"
@@ -8,23 +8,78 @@ import { api, type ApiToolkitShowcaseItem } from "~/lib/api"
 import { AIToolkitSidebar } from "~/components/AIToolkitSidebar"
 import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo"
 
+const AI_TOOLKIT_FAQS = [
+  {
+    question: "Which AI image models can I use in tuziyo?",
+    answer:
+      "tuziyo supports multiple image model families, including Nano Banana, Seedream, and GPT Image. The available catalog is shown in the generator and the model comparison pages document current controls and use cases.",
+  },
+  {
+    question: "Can I use reference images?",
+    answer:
+      "Yes. Reference support depends on the selected model. When references are supported, tuziyo keeps them with the prompt, model settings, and results in the same creative session.",
+  },
+  {
+    question: "How do generation credits work?",
+    answer:
+      "Each model and output configuration has a credit cost. tuziyo shows the applicable estimate before generation, and tasks recorded as failed restore the credits charged for that task.",
+  },
+  {
+    question: "Why compare the same brief across models?",
+    answer:
+      "Different models prioritize instruction following, reference consistency, typography, resolution, speed, and cost differently. Comparing a stable brief helps you choose based on the actual job instead of a general leaderboard.",
+  },
+]
+
+const AI_TOOLKIT_WORKFLOW = [
+  {
+    number: "01",
+    title: "Describe the visual",
+    description:
+      "Start with the subject, action, composition, lighting, and details that must remain consistent.",
+  },
+  {
+    number: "02",
+    title: "Choose the model",
+    description:
+      "Match the brief to the model's available references, output controls, resolution, and credit cost.",
+  },
+  {
+    number: "03",
+    title: "Keep the context",
+    description:
+      "Store prompts, references, settings, and outputs together so the next iteration starts from the strongest result.",
+  },
+]
+
 export function meta() {
   const title = "AI Image Generator & Creative Studio | tuziyo"
   const description =
-    "Generate and edit images with leading AI models, reference images, reusable sessions, and flexible output controls in one creative studio."
+    "Generate images with leading AI models, reference media, reusable sessions, and flexible output controls in one focused creative studio."
 
   return createSeoMeta({
     title,
     description,
     path: "/ai-toolkit",
     keywords:
-      "ai image generator, multi-model ai image studio, text to image, image editing, tuziyo",
-    schema: createWebApplicationSchema({
-      name: "tuziyo AI Toolkit",
-      description,
-      path: "/ai-toolkit",
-      free: false,
-    }),
+      "ai image generator, multi-model ai image studio, text to image, compare ai image models, tuziyo",
+    schema: [
+      createWebApplicationSchema({
+        name: "tuziyo AI Toolkit",
+        description,
+        path: "/ai-toolkit",
+        free: false,
+      }),
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: AI_TOOLKIT_FAQS.map(item => ({
+          "@type": "Question",
+          name: item.question,
+          acceptedAnswer: { "@type": "Answer", text: item.answer },
+        })),
+      },
+    ],
   })
 }
 
@@ -267,7 +322,56 @@ export default function AIToolkitPage() {
         />
       )}
 
-      <main className={`ai-toolkit-stage ${user ? "ai-toolkit-stage--with-sidebar" : ""}`} />
+      <main className={`ai-toolkit-stage ${user ? "ai-toolkit-stage--with-sidebar" : ""}`}>
+        <div className={`ai-toolkit-hero-copy ${isPromptVisible ? "is-visible" : ""}`}>
+          <h1>Multi-model AI image generator</h1>
+          <p>
+            Create from one brief, compare the controls that matter, and keep prompts, references,
+            settings, and results together as the idea develops.
+          </p>
+        </div>
+      </main>
+
+      <section className="ai-toolkit-guide" aria-labelledby="ai-toolkit-guide-title">
+        <div className="ai-toolkit-guide__intro">
+          <span>One brief, clearer model choices</span>
+          <h2 id="ai-toolkit-guide-title">Choose the model for the work, not the leaderboard.</h2>
+          <p>
+            Image models differ in reference consistency, instruction following, typography, output
+            size, speed, and cost. tuziyo keeps those practical differences close to the generator
+            so you can test a direction without rebuilding the creative context.
+          </p>
+          <div className="ai-toolkit-guide__links">
+            <Link to="/ai/models">Compare AI image models</Link>
+            <Link to="/prompts/ai-image-prompts">Read the prompt guide</Link>
+          </div>
+        </div>
+
+        <div className="ai-toolkit-workflow" aria-label="AI image generation workflow">
+          {AI_TOOLKIT_WORKFLOW.map(item => (
+            <article key={item.number}>
+              <span>{item.number}</span>
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="ai-toolkit-faq">
+          <div>
+            <span>Before you generate</span>
+            <h2>Questions about the AI image workflow</h2>
+          </div>
+          <div className="ai-toolkit-faq__list">
+            {AI_TOOLKIT_FAQS.map(item => (
+              <article key={item.question}>
+                <h3>{item.question}</h3>
+                <p>{item.answer}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <div
         className={`ai-toolkit-prompt-dock ${user ? "ai-toolkit-prompt-dock--with-sidebar" : ""} ${isPromptVisible ? "is-visible" : ""}`}

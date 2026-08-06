@@ -170,7 +170,7 @@ export const COMPARISON_PAGES = {
   },
   "best-ai-model-for-product-photography": {
     slug: "best-ai-model-for-product-photography",
-    metaTitle: "Best AI Model for Product Photography: A Practical Comparison | tuziyo",
+    metaTitle: "Best AI Model for Product Photography | tuziyo",
     title: "Best AI Model for Product Photography",
     description:
       "Compare Nano Banana Pro, Nano Banana 2, Seedream 5 Pro, and GPT Image 2 for product photography, packshots, campaign scenes, and reference fidelity.",
@@ -347,7 +347,7 @@ export const COMPARISON_PAGES = {
   },
   "gpt-image-2-vs-nano-banana-2": {
     slug: "gpt-image-2-vs-nano-banana-2",
-    metaTitle: "GPT Image 2 vs Nano Banana 2: Features, Cost & Use Cases | tuziyo",
+    metaTitle: "GPT Image 2 vs Nano Banana 2 | tuziyo",
     title: "GPT Image 2 vs Nano Banana 2",
     description:
       "Compare GPT Image 2 and Nano Banana 2 by starting credits, references, resolutions, batch output, search controls, and creative workflow.",
@@ -490,7 +490,7 @@ export const COMPARISON_PAGES = {
   },
   "seedream-5-pro-vs-seedream-5-lite": {
     slug: "seedream-5-pro-vs-seedream-5-lite",
-    metaTitle: "Seedream 5 Pro vs Seedream 5 Lite: Complete Comparison | tuziyo",
+    metaTitle: "Seedream 5 Pro vs Seedream 5 Lite | tuziyo",
     title: "Seedream 5 Pro vs Seedream 5 Lite",
     description:
       "Compare Seedream 5 Pro and Seedream 5 Lite in tuziyo by credits, resolution, references, aspect ratios, batch output, and practical use cases.",

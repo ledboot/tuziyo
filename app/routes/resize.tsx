@@ -14,9 +14,7 @@ import {
   RefreshCw,
   Download,
 } from "lucide-react";
-import type { Route } from "./+types/resize";
 import { useI18n } from "~/lib/i18n";
-import { SEOMeta } from "~/components/SeoMeta";
 import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo";
 
 type ResizeMode = "px" | "percentage";
@@ -29,7 +27,7 @@ interface ImageItem {
   size: number;
 }
 
-export function meta({}: Route.MetaArgs) {
+export function meta() {
   const title = "Batch Image Resizer | Resize Images by Percentage or Pixels";
   const description =
     "Resize multiple images at once with precision. Support for aspect ratio locking and percentage scaling. 100% private and fast.";
@@ -38,8 +36,13 @@ export function meta({}: Route.MetaArgs) {
     title,
     description,
     path: "/resize",
-    keywords: "tuziyo, bulk image resizer, image resizer online, resize images, percentage image resizer",
-    schema: createWebApplicationSchema({ name: "tuziyo Batch Image Resizer", description, path: "/resize" }),
+    keywords:
+      "tuziyo, bulk image resizer, image resizer online, resize images, percentage image resizer",
+    schema: createWebApplicationSchema({
+      name: "tuziyo Batch Image Resizer",
+      description,
+      path: "/resize",
+    }),
   });
 }
 
@@ -79,7 +82,7 @@ export default function ResizePage() {
           originalHeight: img.naturalHeight,
           size: file.size,
         };
-        setImages((prev) => [...prev, newItem]);
+        setImages(prev => [...prev, newItem]);
         if (images.length === 0) {
           setTargetWidth(img.naturalWidth);
           setTargetHeight(img.naturalHeight);
@@ -87,18 +90,18 @@ export default function ResizePage() {
       };
       img.src = url;
     },
-    [images.length],
+    [images.length]
   );
 
   const handleMultipleFiles = useCallback(
     (files: FileList | File[]) => {
-      Array.from(files).forEach((file) => {
+      Array.from(files).forEach(file => {
         if (file.type.startsWith("image/")) {
           handleFileChange(file);
         }
       });
     },
-    [handleFileChange],
+    [handleFileChange]
   );
 
   const getNewDimensions = useCallback(() => {
@@ -145,15 +148,15 @@ export default function ResizePage() {
           ctx.imageSmoothingQuality = "high";
           ctx.drawImage(img, 0, 0, width, height);
           canvas.toBlob(
-            (blob) => (blob ? resolve(blob) : reject()),
+            blob => (blob ? resolve(blob) : reject()),
             `image/${outputFormat.toLowerCase()}`,
-            outputFormat === "PNG" ? undefined : 0.92,
+            outputFormat === "PNG" ? undefined : 0.92
           );
         };
         img.src = item.preview;
       });
     },
-    [getNewDimensions, outputFormat],
+    [getNewDimensions, outputFormat]
   );
 
   const handleDownload = useCallback(async () => {
@@ -199,20 +202,29 @@ export default function ResizePage() {
 
   return (
     <div className="min-h-[calc(100vh-64px)] flex flex-col">
-      <SEOMeta page="resize" />
       <main className="flex-1 flex overflow-hidden">
         <section className="flex-1 relative flex flex-col bg-base-200 overflow-hidden">
           {images.length > 0 && (
             <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10">
               <div className="btn-group">
-                <button className="btn btn-sm btn-ghost" onClick={() => setZoom(Math.max(10, zoom - 10))}>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => setZoom(Math.max(10, zoom - 10))}
+                >
                   <ZoomOut className="size-4" />
                 </button>
                 <button className="btn btn-sm btn-ghost">{zoom}%</button>
-                <button className="btn btn-sm btn-ghost" onClick={() => setZoom(Math.min(200, zoom + 10))}>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => setZoom(Math.min(200, zoom + 10))}
+                >
                   <ZoomIn className="size-4" />
                 </button>
-                <button className="btn btn-sm btn-ghost" onClick={() => setZoom(100)} title={t.resize.zoom}>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => setZoom(100)}
+                  title={t.resize.zoom}
+                >
                   <Maximize className="size-4" />
                 </button>
               </div>
@@ -221,15 +233,26 @@ export default function ResizePage() {
 
           <div
             className={`flex-1 flex items-center justify-center p-12 relative overflow-auto transition-colors ${isDragging && images.length > 0 ? "bg-primary/5" : ""}`}
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragOver={e => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
             onDragLeave={() => setIsDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setIsDragging(false); e.dataTransfer.files && handleMultipleFiles(e.dataTransfer.files); }}
+            onDrop={e => {
+              e.preventDefault();
+              setIsDragging(false);
+              e.dataTransfer.files && handleMultipleFiles(e.dataTransfer.files);
+            }}
           >
             {images.length === 0 ? (
               <div className="max-w-md w-full text-center">
-                <div className={`card bg-base-100 shadow-2xl ${isDragging ? "ring-4 ring-primary ring-offset-4" : ""}`}>
+                <div
+                  className={`card bg-base-100 shadow-2xl ${isDragging ? "ring-4 ring-primary ring-offset-4" : ""}`}
+                >
                   <div className="card-body items-center">
-                    <div className={`size-20 rounded-3xl flex items-center justify-center mb-6 ${isDragging ? "bg-primary text-primary-content" : "bg-primary/10 text-primary"}`}>
+                    <div
+                      className={`size-20 rounded-3xl flex items-center justify-center mb-6 ${isDragging ? "bg-primary text-primary-content" : "bg-primary/10 text-primary"}`}
+                    >
                       <Upload className="size-10" />
                     </div>
                     <h2 className="card-title text-xl">{t.resize.title}</h2>
@@ -237,14 +260,23 @@ export default function ResizePage() {
                     <div className="card-actions mt-4">
                       <label className="btn btn-primary">
                         {t.common.uploadImage}
-                        <input type="file" multiple accept="image/*" className="hidden" onChange={(e) => e.target.files && handleMultipleFiles(e.target.files)} />
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => e.target.files && handleMultipleFiles(e.target.files)}
+                        />
                       </label>
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="relative transition-all duration-300" style={{ transform: `scale(${zoom / 100})` }}>
+              <div
+                className="relative transition-all duration-300"
+                style={{ transform: `scale(${zoom / 100})` }}
+              >
                 <div className="card bg-base-100 shadow-2xl p-2">
                   <canvas ref={previewCanvasRef} className="block rounded-lg max-w-full" />
                   <div className="flex gap-4 mt-4 text-sm font-bold text-base-content/60 uppercase tracking-wider">
@@ -267,7 +299,11 @@ export default function ResizePage() {
               {images.map((img, idx) => (
                 <button
                   key={img.preview}
-                  onClick={() => { setSelectedIndex(idx); setTargetWidth(img.originalWidth); setTargetHeight(img.originalHeight); }}
+                  onClick={() => {
+                    setSelectedIndex(idx);
+                    setTargetWidth(img.originalWidth);
+                    setTargetHeight(img.originalHeight);
+                  }}
                   className={`size-12 rounded-lg overflow-hidden border-2 transition-all ${selectedIndex === idx ? "border-primary scale-110" : "border-transparent opacity-60 hover:opacity-100"}`}
                 >
                   <img src={img.preview} alt="" className="w-full h-full object-cover" />
@@ -275,7 +311,13 @@ export default function ResizePage() {
               ))}
               <label className="size-12 rounded-lg border-2 border-dashed border-base-300 flex items-center justify-center cursor-pointer hover:border-primary transition-all">
                 <Plus className="size-6 text-base-content/40" />
-                <input type="file" multiple accept="image/*" className="hidden" onChange={(e) => e.target.files && handleMultipleFiles(e.target.files)} />
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => e.target.files && handleMultipleFiles(e.target.files)}
+                />
               </label>
             </div>
           )}
@@ -290,10 +332,16 @@ export default function ResizePage() {
                   {t.resize.title}
                 </h3>
                 <div className="tabs tabs-boxed bg-base-200 mb-4">
-                  <button className={`tab ${resizeMode === "px" ? "tab-active" : ""}`} onClick={() => setResizeMode("px")}>
+                  <button
+                    className={`tab ${resizeMode === "px" ? "tab-active" : ""}`}
+                    onClick={() => setResizeMode("px")}
+                  >
                     {t.resize.pixels}
                   </button>
-                  <button className={`tab ${resizeMode === "percentage" ? "tab-active" : ""}`} onClick={() => setResizeMode("percentage")}>
+                  <button
+                    className={`tab ${resizeMode === "percentage" ? "tab-active" : ""}`}
+                    onClick={() => setResizeMode("percentage")}
+                  >
                     {t.resize.percentage}
                   </button>
                 </div>
@@ -302,18 +350,24 @@ export default function ResizePage() {
                   <div className="space-y-4">
                     <div className="form-control">
                       <label className="label">
-                        <span className="label-text font-bold text-xs uppercase tracking-wider">{t.resize.width}</span>
+                        <span className="label-text font-bold text-xs uppercase tracking-wider">
+                          {t.resize.width}
+                        </span>
                         <span className="label-text-alt text-base-content/50">PX</span>
                       </label>
                       <input
                         type="number"
                         className="input input-bordered"
                         value={targetWidth}
-                        onChange={(e) => {
+                        onChange={e => {
                           const w = Number(e.target.value);
                           setTargetWidth(w);
                           if (lockRatio && currentImage) {
-                            setTargetHeight(Math.round(w * (currentImage.originalHeight / currentImage.originalWidth)));
+                            setTargetHeight(
+                              Math.round(
+                                w * (currentImage.originalHeight / currentImage.originalWidth)
+                              )
+                            );
                           }
                         }}
                       />
@@ -324,23 +378,33 @@ export default function ResizePage() {
                         onClick={() => setLockRatio(!lockRatio)}
                         title={t.resize.aspectRatio}
                       >
-                        {lockRatio ? <LinkIcon className="size-4" /> : <Link2Off className="size-4" />}
+                        {lockRatio ? (
+                          <LinkIcon className="size-4" />
+                        ) : (
+                          <Link2Off className="size-4" />
+                        )}
                       </button>
                     </div>
                     <div className="form-control">
                       <label className="label">
-                        <span className="label-text font-bold text-xs uppercase tracking-wider">{t.resize.height}</span>
+                        <span className="label-text font-bold text-xs uppercase tracking-wider">
+                          {t.resize.height}
+                        </span>
                         <span className="label-text-alt text-base-content/50">PX</span>
                       </label>
                       <input
                         type="number"
                         className="input input-bordered"
                         value={targetHeight}
-                        onChange={(e) => {
+                        onChange={e => {
                           const h = Number(e.target.value);
                           setTargetHeight(h);
                           if (lockRatio && currentImage) {
-                            setTargetWidth(Math.round(h * (currentImage.originalWidth / currentImage.originalHeight)));
+                            setTargetWidth(
+                              Math.round(
+                                h * (currentImage.originalWidth / currentImage.originalHeight)
+                              )
+                            );
                           }
                         }}
                       />
@@ -350,7 +414,9 @@ export default function ResizePage() {
                   <div className="space-y-4">
                     <div className="form-control">
                       <label className="label">
-                        <span className="label-text font-bold text-xs uppercase tracking-wider">{t.resize.percentage}</span>
+                        <span className="label-text font-bold text-xs uppercase tracking-wider">
+                          {t.resize.percentage}
+                        </span>
                         <span className="label-text-alt text-primary font-bold">{percentage}%</span>
                       </label>
                       <input
@@ -359,7 +425,7 @@ export default function ResizePage() {
                         max="200"
                         value={percentage}
                         className="range range-primary"
-                        onChange={(e) => {
+                        onChange={e => {
                           const p = Number(e.target.value);
                           setPercentage(p);
                           if (currentImage) {
@@ -370,7 +436,7 @@ export default function ResizePage() {
                       />
                     </div>
                     <div className="grid grid-cols-4 gap-2">
-                      {[25, 50, 75, 100, 150, 200].map((p) => (
+                      {[25, 50, 75, 100, 150, 200].map(p => (
                         <button
                           key={p}
                           onClick={() => {
@@ -391,12 +457,25 @@ export default function ResizePage() {
               </div>
 
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-base-content/50 mb-4">Presets</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-base-content/50 mb-4">
+                  Presets
+                </h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {[{ label: "HD", w: 1280, h: 720 }, { label: "Full HD", w: 1920, h: 1080 }, { label: "Instagram", w: 1080, h: 1080 }, { label: "4K", w: 3840, h: 2160 }].map((preset) => (
-                    <button key={preset.label} onClick={() => applyPreset(preset.w, preset.h)} className="btn btn-outline btn-sm flex-col h-auto py-2">
+                  {[
+                    { label: "HD", w: 1280, h: 720 },
+                    { label: "Full HD", w: 1920, h: 1080 },
+                    { label: "Instagram", w: 1080, h: 1080 },
+                    { label: "4K", w: 3840, h: 2160 },
+                  ].map(preset => (
+                    <button
+                      key={preset.label}
+                      onClick={() => applyPreset(preset.w, preset.h)}
+                      className="btn btn-outline btn-sm flex-col h-auto py-2"
+                    >
                       <span className="text-xs font-bold text-base-content/50">{preset.label}</span>
-                      <span className="text-sm font-bold">{preset.w} × {preset.h}</span>
+                      <span className="text-sm font-bold">
+                        {preset.w} × {preset.h}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -404,9 +483,15 @@ export default function ResizePage() {
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text font-bold text-xs uppercase tracking-wider">{t.crop.format}</span>
+                  <span className="label-text font-bold text-xs uppercase tracking-wider">
+                    {t.crop.format}
+                  </span>
                 </label>
-                <select className="select select-bordered" value={outputFormat} onChange={(e) => setOutputFormat(e.target.value)}>
+                <select
+                  className="select select-bordered"
+                  value={outputFormat}
+                  onChange={e => setOutputFormat(e.target.value)}
+                >
                   <option>PNG</option>
                   <option>JPG</option>
                   <option>WEBP</option>
@@ -422,9 +507,16 @@ export default function ResizePage() {
               className="btn btn-primary w-full"
             >
               {isProcessing ? (
-                <><RefreshCw className="size-5 animate-spin" /> {t.common.processing}</>
+                <>
+                  <RefreshCw className="size-5 animate-spin" /> {t.common.processing}
+                </>
               ) : (
-                <><Download className="size-5" /> {images.length > 1 ? `${t.crop.downloadAll} (${images.length})` : t.common.saveResult}</>
+                <>
+                  <Download className="size-5" />{" "}
+                  {images.length > 1
+                    ? `${t.crop.downloadAll} (${images.length})`
+                    : t.common.saveResult}
+                </>
               )}
             </button>
             <p className="mt-4 text-center text-xs text-base-content/40 uppercase tracking-widest font-bold">

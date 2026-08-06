@@ -12,6 +12,7 @@
     "preview:blog": "bunx --bun astro preview",
     "typecheck": "react-router typegen && tsc",
     "clean:blog": "rm -rf public/blog public/_astro public/sitemap-index.xml public/sitemap-0.xml",
+    "audit:seo": "bun scripts/audit-seo.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,css}\""
   },
   "dependencies": {

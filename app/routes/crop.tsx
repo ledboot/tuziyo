@@ -14,9 +14,7 @@ import {
   Image as ImageIcon,
   Smartphone,
 } from "lucide-react";
-import type { Route } from "./+types/crop";
 import { useI18n } from "~/lib/i18n";
-import { SEOMeta } from "~/components/SeoMeta";
 import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo";
 
 type AspectRatio = "free" | "1:1" | "4:3" | "16:9" | "3:2" | "2:3";
@@ -34,9 +32,7 @@ interface ImageItem {
   cropArea?: CropArea;
 }
 
-const ASPECT_RATIOS: (
-  t: any,
-) => { label: string; value: AspectRatio; icon: any }[] = (t) => [
+const ASPECT_RATIOS: (t: any) => { label: string; value: AspectRatio; icon: any }[] = t => [
   { label: t.common.free, value: "free", icon: Scaling },
   { label: "1:1", value: "1:1", icon: Square },
   { label: "4:3", value: "4:3", icon: RectangleHorizontal },
@@ -45,7 +41,7 @@ const ASPECT_RATIOS: (
   { label: "2:3", value: "2:3", icon: Smartphone },
 ];
 
-export function meta({}: Route.MetaArgs) {
+export function meta() {
   const title = "Precise Image Cropper | Crop Photos to Fixed Aspect Ratios";
   const description =
     "Crop images with pixel-perfect accuracy. Presets for 16:9, 4:3, and 1:1. High-quality lossless rendering in your browser.";
@@ -54,8 +50,13 @@ export function meta({}: Route.MetaArgs) {
     title,
     description,
     path: "/crop",
-    keywords: "tuziyo, free image cropping tool, crop image online free, photo crop online, fixed aspect ratio crop",
-    schema: createWebApplicationSchema({ name: "tuziyo Image Cropper", description, path: "/crop" }),
+    keywords:
+      "tuziyo, free image cropping tool, crop image online free, photo crop online, fixed aspect ratio crop",
+    schema: createWebApplicationSchema({
+      name: "tuziyo Image Cropper",
+      description,
+      path: "/crop",
+    }),
   });
 }
 
@@ -87,18 +88,18 @@ export default function CropPage() {
 
   const handleFileChange = useCallback((file: File) => {
     const url = URL.createObjectURL(file);
-    setImages((prev) => [...prev, { file, preview: url }]);
+    setImages(prev => [...prev, { file, preview: url }]);
   }, []);
 
   const handleMultipleFiles = useCallback(
     (files: FileList | File[]) => {
-      Array.from(files).forEach((file) => {
+      Array.from(files).forEach(file => {
         if (file.type.startsWith("image/")) {
           handleFileChange(file);
         }
       });
     },
-    [handleFileChange],
+    [handleFileChange]
   );
 
   // Update crop area when aspect ratio changes
@@ -114,7 +115,7 @@ export default function CropPage() {
     };
     const ratio = ratioMap[aspectRatio];
 
-    setCropArea((prev) => {
+    setCropArea(prev => {
       const newHeight = prev.width / ratio;
       return { ...prev, height: newHeight };
     });
@@ -156,24 +157,21 @@ export default function CropPage() {
     });
   }, [aspectRatio]);
 
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent, type: "move" | string) => {
-      e.stopPropagation();
-      const rect = imageRef.current?.getBoundingClientRect();
-      if (!rect) return;
+  const handlePointerDown = useCallback((e: React.PointerEvent, type: "move" | string) => {
+    e.stopPropagation();
+    const rect = imageRef.current?.getBoundingClientRect();
+    if (!rect) return;
 
-      if (type === "move") {
-        setIsDragging(true);
-      } else {
-        setIsResizing(type);
-      }
-      setDragStart({
-        x: e.clientX,
-        y: e.clientY,
-      });
-    },
-    [],
-  );
+    if (type === "move") {
+      setIsDragging(true);
+    } else {
+      setIsResizing(type);
+    }
+    setDragStart({
+      x: e.clientX,
+      y: e.clientY,
+    });
+  }, []);
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
@@ -182,7 +180,7 @@ export default function CropPage() {
       const deltaX = e.clientX - dragStart.x;
       const deltaY = e.clientY - dragStart.y;
 
-      setCropArea((prev) => {
+      setCropArea(prev => {
         let { x, y, width, height } = { ...prev };
 
         if (isDragging) {
@@ -295,7 +293,7 @@ export default function CropPage() {
       });
       setDragStart({ x: e.clientX, y: e.clientY });
     },
-    [isDragging, isResizing, dragStart, imgDimensions, aspectRatio],
+    [isDragging, isResizing, dragStart, imgDimensions, aspectRatio]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -331,18 +329,18 @@ export default function CropPage() {
             0,
             0,
             actualCrop.width,
-            actualCrop.height,
+            actualCrop.height
           );
           canvas.toBlob(
-            (blob) => (blob ? resolve(blob) : reject()),
+            blob => (blob ? resolve(blob) : reject()),
             `image/${outputFormat.toLowerCase()}`,
-            outputFormat === "PNG" ? undefined : 0.95,
+            outputFormat === "PNG" ? undefined : 0.95
           );
         };
         img.src = item.preview;
       });
     },
-    [imgDimensions, outputFormat],
+    [imgDimensions, outputFormat]
   );
 
   const handleDownload = useCallback(async () => {
@@ -375,7 +373,6 @@ export default function CropPage() {
 
   return (
     <div className="bg-slate-50 dark:bg-slate-950 min-h-[calc(100vh-64px)] flex flex-col">
-      <SEOMeta page="crop" />
       <main className="flex-1 flex overflow-hidden">
         {/* Workspace Area */}
         <section className="flex-1 relative flex flex-col bg-[#f1f5f9] dark:bg-slate-950 canvas-pattern overflow-hidden">
@@ -417,12 +414,12 @@ export default function CropPage() {
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
-            onDragOver={(e) => {
+            onDragOver={e => {
               e.preventDefault();
               setIsDraggingUpload(true);
             }}
             onDragLeave={() => setIsDraggingUpload(false)}
-            onDrop={(e) => {
+            onDrop={e => {
               e.preventDefault();
               setIsDraggingUpload(false);
               if (e.dataTransfer.files) {
@@ -441,9 +438,7 @@ export default function CropPage() {
                 >
                   <div
                     className={`size-20 rounded-3xl flex items-center justify-center mb-6 mx-auto transition-colors ${
-                      isDraggingUpload
-                        ? "bg-primary text-white"
-                        : "bg-primary/10 text-primary"
+                      isDraggingUpload ? "bg-primary text-white" : "bg-primary/10 text-primary"
                     }`}
                   >
                     <Crop className="size-10" />
@@ -461,9 +456,7 @@ export default function CropPage() {
                       multiple
                       accept="image/*"
                       className="hidden"
-                      onChange={(e) =>
-                        e.target.files && handleMultipleFiles(e.target.files)
-                      }
+                      onChange={e => e.target.files && handleMultipleFiles(e.target.files)}
                     />
                   </label>
                 </div>
@@ -498,7 +491,7 @@ export default function CropPage() {
                           width: cropArea.width,
                           height: cropArea.height,
                         }}
-                        onPointerDown={(e) => handlePointerDown(e, "move")}
+                        onPointerDown={e => handlePointerDown(e, "move")}
                       >
                         {/* Grid Lines */}
                         <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 opacity-30 group-hover:opacity-100 transition-opacity">
@@ -516,37 +509,37 @@ export default function CropPage() {
                         {/* Resize Handles */}
                         <div
                           className="absolute -top-1.5 -left-1.5 size-3 bg-white border-2 border-primary rounded-full cursor-nw-resize"
-                          onPointerDown={(e) => handlePointerDown(e, "nw")}
+                          onPointerDown={e => handlePointerDown(e, "nw")}
                         />
                         <div
                           className="absolute -top-1.5 -right-1.5 size-3 bg-white border-2 border-primary rounded-full cursor-ne-resize"
-                          onPointerDown={(e) => handlePointerDown(e, "ne")}
+                          onPointerDown={e => handlePointerDown(e, "ne")}
                         />
                         <div
                           className="absolute -bottom-1.5 -left-1.5 size-3 bg-white border-2 border-primary rounded-full cursor-sw-resize"
-                          onPointerDown={(e) => handlePointerDown(e, "sw")}
+                          onPointerDown={e => handlePointerDown(e, "sw")}
                         />
                         <div
                           className="absolute -bottom-1.5 -right-1.5 size-3 bg-white border-2 border-primary rounded-full cursor-se-resize"
-                          onPointerDown={(e) => handlePointerDown(e, "se")}
+                          onPointerDown={e => handlePointerDown(e, "se")}
                         />
 
                         {/* Edge Handles */}
                         <div
                           className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-6 bg-white border border-primary rounded-full cursor-n-resize opacity-0 group-hover:opacity-100"
-                          onPointerDown={(e) => handlePointerDown(e, "n")}
+                          onPointerDown={e => handlePointerDown(e, "n")}
                         />
                         <div
                           className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 h-1.5 w-6 bg-white border border-primary rounded-full cursor-s-resize opacity-0 group-hover:opacity-100"
-                          onPointerDown={(e) => handlePointerDown(e, "s")}
+                          onPointerDown={e => handlePointerDown(e, "s")}
                         />
                         <div
                           className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-6 bg-white border border-primary rounded-full cursor-w-resize opacity-0 group-hover:opacity-100"
-                          onPointerDown={(e) => handlePointerDown(e, "w")}
+                          onPointerDown={e => handlePointerDown(e, "w")}
                         />
                         <div
                           className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 w-1.5 h-6 bg-white border border-primary rounded-full cursor-e-resize opacity-0 group-hover:opacity-100"
-                          onPointerDown={(e) => handlePointerDown(e, "e")}
+                          onPointerDown={e => handlePointerDown(e, "e")}
                         />
 
                         {/* Dimensions Label */}
@@ -572,7 +565,7 @@ export default function CropPage() {
                   {t.crop.aspectRatio}
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {ASPECT_RATIOS(t).map((ratio) => (
+                  {ASPECT_RATIOS(t).map(ratio => (
                     <button
                       type="button"
                       key={ratio.value}
@@ -605,7 +598,7 @@ export default function CropPage() {
                   <select
                     id="output-format"
                     value={outputFormat}
-                    onChange={(e) => setOutputFormat(e.target.value)}
+                    onChange={e => setOutputFormat(e.target.value)}
                     className="w-full h-14 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary px-5 appearance-none text-slate-900 dark:text-white"
                   >
                     <option>PNG</option>
@@ -626,16 +619,10 @@ export default function CropPage() {
               className="w-full py-5 bg-slate-900 dark:bg-primary text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 dark:hover:bg-primary/90 transition-all flex items-center justify-center gap-3 group disabled:opacity-50"
             >
               <span className={isProcessing ? "animate-spin" : ""}>
-                {isProcessing ? (
-                  <RefreshCw className="size-5" />
-                ) : (
-                  <Crop className="size-5" />
-                )}
+                {isProcessing ? <RefreshCw className="size-5" /> : <Crop className="size-5" />}
               </span>
               {isProcessing && t.common.processing}
-              {!isProcessing &&
-                images.length > 1 &&
-                `${t.crop.downloadAll} (${images.length})`}
+              {!isProcessing && images.length > 1 && `${t.crop.downloadAll} (${images.length})`}
               {!isProcessing && images.length <= 1 && t.common.saveResult}
             </button>
             <p className="mt-4 text-2xs text-center text-slate-400 uppercase tracking-widest font-bold">
@@ -660,11 +647,7 @@ export default function CropPage() {
                   : "border-transparent opacity-50 hover:opacity-100"
               }`}
             >
-              <img
-                src={img.preview}
-                alt=""
-                className="w-full h-full object-cover"
-              />
+              <img src={img.preview} alt="" className="w-full h-full object-cover" />
             </button>
           ))}
           <label
@@ -678,9 +661,7 @@ export default function CropPage() {
               multiple
               accept="image/*"
               className="hidden"
-              onChange={(e) =>
-                e.target.files && handleMultipleFiles(e.target.files)
-              }
+              onChange={e => e.target.files && handleMultipleFiles(e.target.files)}
             />
           </label>
         </div>
