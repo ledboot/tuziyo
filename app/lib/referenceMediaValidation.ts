@@ -190,7 +190,7 @@ export function validateReferenceFile(
       return `Reference video duration must be ${videoRule.minDurationSeconds}–${videoRule.maxDurationSeconds} seconds.`
     }
     if (pixels < videoRule.minFramePixels || pixels > videoRule.maxFramePixels) {
-      return `Reference video frame pixels must be ${videoRule.minFramePixels.toLocaleString()}–${videoRule.maxFramePixels.toLocaleString()}.`
+      return `Reference video frame pixels must be ${videoRule.minFramePixels.toLocaleString("en-US")}–${videoRule.maxFramePixels.toLocaleString("en-US")}.`
     }
     if (!Number.isFinite(metadata.fps)) return "Unable to read reference video frame rate."
     if (metadata.fps! < videoRule.minFps || metadata.fps! > videoRule.maxFps) {

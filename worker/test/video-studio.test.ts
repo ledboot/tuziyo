@@ -917,6 +917,26 @@ describe("video generation catalog", () => {
 })
 
 describe("media, library, and Studio migrations", () => {
+  test("normalizes legacy default session titles to English", () => {
+    const db = new Database(":memory:")
+    db.exec(readFileSync(join(import.meta.dir, "../../db/schema.sql"), "utf8"))
+    db.exec(`
+      INSERT INTO sessions (id, user_id, title)
+      VALUES ('legacy-session', 'user-1', char(26032, 23545, 35805));
+    `)
+    db.exec(
+      readFileSync(
+        join(import.meta.dir, "../../db/migrations/0011_english_session_titles.sql"),
+        "utf8"
+      )
+    )
+
+    expect(db.query("SELECT title FROM sessions WHERE id = 'legacy-session'").get()).toEqual({
+      title: "New Session",
+    })
+    db.close()
+  })
+
   test("upgrades a legacy message output and backfills an asset", () => {
     const db = new Database(":memory:")
     db.exec(`

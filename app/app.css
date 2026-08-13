@@ -2270,8 +2270,7 @@ select {
   text-transform: uppercase;
 }
 
-.footer-links-list,
-.footer-lang-list {
+.footer-links-list {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
@@ -2280,8 +2279,7 @@ select {
   list-style: none;
 }
 
-.footer-link,
-.footer-lang-btn {
+.footer-link {
   padding: 0;
   border: 0;
   color: oklch(100% 0 0 / 0.62);
@@ -2295,8 +2293,7 @@ select {
   transition: color 160ms ease;
 }
 
-.footer-link:hover,
-.footer-lang-btn:hover {
+.footer-link:hover {
   color: white;
 }
 

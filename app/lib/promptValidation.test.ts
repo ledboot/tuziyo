@@ -12,7 +12,7 @@ describe("prompt limit UI helpers", () => {
       count: 3,
       isChinese: false,
     })
-    expect(getPromptLimitStatus("一个 scene", limits)).toMatchObject({
+    expect(getPromptLimitStatus("\u4e00\u4e2a scene", limits)).toMatchObject({
       count: 8,
       isChinese: true,
     })

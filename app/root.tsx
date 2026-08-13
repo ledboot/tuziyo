@@ -53,7 +53,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   )
 }
 
-import { I18nProvider } from "./lib/i18n"
 import { useLocation } from "react-router"
 import { useEffect, useRef } from "react"
 import { useUserStore } from "./stores/userStore"
@@ -92,7 +91,7 @@ export default function App() {
     location.pathname.startsWith("/studio/") && location.pathname !== "/studio/projects"
 
   return (
-    <I18nProvider>
+    <>
       {/* Global SVG Filter for Liquid Glass Refraction */}
       <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
         <defs>
@@ -153,7 +152,7 @@ export default function App() {
         <LoginModal />
         <Toaster position="bottom-right" />
       </div>
-    </I18nProvider>
+    </>
   )
 }
 

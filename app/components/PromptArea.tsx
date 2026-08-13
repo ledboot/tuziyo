@@ -22,7 +22,7 @@ import {
   ChevronDown,
 } from "lucide-react"
 import { toast } from "sonner"
-import { useI18n } from "~/lib/i18n"
+import { copy } from "~/lib/copy"
 import { CustomSelect, type SelectOption } from "~/components/CustomSelect"
 import { ModelOptions, type OptionGroup } from "~/components/ModelOptions"
 import { useUserStore } from "~/stores/userStore"
@@ -591,7 +591,7 @@ export default function PromptArea({
   autoGenerate = false,
   className = "",
 }: PromptAreaProps) {
-  const { t } = useI18n()
+  const t = copy
   const { user } = useUserStore()
 
   const userPrompt = useModelStore(state => state.userPrompt)
@@ -2460,9 +2460,9 @@ export default function PromptArea({
                   : referenceSelectionError
                     ? referenceSelectionError
                     : isPromptOverCharacterLimit
-                      ? (promptLimitError ?? `已超出 ${promptLimitText} 限制`)
+                      ? (promptLimitError ?? `Exceeds the ${promptLimitText} limit`)
                       : isPromptAtCharacterLimit
-                        ? `已达到 ${promptLimitText} 限制`
+                        ? `Reached the ${promptLimitText} limit`
                         : referenceUsageText}
               </span>
               <span className="liquid-prompt-hint__count">

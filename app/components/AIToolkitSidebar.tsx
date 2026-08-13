@@ -2,7 +2,7 @@ import React from "react"
 import { SquarePen, Trash2, Pencil, Pin } from "lucide-react"
 import { api } from "~/lib/api"
 import { toast } from "sonner"
-import { useI18n } from "~/lib/i18n"
+import { copy } from "~/lib/copy"
 import { trackSessionSelection } from "~/lib/analytics"
 
 interface Session {
@@ -44,7 +44,7 @@ export function AIToolkitSidebar({
   handleSelectSession,
   editInputRef,
 }: AIToolkitSidebarProps) {
-  const { t } = useI18n()
+  const t = copy
   const handleSessionSelect = (sessionId: string) => {
     trackSessionSelection({
       sessionId,

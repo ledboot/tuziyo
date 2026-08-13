@@ -7,11 +7,11 @@ describe("language-aware video prompt limits", () => {
       default: { max: 1000, unit: "words" as const },
       chinese: { max: 500, unit: "characters" as const },
     }
-    expect(getPromptLimitError("中".repeat(500), limits)).toBeNull()
-    expect(getPromptLimitError("中".repeat(501), limits)).toContain("500 characters")
+    expect(getPromptLimitError("\u4e2d".repeat(500), limits)).toBeNull()
+    expect(getPromptLimitError("\u4e2d".repeat(501), limits)).toContain("500 characters")
     expect(getPromptLimitError(Array(1000).fill("word").join(" "), limits)).toBeNull()
     expect(getPromptLimitError(Array(1001).fill("word").join(" "), limits)).toContain("1,000 words")
-    expect(getPromptLimitStatus(`中${"a".repeat(500)}`, limits).isChinese).toBe(true)
+    expect(getPromptLimitStatus(`\u4e2d${"a".repeat(500)}`, limits).isChinese).toBe(true)
   })
 
   test("treats Kling and Veo limits as exclusive", () => {
@@ -28,8 +28,8 @@ describe("language-aware video prompt limits", () => {
       default: { max: 5000, unit: "characters" as const },
       chinese: { max: 2500, unit: "characters" as const },
     }
-    expect(getPromptLimitError("中".repeat(2500), limits)).toBeNull()
-    expect(getPromptLimitError("中".repeat(2501), limits)).toContain("2,500 characters")
+    expect(getPromptLimitError("\u4e2d".repeat(2500), limits)).toBeNull()
+    expect(getPromptLimitError("\u4e2d".repeat(2501), limits)).toContain("2,500 characters")
     expect(getPromptLimitError("a".repeat(5000), limits)).toBeNull()
     expect(getPromptLimitError("a".repeat(5001), limits)).toContain("5,000 characters")
   })

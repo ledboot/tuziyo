@@ -51,7 +51,7 @@ export function useImage(
   const [image, setImage] = useState<HTMLImageElement | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
 
-  // 调整图像分辨率的函数
+  // Resize an image to the requested resolution.
   const adjustResolution = useCallback(
     (width: number, height: number) => {
       if (typeof window === 'undefined' || !image) return

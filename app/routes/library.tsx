@@ -275,7 +275,7 @@ export default function LibraryPage() {
                 <div>
                   <dt className="text-white/30">Created</dt>
                   <dd className="mt-1 text-white/75">
-                    {new Date(selected.created_at * 1000).toLocaleDateString()}
+                    {new Date(selected.created_at * 1000).toLocaleDateString("en-US")}
                   </dd>
                 </div>
                 {selected.duration_ms ? (

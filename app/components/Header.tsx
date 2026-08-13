@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router"
 import { ChevronDown, LogOut, Menu, User, X } from "lucide-react"
-import { useI18n } from "~/lib/i18n"
+import { copy } from "~/lib/copy"
 import { useState, useEffect } from "react"
 import { useUserStore } from "../stores/userStore"
 import { markPricingIntent, trackEvent } from "~/lib/analytics"
@@ -20,7 +20,7 @@ interface NavItemWithChildren {
 type NavItem = NavItemSimple | NavItemWithChildren
 
 export default function Header() {
-  const { t } = useI18n()
+  const t = copy
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showMobileImageMenu, setShowMobileImageMenu] = useState(false)

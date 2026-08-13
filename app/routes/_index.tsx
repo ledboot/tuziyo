@@ -1,11 +1,11 @@
 import { Link } from "react-router"
 import { ArrowRight } from "lucide-react"
 import type { Route } from "./+types/_index"
-import { translations, useI18n } from "~/lib/i18n"
+import { copy } from "~/lib/copy"
 import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo"
 
 export function meta({}: Route.MetaArgs) {
-  const seo = translations.en.seo
+  const seo = copy.seo
 
   return createSeoMeta({
     title: seo.title,
@@ -56,7 +56,7 @@ const galleryImages = [
 ]
 
 export default function Index() {
-  const { t } = useI18n()
+  const t = copy
   const home = t.home
 
   const featureCards = [

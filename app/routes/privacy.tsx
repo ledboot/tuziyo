@@ -286,7 +286,7 @@ export default function PrivacyPage() {
           <PolicySection id="storage" number="06" title="Cookies and local storage" icon={Cookie}>
             <p>
               tuziyo uses browser storage and similar technologies to keep you signed in, remember
-              language and interface preferences, preserve temporary workflow state, prevent
+              interface preferences, preserve temporary workflow state, prevent
               duplicate analytics events, and understand how the Service is used. Google Tag Manager
               and enabled analytics services may set or access their own identifiers.
             </p>

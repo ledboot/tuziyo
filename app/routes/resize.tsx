@@ -14,7 +14,7 @@ import {
   RefreshCw,
   Download,
 } from "lucide-react";
-import { useI18n } from "~/lib/i18n";
+import { copy } from "~/lib/copy";
 import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo";
 
 type ResizeMode = "px" | "percentage";
@@ -47,7 +47,7 @@ export function meta() {
 }
 
 export default function ResizePage() {
-  const { t } = useI18n();
+  const t = copy;
   const [images, setImages] = useState<ImageItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [resizeMode, setResizeMode] = useState<ResizeMode>("px");

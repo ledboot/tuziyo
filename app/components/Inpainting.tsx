@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import * as ort from "onnxruntime-web";
 import { ImagePlus, Upload, Zap, ShieldCheck } from "lucide-react";
 import { ModelLoader, ModelType } from "~/utils/modelLoader";
-import { useI18n } from "~/lib/i18n";
+import { copy } from "~/lib/copy";
 
 // Safely get Canvas 2D context
 const getCanvasContext = (
@@ -87,7 +87,7 @@ const tensorToImageData = (
 };
 
 export default function Inpainting() {
-  const { t } = useI18n();
+  const t = copy;
 
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [session, setSession] = useState<ort.InferenceSession | null>(null);
@@ -160,7 +160,7 @@ export default function Inpainting() {
     };
 
     img.onerror = () => {
-      setError("图片加载失败，请选择有效的图片文件");
+      setError("The image could not be loaded. Please choose a valid image file.");
     };
 
     img.src = URL.createObjectURL(file);
@@ -346,7 +346,7 @@ export default function Inpainting() {
       const resultCanvas = resultCanvasRef.current;
 
       if (!resultCanvas) {
-        setError("Result Canvas 未初始化");
+        setError("The result canvas is not initialized.");
         return;
       }
 

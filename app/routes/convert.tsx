@@ -15,7 +15,7 @@ import {
   Zap,
   CircleDollarSign,
 } from "lucide-react";
-import { useI18n } from "~/lib/i18n";
+import { copy } from "~/lib/copy";
 import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo";
 
 type OutputFormat = "jpeg" | "png" | "webp";
@@ -60,7 +60,7 @@ export function meta() {
 }
 
 export default function ConvertPage() {
-  const { t } = useI18n();
+  const t = copy;
   const [images, setImages] = useState<ImageItem[]>([]);
   const [globalOutputFormat, setGlobalOutputFormat] = useState<OutputFormat>("webp");
   const [quality, setQuality] = useState(90);
