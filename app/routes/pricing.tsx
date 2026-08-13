@@ -1,15 +1,8 @@
 import { useState, useEffect, useRef } from "react"
-import {
-  Check,
-  X,
-  Loader2,
-  HelpCircle,
-  Plus,
-  Minus,
-} from "lucide-react"
+import { Check, X, Loader2, HelpCircle, Plus, Minus } from "lucide-react"
 import { useUserStore } from "~/stores/userStore"
 import { api } from "~/lib/api"
-import { useI18n } from "~/lib/i18n"
+import { copy } from "~/lib/copy"
 import { toast } from "sonner"
 import { createSeoMeta } from "~/lib/seo"
 import {
@@ -122,7 +115,7 @@ export function meta() {
   })
 }
 
-// 3种等级的模型支持配置
+// Model support configuration for the three plan tiers.
 
 function FAQItem({ q, a }: { q: string; a: string }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -186,7 +179,7 @@ export default function PricingPage() {
     Array<{ name: string; supported: boolean; label?: string }>
   > | null>(null)
   const { user, token, isLoading: isUserLoading, isFetching: isUserFetching } = useUserStore()
-  const { lang, t } = useI18n()
+  const t = copy
   const pricingViewTrackedRef = useRef(false)
   const checkoutReturnHandledRef = useRef(false)
   const currentUserPlan = (user?.userType ?? "free").toLowerCase()
@@ -246,7 +239,7 @@ export default function PricingPage() {
             },
           ],
         })
-        toast.success(lang === "zh" ? "订阅成功" : "Subscription activated")
+        toast.success("Subscription activated")
       })
       .catch(error => {
         console.error("Checkout verification error:", error)
@@ -254,7 +247,7 @@ export default function PricingPage() {
       .finally(() => {
         window.history.replaceState({}, "", "/pricing")
       })
-  }, [lang])
+  }, [])
 
   useEffect(() => {
     api.stripe
@@ -343,7 +336,7 @@ export default function PricingPage() {
     }).format(amount / 100)
   }
 
-  // 根据产品名/排序等对计划进行归类：Starter / Professional / Creator
+  // Group plans by product name and sort order: Starter / Professional / Creator.
   const getPlanKey = (name: string): "starter" | "professional" | "creator" => {
     const lowerName = name.toLowerCase()
     if (lowerName.includes("starter") || lowerName.includes("basic")) {
@@ -355,7 +348,7 @@ export default function PricingPage() {
     }
   }
 
-  // 渲染每个计划的附加特征列表
+  // Render the additional feature list for each plan.
   const getAdditionalFeatures = (planKey: "starter" | "professional" | "creator") => {
     if (planKey === "starter") {
       return [
@@ -385,7 +378,7 @@ export default function PricingPage() {
     }
   }
 
-  // 不同的方案的主题样式
+  // Theme styles for each plan.
   const getPlanStyles = (planKey: "starter" | "professional" | "creator") => {
     switch (planKey) {
       case "starter":
@@ -497,7 +490,7 @@ export default function PricingPage() {
 
             const activePrice =
               billingPeriod === "monthly" ? product.prices.monthly : product.prices.yearly
-            if (!activePrice) return null // 降级处理：若该周期价格没有配置，不显示该卡片
+            if (!activePrice) return null // Hide the card when this billing period is not configured.
 
             return (
               <div
@@ -554,7 +547,7 @@ export default function PricingPage() {
                       className="btn btn-block py-3.5 rounded-2xl font-extrabold text-sm border-none bg-slate-800 text-slate-500 cursor-not-allowed opacity-60"
                       disabled={true}
                     >
-                      {lang === "zh" ? "当前方案" : "Current Plan"}
+                      Current Plan
                     </button>
                   ) : isOtherPlanDisabled ? (
                     <div className="group relative" tabIndex={0}>
@@ -594,7 +587,7 @@ export default function PricingPage() {
                   {/* Credits Counter */}
                   <div className="mt-8 mb-8 flex items-center gap-2">
                     <span className="text-sm font-bold tracking-tight text-white">
-                      {product.credits.toLocaleString()} credits per month
+                      {product.credits.toLocaleString("en-US")} credits per month
                     </span>
                   </div>
 

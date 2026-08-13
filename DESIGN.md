@@ -53,7 +53,7 @@ Use semantic tokens instead of page-local color decisions. `color-primary` is th
 
 ## Typography
 
-### Space Grotesk — Primary typeface for all main content, headings, and UI elements. Its geometric letterforms give tuziyo a precise creator-tool character while still feeling modern and approachable. Weight 600 at 48px headlines creates confident emphasis without making the interface feel heavy; weight 400 at 14px and 16px keeps dense tool surfaces readable. Letter spacing stays at 0 to preserve a clean rhythm across product UI and multilingual content.
+### Space Grotesk — Primary typeface for all main content, headings, and UI elements. Its geometric letterforms give tuziyo a precise creator-tool character while still feeling modern and approachable. Weight 600 at 48px headlines creates confident emphasis without making the interface feel heavy; weight 400 at 14px and 16px keeps dense tool surfaces readable. Letter spacing stays at 0 to preserve a clean rhythm across the English product UI.
 
 - **Substitute:** Inter
 - **Weights:** 400, 500, 600
@@ -138,8 +138,8 @@ The header is sticky, dark, and slightly translucent.
 
 - Left: symbol mark plus `tuziyo` wordmark.
 - Center: concise product navigation, centered against the full viewport rather than the remaining space between brand and actions.
-- Right: language selector, login, and primary registration CTA.
-- Header navigation, dropdown rows, language selector, and account actions use `1rem` text with normal weight.
+- Right: login and primary registration CTA.
+- Header navigation, dropdown rows, and account actions use `1rem` text with normal weight.
 - Header menu item content must be horizontally centered inside each daisyUI `menu` item.
 - Header menu styling should be applied directly with Tailwind and daisyUI classes in the component. Do not add custom `site-nav-*`, `site-dropdown`, or menu-only classes in `app.css`.
 - Header menu text is white by default. Hover and active states use darker surfaces for feedback while keeping text white.
@@ -149,7 +149,7 @@ The header is sticky, dark, and slightly translucent.
 
 ### Navigation Dropdowns
 
-Use daisyUI `dropdown` plus `menu` for header navigation, language menus, compact account menus, and mobile navigation.
+Use daisyUI `dropdown` plus `menu` for header navigation, compact account menus, and mobile navigation.
 
 - Structure: use `dropdown`, `dropdown-content`, `menu`, `menu-sm`, `rounded-box`, `bg-base-200`, and `shadow-2xl` before adding project-specific overrides.
 - Position below the trigger with a small visual offset; use padding on `dropdown-content` when a hover-safe gap is needed.
@@ -166,7 +166,7 @@ The footer should use the same dark surface system as the rest of the product.
 - Dark background with brand block on the left.
 - Link columns for Product, Resources, Company, and Legal.
 - Social icons should sit inside small circular dark buttons.
-- Include language selector and copyright row.
+- Include a copyright row.
 - Keep footer typography muted and compact.
 
 ## 6. Component Styling
@@ -190,7 +190,7 @@ Secondary buttons:
 
 Icon buttons:
 
-- Use familiar icons for language, close, upload, play, settings, history, arrows, and social links.
+- Use familiar icons for close, upload, play, settings, history, arrows, and social links.
 - Minimum hit area: `40px`, preferably `44px`.
 - Add accessible labels.
 

@@ -292,7 +292,7 @@ export function calculateRequiredCredits(model: string, input: any): number {
   let totalCredits = singleImageCredits * numImages
 
   // 4. Add reference images premium
-  // "一张参考图需要credit=5，添加2张参考图 credit=5*2"
+  // Each reference image costs 5 credits, so two reference images cost 5 * 2 credits.
   const referenceImageCount = input.reference_images?.length || 0
   totalCredits += referenceImageCount * 5
 

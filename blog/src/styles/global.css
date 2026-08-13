@@ -87,7 +87,7 @@ body {
     line-height: 1.8;
   }
 
-  /* 标题 Heading Styles */
+  /* Heading styles */
   .prose h1,
   .prose h2,
   .prose h3,
@@ -103,7 +103,7 @@ body {
     @apply text-2xl mt-8 mb-4;
   }
 
-  /* 链接 Link Styles */
+  /* Link styles */
   .prose a {
     @apply text-primary-brand font-semibold no-underline transition-all duration-200;
     border-bottom: 2px solid rgba(0, 194, 184, 0.2);
@@ -115,7 +115,7 @@ body {
     background-color: rgba(0, 194, 184, 0.05);
   }
 
-  /* 引用 Blockquote Styles */
+  /* Blockquote styles */
   .prose blockquote {
     @apply not-italic border-l-4 border-primary-brand bg-slate-50 py-4 px-6 rounded-r-xl my-8 dark:bg-slate-900/50;
   }
@@ -124,7 +124,7 @@ body {
     @apply text-slate-700 dark:text-slate-300 font-medium my-0 before:content-none after:content-none;
   }
 
-  /* 列表 List Styles */
+  /* List styles */
   .prose ul > li::marker {
     @apply text-primary-brand;
   }
@@ -133,7 +133,7 @@ body {
     @apply text-primary-brand font-bold;
   }
 
-  /* 代码块 Code Block Styles */
+  /* Code block styles */
   .prose pre {
     @apply rounded-3xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/80 shadow-sm p-5 overflow-x-auto;
   }
@@ -142,7 +142,7 @@ body {
     @apply font-mono text-sm;
   }
 
-  /* 行内代码 Inline Code */
+  /* Inline code */
   .prose :not(pre) > code {
     @apply bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded-md border border-slate-200/50 font-semibold dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 text-[0.9em];
     &::before {
@@ -153,17 +153,17 @@ body {
     }
   }
 
-  /* 图片 Image Styles */
+  /* Image styles */
   .prose img {
     @apply rounded-3xl shadow-lg border border-slate-100 dark:border-slate-800 dark:bg-slate-900 my-10 w-full;
   }
 
-  /* 水平分割线 HR Styles */
+  /* Horizontal rule styles */
   .prose hr {
     @apply border-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent my-12 dark:via-slate-800;
   }
 
-  /* 表格 Table Styles */
+  /* Table styles */
   .prose table {
     @apply w-full my-8 border-collapse;
   }

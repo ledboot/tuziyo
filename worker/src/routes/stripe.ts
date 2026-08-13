@@ -80,17 +80,17 @@ export async function handleGetProducts(c: Context<{ Bindings: Env }>) {
   const stripe = getStripe(c)
 
   try {
-    // 1. 获取所有激活的商品
+    // 1. Fetch all active products.
     const activeProducts = await stripe.products.list({
       active: true,
     })
 
-    // 2. 获取所有激活的价格
+    // 2. Fetch all active prices.
     const activePrices = await stripe.prices.list({
       active: true,
     })
 
-    // 将价格按 product_id 进行归类
+    // Group prices by product ID.
     const pricesMap: Record<string, Stripe.Price[]> = {}
     for (const price of activePrices.data) {
       const prodId = typeof price.product === "string" ? price.product : price.product.id
@@ -100,13 +100,13 @@ export async function handleGetProducts(c: Context<{ Bindings: Env }>) {
       pricesMap[prodId].push(price)
     }
 
-    // 3. 组合成产品列表，每个产品包含它的价格信息
+    // 3. Build the product list with pricing details for each product.
     const products = activeProducts.data
       .map(product => {
         const prodsPrices = pricesMap[product.id] || []
         const features = product.metadata?.features ? product.metadata.features.split("|") : []
 
-        // 寻找月付和年付价格
+        // Find monthly and yearly prices.
         const monthlyPrice = prodsPrices.find(
           p =>
             p.recurring?.interval === "month" &&
@@ -114,7 +114,7 @@ export async function handleGetProducts(c: Context<{ Bindings: Env }>) {
         )
         const yearlyPrice = prodsPrices.find(p => p.recurring?.interval === "year")
 
-        if (!monthlyPrice && !yearlyPrice) return null // 过滤掉没有有效价格的产品
+        if (!monthlyPrice && !yearlyPrice) return null // Exclude products without a valid price.
 
         return {
           product_id: product.id,
@@ -291,7 +291,7 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
         const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
         const { currentPeriodStart, currentPeriodEnd } = getSubscriptionPeriod(subscription)
 
-        // 1. 通过 Stripe Product metadata 获取动态额度和用户组类型，支持在控制台动态增改套餐
+        // 1. Read credits and user type from Stripe Product metadata so plans can be managed in Stripe.
         let creditsAmount = 0
         let userType = "free"
         let creditGrantInterval: "month" | "year" = "month"
@@ -314,12 +314,12 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
           }
         }
 
-        // 兜底逻辑：如果 Stripe metadata 中未配置 user_type，使用硬编码的映射
+        // Fall back to the built-in mapping when Stripe metadata does not define user_type.
         if (!userType) {
           userType = UserTypeMap[plan] || "starter"
         }
 
-        // 幂等性校验：检查该订阅是否已在数据库中存在，避免因 Stripe 重试事件导致重复赠送初始额度
+        // Prevent duplicate initial credits when Stripe retries the subscription event.
         const existingSub = await c.env.DB.prepare(
           "SELECT stripe_subscription_id FROM subscriptions WHERE stripe_subscription_id = ?"
         )
@@ -464,7 +464,7 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
         }
       }
 
-      // 1. 获取订阅关联的 user_id
+      // 1. Find the user associated with the subscription.
       const localSub = await c.env.DB.prepare(
         "SELECT user_id FROM subscriptions WHERE stripe_subscription_id = ?"
       )
@@ -474,7 +474,7 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
       if (localSub) {
         const userId = localSub.user_id
 
-        // 2. 更新本地订阅表
+        // 2. Update the local subscription record.
         await c.env.DB.prepare(
           `
             UPDATE subscriptions SET
@@ -506,7 +506,7 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
           )
           .run()
 
-        // 3. 同步更新用户表的 user_type
+        // 3. Keep the user's user_type in sync.
         await c.env.DB.prepare("UPDATE users SET user_type = ?, updated_at = ? WHERE id = ?")
           .bind(newUserType, timestamp, userId)
           .run()
@@ -522,14 +522,14 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
       const subscription = event.data.object as Stripe.Subscription
       console.log("customer.subscription.deleted:", subscription.id)
 
-      // 1. 获取订阅关联的 user_id
+      // 1. Find the user associated with the subscription.
       const localSub = await c.env.DB.prepare(
         "SELECT user_id FROM subscriptions WHERE stripe_subscription_id = ?"
       )
         .bind(subscription.id)
         .first<{ user_id: string }>()
 
-      // 2. 将订阅状态标为 canceled
+      // 2. Mark the subscription as canceled.
       await c.env.DB.prepare(
         `
           UPDATE subscriptions SET
@@ -541,7 +541,7 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
         .bind(timestamp, subscription.id)
         .run()
 
-      // 3. 将用户的用户组降级为 free
+      // 3. Downgrade the user to the free tier.
       if (localSub) {
         await resetSubscriptionCredits(c.env.DB, localSub.user_id, timestamp)
         await c.env.DB.prepare("UPDATE users SET user_type = 'free', updated_at = ? WHERE id = ?")
@@ -588,8 +588,8 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
       const invoice = event.data.object as Stripe.Invoice
       console.log("invoice.paid:", invoice)
 
-      // 只处理订阅周期的续费（billing_reason 为 subscription_cycle）
-      // 避免与 initial purchase (subscription_create) 重复赠送额度
+      // Only process subscription renewals when billing_reason is subscription_cycle.
+      // This avoids duplicating credits from the initial subscription_create purchase.
       if (invoice.billing_reason === "subscription_cycle") {
         const subscriptionId = getInvoiceSubscriptionId(invoice)
         if (subscriptionId) {
@@ -621,7 +621,7 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
             currentPeriodEnd
           )
 
-          // 1. 查找本地订阅记录以获取 userId 和 plan
+          // 1. Find the local subscription record to get the user ID and plan.
           const localSub = await c.env.DB.prepare(
             "SELECT user_id, plan FROM subscriptions WHERE stripe_subscription_id = ?"
           )
@@ -631,7 +631,7 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
           if (localSub) {
             const { user_id: userId, plan } = localSub
 
-            // 2. 更新本地订阅状态与有效期
+            // 2. Update the local subscription status and validity period.
             await c.env.DB.prepare(
               `
                 UPDATE subscriptions SET
@@ -661,7 +661,7 @@ export async function handleStripeWebhook(c: Context<{ Bindings: Env }>) {
               )
               .run()
 
-            // 3. 幂等性校验：检查是否已经针对此 Invoice 赠送过 Credits
+            // 3. Check whether credits were already granted for this invoice.
             const hasCredited = await c.env.DB.prepare(
               "SELECT id FROM credit_transactions WHERE invoice_id = ?"
             )

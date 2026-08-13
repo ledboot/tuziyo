@@ -377,7 +377,7 @@ export default function ProfilePage() {
                           <div>
                             <div className="flex items-baseline gap-2">
                               <span className="text-5xl sm:text-6xl font-bold text-white tracking-tight leading-none drop-shadow-md">
-                                {credits.balance.toLocaleString()}
+                                {credits.balance.toLocaleString("en-US")}
                               </span>
                               <span className="text-lg font-medium text-base-content/50 uppercase tracking-wider">
                                 Credits
@@ -391,7 +391,7 @@ export default function ProfilePage() {
                                 Subscription
                               </span>
                               <span className="text-lg font-bold text-primary">
-                                {credits.subscription_balance.toLocaleString()}
+                                {credits.subscription_balance.toLocaleString("en-US")}
                               </span>
                             </div>
                             <div className="w-px bg-white/10 my-1"></div>
@@ -400,7 +400,7 @@ export default function ProfilePage() {
                                 Purchased
                               </span>
                               <span className="text-lg font-bold text-green-400">
-                                {credits.purchased_balance.toLocaleString()}
+                                {credits.purchased_balance.toLocaleString("en-US")}
                               </span>
                             </div>
                             <div className="w-px bg-white/10 my-1"></div>
@@ -409,7 +409,7 @@ export default function ProfilePage() {
                                 Total Used
                               </span>
                               <span className="text-lg font-bold text-white/80">
-                                {credits.total_used.toLocaleString()}
+                                {credits.total_used.toLocaleString("en-US")}
                               </span>
                             </div>
                           </div>

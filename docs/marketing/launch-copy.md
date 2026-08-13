@@ -6,6 +6,7 @@
 - URL: https://tuziyo.com/
 - AI Studio: https://tuziyo.com/ai-toolkit
 - Category: AI image generator / creative tools / design tools
+- Tags: ai image generator, ai video generator, multi model ai, ai studio, creative tools, design tools, image model comparison, open source
 - Offer: 10 free credits for every new account
 - Payment requirement: no credit card required
 - Open source: https://github.com/ledboot/tuziyo
@@ -41,9 +42,14 @@ Alternatives:
 Name:
 
 > Tuziyo
+
 Tagline:
 
 > Generate, compare, and organize AI visuals in one workflow
+
+Topics / Tags:
+
+> Artificial Intelligence, Design Tools, Creative Tools, AI Image Generator, Productivity
 
 Description:
 
@@ -141,6 +147,10 @@ Key features:
 Keywords:
 
 > AI image generator, multi-model AI, image model comparison, Nano Banana, Seedream, GPT Image, creative workflow, AI design tool, image editing
+
+Tags:
+
+> ai image generator, ai video generator, multi model ai, ai studio, creative tools, design tools, image model comparison, open source
 
 ## Creator outreach email
 

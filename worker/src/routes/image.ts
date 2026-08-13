@@ -1864,7 +1864,7 @@ async function completeGenerationTask(
     throw new Error(deductResult.error || "Failed to deduct credits")
   }
 
-  // Update Session title (if it was "New Session" or "New Chat" or "新对话")
+  // Update the session title when it still uses a current or legacy default title.
   const session = await db
     .prepare("SELECT title FROM sessions WHERE id = ? AND user_id = ? AND status = 1")
     .bind(sessionId, userId)
@@ -1875,8 +1875,8 @@ async function completeGenerationTask(
     if (
       sessionTitle === "New Session" ||
       sessionTitle === "New Chat" ||
-      sessionTitle === "新对话" ||
-      sessionTitle === "新会话"
+      sessionTitle === "\u65b0\u5bf9\u8bdd" ||
+      sessionTitle === "\u65b0\u4f1a\u8bdd"
     ) {
       const title = input.prompt.slice(0, 100).trim() || "New Session"
       await db

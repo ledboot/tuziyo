@@ -1,4 +1,4 @@
--- 1. 用户表 (Users)
+-- 1. Users
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
 
--- 2. 第三方账号表 (Accounts) - 支持多种第三方登录
+-- 2. Third-party accounts - supports multiple authentication providers
 CREATE TABLE IF NOT EXISTS accounts (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -24,11 +24,11 @@ CREATE TABLE IF NOT EXISTS accounts (
     UNIQUE(provider, provider_account_id)
 );
 
--- 3. 会话表 (Chat Sessions)
+-- 3. Chat sessions
 CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
-    title TEXT NOT NULL DEFAULT '新对话',
+    title TEXT NOT NULL DEFAULT 'New Session',
     is_pinned INTEGER NOT NULL DEFAULT 0,
     preview_image TEXT DEFAULT '',
     status INTEGER NOT NULL DEFAULT 1 CHECK(status IN (1, 2)), -- 1: active, 2: deleted
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- 4. 消息记录表 (Chat Messages)
+-- 4. Chat messages
 CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS messages (
     FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
 );
 
--- 4.1 消息输出表：一次生成消息可以包含多张图片
+-- 4.1 Message outputs: one generation message can contain multiple images
 CREATE TABLE IF NOT EXISTS message_outputs (
     id TEXT PRIMARY KEY,
     message_id TEXT NOT NULL,
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS message_outputs (
     UNIQUE(message_id, output_index)
 );
 
--- 5. 订阅表 (Subscriptions)
+-- 5. Subscriptions
 CREATE TABLE IF NOT EXISTS subscriptions (
     id TEXT PRIMARY KEY,
     user_id TEXT UNIQUE NOT NULL,
@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- 创建索引以加速查询
+-- Create indexes to speed up queries
 CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
 CREATE INDEX IF NOT EXISTS idx_accounts_provider ON accounts(provider, provider_account_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
@@ -130,7 +130,7 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer_id ON subscriptions
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_subscription_id ON subscriptions(stripe_subscription_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
 
--- 6. 用户 Credits 余额表
+-- 6. User credit balances
 CREATE TABLE IF NOT EXISTS user_credits (
     id TEXT PRIMARY KEY,
     user_id TEXT UNIQUE NOT NULL,
@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS user_credits (
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- 7. Credits 消耗记录表
+-- 7. Credit transactions
 CREATE TABLE IF NOT EXISTS credit_transactions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -167,7 +167,7 @@ CREATE INDEX IF NOT EXISTS idx_credit_transactions_created_at ON credit_transact
 CREATE UNIQUE INDEX IF NOT EXISTS idx_credit_transactions_invoice_id ON credit_transactions(invoice_id) WHERE invoice_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_credit_transactions_subscription_period ON credit_transactions(user_id, credit_period_start, credit_period_end) WHERE type = 'subscription' AND credit_period_start IS NOT NULL AND credit_period_end IS NOT NULL;
 
--- 8. 用户内容收藏表
+-- 8. User content favorites
 CREATE TABLE IF NOT EXISTS content_favorites (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -188,7 +188,7 @@ CREATE INDEX IF NOT EXISTS idx_content_favorites_created_at ON content_favorites
 CREATE UNIQUE INDEX IF NOT EXISTS idx_content_favorites_legacy_unique ON content_favorites(user_id, content_type, message_id) WHERE output_id IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_content_favorites_output_unique ON content_favorites(user_id, content_type, output_id) WHERE output_id IS NOT NULL;
 
--- 8.1 统一资产库
+-- 8.1 Unified asset library
 CREATE TABLE IF NOT EXISTS assets (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -222,7 +222,7 @@ CREATE INDEX IF NOT EXISTS idx_assets_user_favorite ON assets(user_id, is_favori
 CREATE INDEX IF NOT EXISTS idx_assets_source_output ON assets(source_output_id);
 CREATE INDEX IF NOT EXISTS idx_message_outputs_asset_id ON message_outputs(asset_id);
 
--- 9. 异步生成任务表 (Generation Tasks)
+-- 9. Asynchronous generation tasks
 CREATE TABLE IF NOT EXISTS generation_tasks (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,

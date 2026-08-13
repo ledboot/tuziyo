@@ -1,19 +1,9 @@
 import { Link } from "react-router"
-import { useI18n, type Language } from "~/lib/i18n"
+import { copy } from "~/lib/copy"
 import { AI_IMAGE_MODELS, AI_IMAGE_MODEL_SLUGS } from "~/data/aiImageModels"
 
-const LANG_NAMES: Record<Language, string> = {
-  en: "English",
-  zh: "中文",
-  fr: "Français",
-  ja: "日本語",
-  ko: "한국어",
-  ru: "Русский",
-  it: "Italiano",
-}
-
 export default function Footer() {
-  const { t, setLang } = useI18n()
+  const t = copy
 
   return (
     <footer className="footer-footer">
@@ -104,19 +94,6 @@ export default function Footer() {
                   Contact & Support
                 </Link>
               </li>
-            </ul>
-          </div>
-
-          <div className="footer-links-col">
-            <h4 className="footer-links-title">Language</h4>
-            <ul className="footer-lang-list">
-              {(Object.keys(LANG_NAMES) as Language[]).map(lang => (
-                <li key={lang}>
-                  <button type="button" onClick={() => setLang(lang)} className="footer-lang-btn">
-                    {LANG_NAMES[lang]}
-                  </button>
-                </li>
-              ))}
             </ul>
           </div>
         </nav>

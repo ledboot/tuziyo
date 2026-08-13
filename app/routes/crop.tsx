@@ -14,7 +14,7 @@ import {
   Image as ImageIcon,
   Smartphone,
 } from "lucide-react";
-import { useI18n } from "~/lib/i18n";
+import { copy } from "~/lib/copy";
 import { createSeoMeta, createWebApplicationSchema } from "~/lib/seo";
 
 type AspectRatio = "free" | "1:1" | "4:3" | "16:9" | "3:2" | "2:3";
@@ -61,7 +61,7 @@ export function meta() {
 }
 
 export default function CropPage() {
-  const { t } = useI18n();
+  const t = copy;
   const [images, setImages] = useState<ImageItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("free");

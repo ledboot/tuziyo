@@ -34,7 +34,7 @@ describe("EvoLink Nano Banana models", () => {
     expect(getImageModelPromptMaxLength("openai/gpt-image-1.5")).toBe(2000)
     expect(getImageModelPromptMaxLength("openai/gpt-image-2")).toBe(32000)
     expect(getImageModelPromptMaxLength("missing/model")).toBeNull()
-    expect(getPromptCharacterLength("兔子🐰")).toBe(3)
+    expect(getPromptCharacterLength("\u5154\u5b50🐰")).toBe(3)
   })
 
   test("matches EvoLink prompt maxLength values", () => {
